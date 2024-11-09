@@ -9,6 +9,7 @@ export class ShadowRenderPipeline {
   private vertexBindGroup!: GPUBindGroup;
   private projectionViewBindGroup!: GPUBindGroup;
 
+  //@ts-ignore
   constructor(private device: GPUDevice, camera: ShadowCamera, transformsBuffer: UniformBuffer) {
 
     const shaderModule = device.createShaderModule({

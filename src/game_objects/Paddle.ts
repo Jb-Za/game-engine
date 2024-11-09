@@ -5,7 +5,7 @@ import { Color } from "../math/Color";
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec3 } from "../math/Vec3";
 import { RenderPipeline } from "../render_pipelines/RenderPipeline";
-import { UnlitRenderPipeline } from "../render_pipelines/UnlitRenderPipeline";
+//import { UnlitRenderPipeline } from "../render_pipelines/UnlitRenderPipeline";
 import { UniformBuffer } from "../uniform_buffers/UniformBuffer";
 import { DirectionalLight } from "../lights/DirectionalLight";
 import { Mat3x3 } from "../math/Mat3x3";

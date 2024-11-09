@@ -1,7 +1,7 @@
 import { GeometryBuffers } from "../attribute_buffers/GeometryBuffers";
 import { Camera } from "../camera/Camera";
 import { Color } from "../math/Color";
-import { Mat4x4 } from "../math/Mat4x4";
+//import { Mat4x4 } from "../math/Mat4x4";
 import { Vec2 } from "../math/Vec2";
 import shaderSource from "../shaders/UnlitMaterialShader.wgsl?raw";
 import { Texture2D } from "../texture/Texture2D";
