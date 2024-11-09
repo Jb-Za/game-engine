@@ -69,4 +69,28 @@ export class Vec3 extends Float32Array
         return a.x * b.x + a.y * b.y + a.z * b.z;
     }
 
+    public static add(a: Vec3 ,b: Vec3) : Vec3 
+    {
+        return new Vec3(a.x + b.x, a.y + b.y, a.z + b.z);
+    }
+
+    public static transpose(a : Vec3){
+        return new Vec3(a[0], a[1], a[2]);
+    }
+
+    public static multiplyScalar(a: Vec3, scalar: number): Vec3 {
+        return new Vec3(a.x * scalar, a.y * scalar, a.z * scalar);
+    }
+
+    public static multiply(a: Vec3, b: Vec3): Vec3 {
+        return new Vec3(a.x * b.x, a.y * b.y, a.z * b.z);
+    }
+
+    public static distance(a: Vec3, b: Vec3): number {
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dz = a.z - b.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
 }

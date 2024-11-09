@@ -127,6 +127,21 @@ export class Mat4x4 extends Float32Array{
         ]);
         return m;
     }
+
+    public static rotationY(angle: number): Mat4x4 {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const m = new Mat4x4();
+        m.set([
+            c, 0, s, 0,    // first column
+            0, 1, 0, 0,    // second column
+            -s, 0, c, 0,   // third column
+            0, 0, 0, 1     // fourth column (homogeneous coordinates)
+        ]);
+
+        return m;
+    }
+    
       
     public static orthographic(left: number, right: number, top: number, bottom: number, near: number, far: number): Mat4x4{
         const r0c0 = 2 / (right - left);
@@ -173,5 +188,27 @@ export class Mat4x4 extends Float32Array{
         ]);
 
         return lookAt
+    }
+
+    public static multiplyVec(matrix: Mat4x4, vector: Vec3): Vec3 {
+        const x = matrix[0] * vector.x + matrix[4] * vector.y + matrix[8] * vector.z + matrix[12];
+        const y = matrix[1] * vector.x + matrix[5] * vector.y + matrix[9] * vector.z + matrix[13];
+        const z = matrix[2] * vector.x + matrix[6] * vector.y + matrix[10] * vector.z + matrix[14];
+    
+        return new Vec3(x, y, z);
+    }
+
+    // Returns the matrix as a Float32Array in column-major order
+    public static toFloat32Array(a: Mat4x4): Float32Array {
+        const array = new Float32Array(16);
+
+        // Fill the array in column-major order
+        for (let col = 0; col < 4; col++) {
+            for (let row = 0; row < 4; row++) {
+                array[col * 4 + row] = a[row * 4 + col];
+            }
+        }
+
+        return array;
     }
 }
