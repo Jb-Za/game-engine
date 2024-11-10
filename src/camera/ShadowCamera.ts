@@ -1,6 +1,7 @@
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec3 } from "../math/Vec3";
 import { UniformBuffer } from "../uniform_buffers/UniformBuffer";
+// import { Camera } from "./Camera";
 
 export class ShadowCamera {
     // BUFFER
@@ -26,7 +27,6 @@ export class ShadowCamera {
     }
 
     public update() {
-
         this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
         this.perspective = Mat4x4.orthographic(-20, 20, -20, 20, this.near, this.far);
         this.projectionView = Mat4x4.multiply(this.perspective, this.view);

@@ -16,13 +16,16 @@ export class Floor{
     public pipeline: RenderPipeline;
     private transformBuffer: UniformBuffer;
     private normalMatrixBuffer: UniformBuffer;
+    public rotation : Vec3 = new Vec3(0.5,0.5,0.5);
 
     private transform =  Mat4x4.identity();
 
-    public scale = new Vec3(40,40,1);
+    public scale = new Vec3(1,1,1);
     public position = new Vec3(0,0,4);
 
     public color = new Color(0.2,0.2,0.2,1);
+
+    private angle = 0;
 
     constructor(device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight, pointLights: PointLightsCollection){
         this.transformBuffer = new UniformBuffer(device, this.transform, "Paddle Transform");
@@ -35,8 +38,12 @@ export class Floor{
         const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
         const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
         
+        // const rotationX = Mat4x4.rotationX(this.rotation.x * 360);
+        // const rotationY = Mat4x4.rotationY(this.rotation.y * 360);
+        // const rotationZ = Mat4x4.rotationZ(this.rotation.z * 360);
+        // const rotationMultiplied = Mat4x4.multiply(Mat4x4.multiply(rotationX, rotationY), rotationZ);
         this.transform = Mat4x4.multiply(translate, scale);
-
+        this.transform = Mat4x4.multiply(this.transform, Mat4x4.rotationZ(this.angle));
         let normalMatrix = Mat3x3.fromMat4x4(this.transform);
         normalMatrix = Mat3x3.transpose(normalMatrix);
         normalMatrix = Mat3x3.inverse(normalMatrix);

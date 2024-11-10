@@ -10,7 +10,7 @@ export class ShadowRenderPipeline {
   private projectionViewBindGroup!: GPUBindGroup;
 
   //@ts-ignore
-  constructor(private device: GPUDevice, camera: ShadowCamera, transformsBuffer: UniformBuffer) {
+  constructor(private device: GPUDevice, camera: ShadowCamera | CubeMapShadowCamera, transformsBuffer: UniformBuffer) {
 
     const shaderModule = device.createShaderModule({
       code: shaderSource,
