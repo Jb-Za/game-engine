@@ -1,7 +1,7 @@
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec3 } from "../math/Vec3";
 import { UniformBuffer } from "../uniform_buffers/UniformBuffer";
-import { Camera } from "./Camera";
+// import { Camera } from "./Camera";
 
 export class ShadowCamera {
     // BUFFER

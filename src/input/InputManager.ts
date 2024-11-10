@@ -1,4 +1,3 @@
-import { Vec2 } from "../math/Vec2";
 import { EventEmitter } from "../Events/EventEmitter";
 
 
@@ -7,10 +6,6 @@ export type Coordinates = { x: number; y: number };
 export class InputManager {
   private keys: Map<string, boolean> = new Map<string, boolean>();
   private mouseKeys: Map<number, boolean> = new Map<number, boolean>();
-
- 
-  private mousePosition: Coordinates = { x: 0, y: 0 };
-  private lastMousePosition: Coordinates = { x: 0, y: 0 };
   private _mouseMoved: EventEmitter<Coordinates> = new EventEmitter();
 
 
@@ -29,7 +24,6 @@ export class InputManager {
 
     window.addEventListener("mousedown", (e) => {
       this.mouseKeys.set(e.button, true);
-
     });
 
     // window.addEventListener("mousemove", (e: MouseEvent) => {

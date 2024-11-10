@@ -1,6 +1,6 @@
 import { Camera } from "./camera/Camera";
-import { Ball } from "./game_objects/Ball";
-import { Paddle } from "./game_objects/Paddle";
+//mport { Ball } from "./game_objects/Ball";
+//import { Paddle } from "./game_objects/Paddle";
 import { GeometryBuffersCollection } from "./attribute_buffers/GeometryBuffersCollection";
 import { AmbientLight } from "./lights/AmbientLight";
 import { Color } from "./math/Color";
@@ -11,11 +11,13 @@ import { PointLightsCollection } from "./lights/PointLight";
 import { Floor } from "./game_objects/Floor";
 import { InputManager } from "./input/InputManager";
 import { ShadowCamera } from "./camera/ShadowCamera";
-import { Cube } from "./game_objects/Cube";
+//import { Cube } from "./game_objects/Cube";
+import { GameObject, ObjectMap } from "./game_objects/ObjectMap";
 async function init() {
   const canvas = document.getElementById("canvas") as HTMLCanvasElement;
   const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
-
+  
+  const infoElem = document.querySelector('#info');
   if (!gpuContext) {
     alert("WebGPU not supported");
     return;
@@ -38,6 +40,8 @@ async function init() {
   const inputManager = new InputManager(canvas);
 
   GeometryBuffersCollection.initialize(device);
+
+  const objectMap = new ObjectMap();
 
   // DEPTH TEXTURE
   const depthTexture = Texture2D.createDepthTexture(
@@ -69,47 +73,68 @@ async function init() {
 
   //Game Objects
   const camera = new Camera(device, canvas.width / canvas.height, inputManager);
-  camera.eye = new Vec3(0, 0, 0);
-  camera.target = new Vec3(3, -1.7, 0);
+  camera.eye = new Vec3(5, 2, 4);
+  camera.target = new Vec3(4, 2, 3);
 
   //
   const shadowCamera = new ShadowCamera(device);
-  shadowCamera.eye = new Vec3(0, 10, 0); // Let's imagine it as a negative direction light * -20 or any other fitting scalar
+  shadowCamera.eye = new Vec3(0, 0, -20); // Let's imagine it as a negative direction light * -20 or any other fitting scalar
 
 
   // Game Objects
-  const floor = new Floor(
-    device,
-    camera,
-    shadowCamera,
-    ambientLight,
-    directionalLight,
-    pointLights
-  );
+  const floor = new Floor(device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   floor.pipeline.shadowTexture = shadowTexture;
   floor.scale = new Vec3(40, 0.1, 40)
   floor.position = new Vec3(0, -2, 0);
 
-  const cube1 = new Cube(
-    device,
-    camera,
-    shadowCamera,
-    ambientLight,
-    directionalLight,
-    pointLights
-  );
-  cube1.pipeline.shadowTexture = shadowTexture;
-  cube1.scale = new Vec3(0.5, 0.5, 0.5);
-  cube1.position = new Vec3(3, -1, 0);
-  cube1.orbit = true;
-  cube1.orbitPoint = pointLights.lights[0].position;
-  cube1.orbitDistance = Vec3.distance(cube1.position, pointLights.lights[0].position);
+  // const cubes: Array<GameObject> = [];
+  for(let i = 0; i < 20; i++){
+    objectMap.createCube({device,camera,shadowCamera,ambientLight,directionalLight,pointLights}, shadowTexture, true)
+  }
 
+ 
+  window.addEventListener("keydown", (e: KeyboardEvent) => {
+    if(e.key === 'e'){
+      console.log(camera.eye);
+      console.log(camera.target);
+    }
+  });
+
+
+  const createOrbit = (orbitPoint: Vec3, objectMap: ObjectMap) => {
+    const orbitRadius = 4;
+    objectMap.objects.forEach((object: GameObject) => {
+      const distance = Math.random() * orbitRadius;
+      // Calculate random direction within the sphere
+      const theta = Math.random() * 2 * Math.PI;
+      const phi = Math.random() * Math.PI;
+      const x = distance * Math.sin(phi) * Math.cos(theta);
+      const y = distance * Math.sin(phi) * Math.sin(theta);
+      const z = distance * Math.cos(phi);
+      //object.scale = new Vec3
+      // Set the object's position relative to the orbit point
+      const position = new Vec3(orbitPoint.x + x, orbitPoint.y + y, orbitPoint.z + z);
+      object.scale = Vec3.scale(object.scale, getRandomArbitrary(0.5, 0.8));
+      object.orbitInitialPosition = position;
+      object.orbitAxis = Vec3.normalize(Vec3.subtract(new Vec3(Math.random(), Math.random(), Math.random()), orbitPoint));
+      object.orbit = true;
+      object.orbitDistance = distance;
+      object.orbitDirection = (Math.random()>=0.5)? 1 : -1;
+      
+    });
+  }
+
+  const getRandomArbitrary = (min: number, max: number) => {
+    return Math.random() * (max - min) + min;
+  }
+
+  createOrbit(new Vec3(0, 3, 0), objectMap);
 
   const update = () => {
     camera.update();
-    shadowCamera.target = cube1.position ;
-    cube1.update();
+    objectMap.objects.forEach((object) => {
+      object.update();
+    }); 
     ambientLight.update();
     directionalLight.update();
     pointLights.update();
@@ -130,7 +155,9 @@ async function init() {
     });
 
     // DRAW HERE
-    cube1.drawShadows(renderPassEncoder);
+    objectMap.objects.forEach((object) => {
+      object.drawShadows(renderPassEncoder);
+    }); 
     renderPassEncoder.end();
   };
 
@@ -155,17 +182,34 @@ async function init() {
 
     // DRAW HERE
     floor.draw(renderPassEncoder);
-    cube1.draw(renderPassEncoder);
+    objectMap.objects.forEach((object) => {
+      object.draw(renderPassEncoder);
+    }); 
     renderPassEncoder.end();
   };
 
+  let then = 0;
+  
   const draw = () => {
+    let now = performance.now();
+    now *= 0.001;  // convert to seconds
+    const deltaTime = now - then;
+    then = now;
+    const startTime = performance.now();
     update();
     const commandEncoder = device.createCommandEncoder();
     shadowPass(commandEncoder);
     scenePass(commandEncoder);
     device.queue.submit([commandEncoder.finish()]);
 
+    const jsTime = performance.now() - startTime;
+
+    if(infoElem != null){
+      infoElem.textContent = `\
+      fps: ${(1 / deltaTime).toFixed(1)}
+      js: ${jsTime.toFixed(1)}ms
+      `;
+    }
     requestAnimationFrame(draw);
   };
 

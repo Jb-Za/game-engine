@@ -1,5 +1,6 @@
 import { MathUtils } from "./MathUtil";
 import { Vec3 } from "./Vec3";
+import { Vec4 } from "./Vec4";
 
 export class Mat4x4 extends Float32Array{
     constructor(){
@@ -210,5 +211,54 @@ export class Mat4x4 extends Float32Array{
         }
 
         return array;
+    }
+
+    public static add(a: Mat4x4, b: Mat4x4): Mat4x4 {
+        const m = new Mat4x4();
+        for (let i = 0; i < 16; i++) {
+            m[i] = a[i] + b[i];
+        }
+        return m;
+    }
+
+    public static rotationAxis(axis: Vec3, angle: number): Mat4x4 {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const t = 1 - c;
+
+        const x = axis.x;
+        const y = axis.y;
+        const z = axis.z;
+
+        const r0c0 = t * x * x + c;
+        const r0c1 = t * x * y - s * z;
+        const r0c2 = t * x * z + s * y;
+
+        const r1c0 = t * x * y + s * z;
+        const r1c1 = t * y * y + c;
+        const r1c2 = t * y * z - s * x;
+
+        const r2c0 = t * x * z - s * y;
+        const r2c1 = t * y * z + s * x;
+        const r2c2 = t * z * z + c;
+
+        const m = new Mat4x4();
+        m.set([
+            r0c0, r0c1, r0c2, 0,
+            r1c0, r1c1, r1c2, 0,
+            r2c0, r2c1, r2c2, 0,
+            0, 0, 0, 1
+        ]);
+
+        return m;
+    }
+
+    public static transformVec4(matrix: Mat4x4, vector: Vec4): Vec4 {
+        const x = matrix[0] * vector.x + matrix[4] * vector.y + matrix[8] * vector.z + matrix[12] * vector.w;
+        const y = matrix[1] * vector.x + matrix[5] * vector.y + matrix[9] * vector.z + matrix[13] * vector.w;
+        const z = matrix[2] * vector.x + matrix[6] * vector.y + matrix[10] * vector.z + matrix[14] * vector.w;
+        const w = matrix[3] * vector.x + matrix[7] * vector.y + matrix[11] * vector.z + matrix[15] * vector.w;
+    
+        return new Vec4(x, y, z, w);
     }
 }

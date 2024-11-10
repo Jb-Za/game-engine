@@ -15,24 +15,22 @@ import { ShadowCamera } from "../camera/ShadowCamera";
 import { Vec2 } from "../math/Vec2";
 import { RectCollider } from "../collider/RectCollider";
 import { Paddle } from "./Paddle";
+import { GameObject } from "./ObjectMap";
 
-export class Ball{
-    public pipeline: RenderPipeline;
-    private shadowPipeline: ShadowRenderPipeline;
-    
-    private transformBuffer: UniformBuffer;
-
-    private transform =  Mat4x4.identity();
-    private normalMatrixBuffer: UniformBuffer;
-
+export class Ball implements GameObject{
     public scale = new Vec3(1,1,1);
     public position = new Vec3(0,0,1);
-
+    public pipeline: RenderPipeline;
     public color = new Color(1,1,1,1);
-    private direction = new Vec2(10, 1);
-    private speed = 0.05;
-
     public collider = new RectCollider();
+    public orbit: boolean = false;
+
+    private shadowPipeline: ShadowRenderPipeline;
+    private transformBuffer: UniformBuffer;
+    private transform =  Mat4x4.identity();
+    private normalMatrixBuffer: UniformBuffer;
+    private speed = 0.05;
+    private direction = new Vec2(10, 1);
 
     constructor(device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight,  pointLights: PointLightsCollection){
         this.transformBuffer = new UniformBuffer(device, this.transform, "Paddle Transform");

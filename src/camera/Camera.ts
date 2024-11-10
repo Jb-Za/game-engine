@@ -1,5 +1,5 @@
 import { Coordinates, InputManager } from "../input/InputManager";
-import { Mat3x3 } from "../math/Mat3x3";
+// import { Mat3x3 } from "../math/Mat3x3";
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec3 } from "../math/Vec3";
 import { UniformBuffer } from "../uniform_buffers/UniformBuffer";

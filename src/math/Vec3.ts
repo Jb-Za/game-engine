@@ -93,4 +93,8 @@ export class Vec3 extends Float32Array
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
+    public static scale(a: Vec3, factor: number): Vec3 {
+        return new Vec3(a.x * factor, a.y * factor, a.z * factor);
+    }
+    
 }

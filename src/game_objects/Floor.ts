@@ -35,7 +35,6 @@ export class Floor{
     }
 
     public update(){
-        //this.angle += 0.01;
         const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
         const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
         

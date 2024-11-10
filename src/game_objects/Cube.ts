@@ -12,31 +12,29 @@ import { Mat3x3 } from "../math/Mat3x3";
 import { PointLightsCollection } from "../lights/PointLight";
 import { ShadowRenderPipeline } from "../render_pipelines/ShadowRenderPipeline";
 import { ShadowCamera } from "../camera/ShadowCamera";
-import { Vec2 } from "../math/Vec2";
+// import { Vec2 } from "../math/Vec2";
+import { Vec4 } from "../math/Vec4";
 // import { RectCollider } from "../collider/RectCollider";
 
 export class Cube{
     public pipeline: RenderPipeline;
-    private shadowPipeline: ShadowRenderPipeline;
-    
-    private transformBuffer: UniformBuffer;
-
-    private transform =  Mat4x4.identity();
-    private normalMatrixBuffer: UniformBuffer;
-
     public scale = new Vec3(1,1,1);
     public position = new Vec3(0,0,0);
-   
-
     public color = new Color(1,0,0,1);
-    // private direction = new Vec2(10, 1);
-    // private speed = 0.05;
 
     public orbit: boolean = false;
     public orbitPoint: Vec3 = new Vec3(0,0,0);
-    public orbitSpeed: number = 0.005;
+    public orbitSpeed: number = 0.55;
     public orbitDistance: number = 0;
+    public orthogonalVector: Vec3 = new Vec3(0,0,0);
+    public orbitAxis: Vec3 = new Vec3(0,0,0);
+    public orbitDirection: number = 1;
+    public orbitInitialPosition: Vec3 = new Vec3(0,0,0);
 
+    private shadowPipeline: ShadowRenderPipeline;
+    private transformBuffer: UniformBuffer;
+    private transform =  Mat4x4.identity();
+    private normalMatrixBuffer: UniformBuffer;
     // public collider = new RectCollider();
 
     constructor(device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight,  pointLights: PointLightsCollection){
@@ -74,14 +72,18 @@ export class Cube{
     }
 
     private _orbitPoint() : void{
-        const angle = this.orbitSpeed * performance.now() / 10; // Use the current time to calculate the angle
-
-        const x = this.orbitPoint.x + this.orbitDistance * Math.cos(angle);
-        //const y = this.orbitPoint.y + this.orbitDistance * Math.sin(angle);
-        const z = this.orbitPoint.z + this.orbitDistance * Math.sin(angle);
-        this.position.x = x;
-        //this.position.y = y;
-        this.position.z = z;
+        const angle = this.orbitSpeed * performance.now() / 1000 * this.orbitDirection; // Use the current time to calculate the angle
+        const axis = Vec3.normalize(this.orbitAxis); // Normalize the orbit axis
+    
+        const rotationMatrix = Mat4x4.rotationAxis(axis, angle); // Create a rotation matrix around the axis
+        const translationMatrix = Mat4x4.translation(this.orbitPoint.x, this.orbitPoint.y, this.orbitPoint.z); // Create a translation matrix to the orbit point
+        const orbitMatrix = Mat4x4.multiply(translationMatrix, rotationMatrix); // Combine the translation and rotation matrices
+    
+        const positionVector = new Vec4(this.orbitInitialPosition.x, this.orbitInitialPosition.y, this.orbitInitialPosition.z, 1); // Create a position vector representing the orbit distance
+        const newPosition = Mat4x4.transformVec4(orbitMatrix, positionVector); // Apply the orbit matrix to the position vector
+    
+        this.position.x = newPosition.x;
+        this.position.y = newPosition.y;
+        this.position.z = newPosition.z;
     }
-
 }
