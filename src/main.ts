@@ -47,7 +47,7 @@ async function init() {
   directionalLight.intensity = 0.8;
   directionalLight.direction = new Vec3(0,0,0.2);
 
-  const pointLights = new PointLightsCollection(device);
+  const pointLights = new PointLightsCollection(device, 3);
   pointLights.lights[0].color = new Color(1, 0, 0, 1);
   pointLights.lights[0].intensity = 2;
   pointLights.lights[0].position = new Vec3(4, 2, -1);

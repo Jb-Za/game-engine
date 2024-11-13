@@ -16,7 +16,7 @@ import { Vec2 } from "../math/Vec2";
 import { RectCollider } from "../collider/RectCollider";
 import { Paddle } from "./Paddle";
 import { GameObject } from "./ObjectMap";
-import { Vec4 } from "../math/Vec4";
+////import { Vec4 } from "../math/Vec4";
 
 export class Ball implements GameObject{
     public scale = new Vec3(1,1,1);
@@ -29,7 +29,6 @@ export class Ball implements GameObject{
     private transformBuffer: UniformBuffer;
     private transform =  Mat4x4.identity();
     private normalMatrixBuffer: UniformBuffer;
-    private speed = 0.05;
     private direction = new Vec2(10, 1);
 
     public orbit: boolean = false;
