@@ -68,7 +68,6 @@ export class ShadowRenderPipeline {
         entryPoint: "shadowVS",
       },
 
-      // CONFIGURE DEPTH
       depthStencil: {
         depthWriteEnabled: true,
         depthCompare: "less",

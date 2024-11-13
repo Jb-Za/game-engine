@@ -46,11 +46,6 @@ export class Cube{
     }
 
     public update(){
-        
-        if(this.orbit === true){
-            this._orbitPoint();
-        }
-
         const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
         const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
         this.transform = Mat4x4.multiply(translate, scale);
@@ -71,19 +66,4 @@ export class Cube{
         this.shadowPipeline.draw(renderPassEncoder, GeometryBuffersCollection.cubeBuffers);
     }
 
-    private _orbitPoint() : void{
-        const angle = this.orbitSpeed * performance.now() / 1000 * this.orbitDirection; // Use the current time to calculate the angle
-        const axis = Vec3.normalize(this.orbitAxis); // Normalize the orbit axis
-    
-        const rotationMatrix = Mat4x4.rotationAxis(axis, angle); // Create a rotation matrix around the axis
-        const translationMatrix = Mat4x4.translation(this.orbitPoint.x, this.orbitPoint.y, this.orbitPoint.z); // Create a translation matrix to the orbit point
-        const orbitMatrix = Mat4x4.multiply(translationMatrix, rotationMatrix); // Combine the translation and rotation matrices
-    
-        const positionVector = new Vec4(this.orbitInitialPosition.x, this.orbitInitialPosition.y, this.orbitInitialPosition.z, 1); // Create a position vector representing the orbit distance
-        const newPosition = Mat4x4.transformVec4(orbitMatrix, positionVector); // Apply the orbit matrix to the position vector
-    
-        this.position.x = newPosition.x;
-        this.position.y = newPosition.y;
-        this.position.z = newPosition.z;
-    }
 }

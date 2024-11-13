@@ -7,6 +7,7 @@ import { Color } from "../math/Color";
 import { Vec3 } from "../math/Vec3";
 import { RenderPipeline } from "../render_pipelines/RenderPipeline";
 import { Texture2D } from "../texture/Texture2D";
+import { Ball } from "./Ball";
 // import { Ball } from "./Ball";
 import { Cube } from "./Cube";
 // import { Floor } from "./Floor";
@@ -40,6 +41,25 @@ export class ObjectMap {
     return cube;
   }
 
+  public createSphere(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean) {
+    const sphere = new Ball(
+      objectParameters.device,
+      objectParameters.camera,
+      objectParameters.shadowCamera,
+      objectParameters.ambientLight,
+      objectParameters.directionalLight,
+      objectParameters.pointLights
+    );
+    sphere.pipeline.shadowTexture = shadowTexture;
+    if(randomColor === true){
+      sphere.color = this.generateRandomColor();
+    }
+    // Assign a unique ID to the object
+    const id = this.objectIdCounter++;
+    this._objects.set(id, sphere);
+    return sphere;
+  }
+
   private generateRandomColor() : Color {
     return new Color(Math.random(), Math.random(), Math.random(), Math.random());
   }
@@ -54,13 +74,14 @@ export interface GameObject {
     update: Function;
     drawShadows: Function;
     
-    orbit?: boolean;
-    orbitDistance?: number;
-    orbitSpeed?: number;
-    orthogonalVector?: Vec3;
-    orbitAxis?: Vec3;
-    orbitDirection?: number;
-    orbitInitialPosition?: Vec3;
+    orbit: boolean;
+    orbitDistance: number;
+    orbitSpeed: number;
+    orthogonalVector: Vec3;
+    orbitAxis: Vec3;
+    orbitDirection: number;
+    orbitInitialPosition: Vec3;
+    orbitPoint: Vec3;
     // Add any other common properties and methods here
 }
 

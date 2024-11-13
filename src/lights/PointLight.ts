@@ -15,15 +15,14 @@ export class PointLight{
 
 export class PointLightsCollection{
     public buffer: UniformBuffer;
-    public lights: PointLight[] = [
-        new PointLight(),
-        new PointLight(),
-        new PointLight()
-    ]
+    public lights: PointLight[] = []
 
-    constructor(device: GPUDevice){
+    constructor(device: GPUDevice, lightCount: number){
         const byteSize = 3 * 16 * Float32Array.BYTES_PER_ELEMENT;
         this.buffer = new UniformBuffer(device, byteSize, "Directional Light");
+        for(let i = 0; i < lightCount; i++){
+            this.lights.push(new PointLight());
+        }
     }
 
     public update(){
