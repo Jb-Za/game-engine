@@ -12,7 +12,7 @@ import { Floor } from "./game_objects/Floor";
 import { InputManager } from "./input/InputManager";
 import { ShadowCamera } from "./camera/ShadowCamera";
 //import { Cube } from "./game_objects/Cube";
-import { GameObject, ObjectMap } from "./game_objects/ObjectMap";
+import { ObjectMap } from "./game_objects/ObjectMap";
 import { Ball } from "./game_objects/Ball";
 import { Mat4x4 } from "./math/Mat4x4";
 import { Vec4 } from "./math/Vec4";

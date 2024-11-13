@@ -13,7 +13,7 @@ import { PointLightsCollection } from "../lights/PointLight";
 import { ShadowRenderPipeline } from "../render_pipelines/ShadowRenderPipeline";
 import { ShadowCamera } from "../camera/ShadowCamera";
 // import { Vec2 } from "../math/Vec2";
-import { Vec4 } from "../math/Vec4";
+//import { Vec4 } from "../math/Vec4";
 // import { RectCollider } from "../collider/RectCollider";
 
 export class Cube{
