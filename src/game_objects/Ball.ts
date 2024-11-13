@@ -16,6 +16,7 @@ import { Vec2 } from "../math/Vec2";
 import { RectCollider } from "../collider/RectCollider";
 import { Paddle } from "./Paddle";
 import { GameObject } from "./ObjectMap";
+import { Vec4 } from "../math/Vec4";
 
 export class Ball implements GameObject{
     public scale = new Vec3(1,1,1);
@@ -23,7 +24,6 @@ export class Ball implements GameObject{
     public pipeline: RenderPipeline;
     public color = new Color(1,1,1,1);
     public collider = new RectCollider();
-    public orbit: boolean = false;
 
     private shadowPipeline: ShadowRenderPipeline;
     private transformBuffer: UniformBuffer;
@@ -31,6 +31,15 @@ export class Ball implements GameObject{
     private normalMatrixBuffer: UniformBuffer;
     private speed = 0.05;
     private direction = new Vec2(10, 1);
+
+    public orbit: boolean = false;
+    public orbitPoint: Vec3 = new Vec3(0,0,0);
+    public orbitSpeed: number = 0.55;
+    public orbitDistance: number = 0;
+    public orthogonalVector: Vec3 = new Vec3(0,0,0);
+    public orbitAxis: Vec3 = new Vec3(0,0,0);
+    public orbitDirection: number = 1;
+    public orbitInitialPosition: Vec3 = new Vec3(0,0,0);
 
     constructor(device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight,  pointLights: PointLightsCollection){
         this.transformBuffer = new UniformBuffer(device, this.transform, "Paddle Transform");
@@ -41,14 +50,6 @@ export class Ball implements GameObject{
     }
 
     public update(){
-        this.direction.nomalize();
-        this.position.x += this.direction.x * this.speed;
-        this.position.y += this.direction.y * this.speed;
-
-        if(this.position.y > 5 || this.position.y < -5 ){
-            this.direction.y *= -1;
-        }
-
         const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
         const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
         this.transform = Mat4x4.multiply(translate, scale);
