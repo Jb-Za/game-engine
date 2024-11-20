@@ -25,12 +25,12 @@ export class RenderPipeline {
   public set diffuseTexture(texture: Texture2D) {
     this._diffuseTexture = texture;
     this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);
-}
+  }
 
-public set shadowTexture(texture: Texture2D) {
-    this._shadowTexture = texture;
-    this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);
-}
+  public set shadowTexture(texture: Texture2D) {
+      this._shadowTexture = texture;
+      this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);
+  }
 
   private textureTilingBuffer: UniformBuffer;
   private _textureTiling: Vec2 = new Vec2(1, 1);
