@@ -13,7 +13,7 @@ import { InputManager } from "./input/InputManager";
 import { ShadowCamera } from "./camera/ShadowCamera";
 //import { Cube } from "./game_objects/Cube";
 import { ObjectMap } from "./game_objects/ObjectMap";
-import { uploadGLB } from "./gltb/GLB_Upload";
+import { GLTFScene, uploadGLB } from "./gltb/GLB_Upload";
 import shaderSource from "./shaders/GLTFShader.wgsl?raw";
 import { GLTFMesh } from "./gltb/GLTFMesh";
 
@@ -42,7 +42,7 @@ async function init() {
 
   //Input Manager
   const inputManager = new InputManager(canvas);
-  //GeometryBuffersCollection.initialize(device);
+  GeometryBuffersCollection.initialize(device);
 
   const objectMap = new ObjectMap();
 
@@ -85,17 +85,17 @@ async function init() {
   shadowCamera.target = new Vec3(4.85, 2.38, -2.61);
 
   // Game Objects
-  // const floor = new Floor(
-  //   device,
-  //   camera,
-  //   shadowCamera,
-  //   ambientLight,
-  //   directionalLight,
-  //   pointLights
-  // );
-  // floor.pipeline.shadowTexture = shadowTexture;
-  // // floor.scale = new Vec3(40, 0.1, 40);
-  // floor.position = new Vec3(3, 0, 0);
+  const floor = new Floor(
+    device,
+    camera,
+    shadowCamera,
+    ambientLight,
+    directionalLight,
+    pointLights
+  );
+  floor.pipeline.shadowTexture = shadowTexture;
+  floor.scale = new Vec3(40, 0.1, 40)
+  floor.position = new Vec3(0, -2, 0);
 
   async function loadGLBFromURL(url: string, device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight,  pointLights: PointLightsCollection) {
     const response = await fetch(url);
@@ -103,10 +103,13 @@ async function init() {
     return uploadGLB(arrayBuffer, device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   }
 
-  const glbMesh: GLTFMesh = await loadGLBFromURL("../assets/gltf/walking.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
-  glbMesh.scale = new Vec3(1, 1, 1);
-  glbMesh.position = new Vec3(0, 0, 0);
-  glbMesh.pipeline.shadowTexture = shadowTexture;
+  const glbScene: GLTFScene[] = await loadGLBFromURL("../assets/gltf/Fox.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
+  const glbMesh: GLTFMesh[] = glbScene[0].meshes;
+  for (let i = 0; i < glbMesh.length; i++) {
+    glbMesh[i].pipeline.shadowTexture = shadowTexture;
+    glbMesh[i].scale = new Vec3(100,100, 100);
+    glbMesh[i].position = new Vec3(0, 0, 0);
+  }
   //gltfObjects.shadow;
 
   window.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -121,9 +124,11 @@ async function init() {
     ambientLight.update();
     directionalLight.update();
     pointLights.update();
-    //floor.update();
     shadowCamera.update();
-    glbMesh.update();
+    glbMesh.forEach(glbMesh => {
+      glbMesh.update();
+    });
+    floor.update();
   };
 
   const shadowPass = (commandEncoder: GPUCommandEncoder) => {
@@ -165,12 +170,15 @@ async function init() {
     });
 
     // DRAW HERE
-    //floor.draw(renderPassEncoder);
+    
     objectMap.objects.forEach((object) => {
       object.draw(renderPassEncoder);
     });
 
-    glbMesh.draw(renderPassEncoder);
+    glbMesh.forEach(glbMesh => {
+      glbMesh.draw(renderPassEncoder);
+    });
+    floor.draw(renderPassEncoder);
     renderPassEncoder.end();
   };
 

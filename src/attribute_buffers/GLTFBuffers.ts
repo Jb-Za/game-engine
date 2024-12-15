@@ -2,18 +2,17 @@ import { Geometry } from "../geometry/Geometry";
 
 export class GLTFBuffers
 {
-    public readonly positionsBuffer: GPUBuffer;
+    public positionsBuffer: GPUBuffer;
     public readonly indicesBuffer?: GPUBuffer;
     public readonly colorsBuffer: GPUBuffer;
     public readonly texCoordsBuffer: GPUBuffer;
     public readonly normalsBuffer: GPUBuffer;
 
-    public readonly vertexCount: number;
+    public vertexCount: number;
     public readonly indexCount?: number;
 
     constructor(device: GPUDevice, geometry: Geometry) 
     {
-
         // Convert the view object to a Uint16Array
         let data = geometry.positions.view;
         let buffer = new ArrayBuffer(data.view.length);
@@ -37,16 +36,9 @@ export class GLTFBuffers
 
         this.vertexCount = data.length / 3; // (xyz)
         
-        
-        
-        
-        
-        
-        
-        
         //... ignore below
         // INDICES
-        if (geometry.indices.view.length > 0) 
+        if (geometry.indices?.view.length > 0) 
         {
             data = geometry.indices.view;
             buffer = new ArrayBuffer(data.view.length);
@@ -67,6 +59,8 @@ export class GLTFBuffers
             this.indexCount = geometry.indices.view.length / 2;
         }
     
+
+        /// Below this is irrelevant for now
         // COLORS
         this.colorsBuffer = device.createBuffer({
             label: "Colors Buffer",
@@ -93,18 +87,33 @@ export class GLTFBuffers
             0,
             geometry.texCoords.byteLength);
 
-        // TEXCOORDS
-        this.normalsBuffer = device.createBuffer({
-            label: "Normals Buffer",
-            size: geometry.normals.byteLength,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-        });
+        // NORMALS
+        if (geometry.normals != null) 
+        {
+            this.normalsBuffer = device.createBuffer({
+                label: "Normals Buffer",
+                size: geometry.normals.byteLength,
+                usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+            });
+    
+            data = geometry.normals.view;
+            buffer = new ArrayBuffer(data.view.length);
+            view = new Uint8Array(buffer);
+    
+            device.queue.writeBuffer(this.normalsBuffer,
+                0,
+                view.buffer,
+                0,
+                view.byteLength);    
+        }
+        else{
+            this.normalsBuffer = device.createBuffer({
+                label: "Normals Buffer",
+                size: 0,
+                usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+            });
+        }
 
-        device.queue.writeBuffer(this.normalsBuffer,
-            0,
-            geometry.normals.buffer,
-            0,
-            geometry.normals.byteLength);    
     
     }
 }

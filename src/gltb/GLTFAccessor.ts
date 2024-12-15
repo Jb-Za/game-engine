@@ -1,5 +1,5 @@
 import { GLTFBufferView } from "./GLTFBufferView";
-import { GTLFUtils } from "./GTLFUtils";
+import { GLTFUtils } from "./GLTFUtils";
 
 export interface Accessor {
   count: number;
@@ -18,7 +18,7 @@ export class GLTFAccessor {
   constructor(view: GLTFBufferView, accessor: Accessor) {
     this.count = accessor["count"];
     this.componentType = accessor["componentType"];
-    this.gltfType = GTLFUtils.parseGltfType(accessor["type"]);
+    this.gltfType = GLTFUtils.parseGltfType(accessor["type"]);
     this.view = view;
     this.byteOffset = 0;
     if (accessor["byteOffset"] !== undefined) {
@@ -27,7 +27,7 @@ export class GLTFAccessor {
   }
 
   get byteStride() {
-    var elementSize = GTLFUtils.gltfTypeSize(this.componentType, this.gltfType);
+    var elementSize = GLTFUtils.gltfTypeSize(this.componentType, this.gltfType);
     return Math.max(elementSize, this.view.byteStride);
   }
 
@@ -38,7 +38,7 @@ export class GLTFAccessor {
   // Get the vertex attribute type for accessors that are
   // used as vertex attributes
   get vertexType() {
-    return GTLFUtils.gltfVertexType(this.componentType, this.gltfType);
+    return GLTFUtils.gltfVertexType(this.componentType, this.gltfType);
   }
 
 

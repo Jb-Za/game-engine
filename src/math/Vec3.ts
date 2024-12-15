@@ -1,3 +1,5 @@
+import { Mat4x4 } from "./Mat4x4";
+
 export class Vec3 extends Float32Array
 {
     constructor(x: number = 0, y: number = 0, z: number = 0)
@@ -32,6 +34,11 @@ export class Vec3 extends Float32Array
     public get z(): number
     {
         return this[2];
+    }
+
+    public get xyz(): number[]
+    {
+        return [this[0], this[1], this[2]];
     }
 
     public set z(value: number)
@@ -96,5 +103,27 @@ export class Vec3 extends Float32Array
     public static scale(a: Vec3, factor: number): Vec3 {
         return new Vec3(a.x * factor, a.y * factor, a.z * factor);
     }
+
+    public static transformPoint(mat: Mat4x4, point: Vec3): Vec3 {
+        const x = point.x, y = point.y, z = point.z;
+        const e = mat;
+      
+        const tx = e[0] * x + e[4] * y + e[8] * z + e[12];
+        const ty = e[1] * x + e[5] * y + e[9] * z + e[13];
+        const tz = e[2] * x + e[6] * y + e[10] * z + e[14];
+      
+        return new Vec3(tx, ty, tz);
+      }
+
+    public static transformVector(mat: Mat4x4, vector: Vec3): Vec3 {
+        const x = vector.x, y = vector.y, z = vector.z;
+        const e = mat;
+      
+        const tx = e[0] * x + e[4] * y + e[8] * z;
+        const ty = e[1] * x + e[5] * y + e[9] * z;
+        const tz = e[2] * x + e[6] * y + e[10] * z;
+      
+        return new Vec3(tx, ty, tz);
+      }
     
 }

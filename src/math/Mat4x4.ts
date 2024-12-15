@@ -199,6 +199,15 @@ export class Mat4x4 extends Float32Array{
         return new Vec3(x, y, z);
     }
 
+    public static multiplyVec4(matrix: Mat4x4, vector: Vec4): Vec4 {
+        const x = matrix[0] * vector.x + matrix[4] * vector.y + matrix[8] * vector.z + matrix[12] * vector.w;
+        const y = matrix[1] * vector.x + matrix[5] * vector.y + matrix[9] * vector.z + matrix[13] * vector.w;
+        const z = matrix[2] * vector.x + matrix[6] * vector.y + matrix[10] * vector.z + matrix[14] * vector.w;
+        const w = matrix[3] * vector.x + matrix[7] * vector.y + matrix[11] * vector.z + matrix[15] * vector.w;
+    
+        return new Vec4(x, y, z, w);
+    }
+
     // Returns the matrix as a Float32Array in column-major order
     public static toFloat32Array(a: Mat4x4): Float32Array {
         const array = new Float32Array(16);
@@ -287,5 +296,54 @@ export class Mat4x4 extends Float32Array{
         ]);
 
         return m;
+    }
+
+    public static fromValues(
+        m00: number, m01: number, m02: number, m03: number,
+        m10: number, m11: number, m12: number, m13: number,
+        m20: number, m21: number, m22: number, m23: number,
+        m30: number, m31: number, m32: number, m33: number): Mat4x4 {
+        const m = new Mat4x4();
+        m.set([
+            m00, m01, m02, m03,
+            m10, m11, m12, m13,
+            m20, m21, m22, m23,
+            m30, m31, m32, m33
+        ]);
+        return m;
+    }
+
+    public static fromArray(array: Float32Array, offset: number = 0): Mat4x4 {
+        const mat = new Mat4x4();
+        for (let i = 0; i < 16; i++) {
+          mat[i] = array[offset + i];
+        }
+        return mat;
+    }
+
+    public static fromRotationTranslationScale(m: Mat4x4, rotation: number[], translation: number[], scale: number[]): Mat4x4 {
+        const [x, y, z, w] = rotation;
+        const x2 = x + x, y2 = y + y, z2 = z + z;
+        const xx = x * x2, xy = x * y2, xz = x * z2;
+        const yy = y * y2, yz = y * z2, zz = z * z2;
+        const wx = w * x2, wy = w * y2, wz = w * z2;
+        const sx = scale[0], sy = scale[1], sz = scale[2];
+
+        m.set([
+            (1 - (yy + zz)) * sx, (xy + wz) * sx, (xz - wy) * sx, 0,
+            (xy - wz) * sy, (1 - (xx + zz)) * sy, (yz + wx) * sy, 0,
+            (xz + wy) * sz, (yz - wx) * sz, (1 - (xx + yy)) * sz, 0,
+            translation[0], translation[1], translation[2], 1
+        ]);
+
+        return m;
+    }
+
+    public static transformMat4(out: Vec3, a: Vec3, m: Mat4x4): Vec3 {
+        let x = a[0], y = a[1], z = a[2];
+        out[0] = m[0] * x + m[4] * y + m[8] * z + m[12];
+        out[1] = m[1] * x + m[5] * y + m[9] * z + m[13];
+        out[2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+        return out;
     }
 }

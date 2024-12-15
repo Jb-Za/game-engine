@@ -1,20 +1,22 @@
 import { GeometryBuffers } from "../attribute_buffers/GeometryBuffers";
 import { Geometry } from "../geometry/Geometry";
 import { RenderPipeline } from "../render_pipelines/RenderPipeline";
-import { GLTFRenderMode } from "./GTLFUtils";
+import { GLTFRenderMode } from "./GLTFUtils";
 
 export class GLTFPrimitive {
   positions: any;
   indices: any;
   topology: any;
   renderPipeline: RenderPipeline | null;
+  materials: any;
   //geometryBuffers: GeometryBuffers;
-  constructor(positions: any, indices: any, topology: any, device: GPUDevice) {
+  constructor(device: GPUDevice, positions: any, indices: any, topology: any, material: any ) {
     // TODO: ANY????
     this.renderPipeline = null;
     this.positions = positions;
     this.indices = indices;
     this.topology = topology;
+    this.materials = material;
     // Set usage for the positions data and flag it as needing upload
     this.positions.view.needsUpload = true;
     this.positions.view.addUsage(GPUBufferUsage.VERTEX);
