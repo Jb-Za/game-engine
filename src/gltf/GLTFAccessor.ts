@@ -12,8 +12,8 @@ export class GLTFAccessor {
   private componentType: any;
   private count: number;
   private gltfType: any;
-  private view: GLTFBufferView;
-  private byteOffset: number;
+  public byteOffset: number;
+  public view: GLTFBufferView;
 
   constructor(view: GLTFBufferView, accessor: Accessor) {
     this.count = accessor["count"];

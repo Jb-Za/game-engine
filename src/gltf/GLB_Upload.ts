@@ -13,6 +13,7 @@ import { Geometry } from "../geometry/Geometry";
 import { GLTFBuffers } from "../attribute_buffers/GLTFBuffers";
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec3 } from "../math/Vec3";
+import { GLTFAnimation } from "./GLTFAnimation";
 
 export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight, pointLights: PointLightsCollection) {
   let header = new Uint32Array(buffer, 0, 5);
@@ -56,6 +57,11 @@ export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera
   let materials: GLTFMaterial[] = [];
   if (jsonChunk["materials"] !== undefined) {
     materials = jsonChunk["materials"];
+  }
+
+  let animations: GLTFAnimation[] = [];
+  if (jsonChunk["animations"] !== undefined) {
+    animations = jsonChunk["animations"];
   }
 
   const scenes = [];
@@ -152,50 +158,21 @@ export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera
           const inverseBindMatricesAccessor = accessors[skin.inverseBindMatrices];
           const inverseBindMatrices = new Float32Array(inverseBindMatricesAccessor.view.view);
 
-          const jointIndices = new Uint16Array(_jointIndices[0].view.view);
-          const jointWeights = new Float32Array(_jointWeights[0].view.view);
+          const jointIndices = new Uint16Array(_jointIndices[0]!.view.view);
+          const jointWeights = new Float32Array(_jointWeights[0]!.view.view);
 
-          // let data = jointIndices;
-          // let buffer = new ArrayBuffer(data.length);
-          // let view = new Uint8Array(buffer);
-  
-          // let byteOffset = data.byteOffset;
-
-          // Object.keys(data).forEach(key => {
-          //   view[parseInt(key)] = data[key];
-          // });
-
-          // jointIndicesBuffers = device.createBuffer({
-          //   label: "Joint Indices Buffer",
-          //   size: view.byteLength,
-          //   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-          // });
-          // device.queue.writeBuffer(jointIndicesBuffers, 0, view.buffer, byteOffset, view.byteLength);
-
-
-          // let data2 = jointWeights;
-          // buffer = new ArrayBuffer(data2.length);
-          // view = new Uint8Array(buffer);
-  
-          // byteOffset = data2.byteOffset;
-
-          // Object.keys(data2).forEach(key => {
-          //   view[parseInt(key)] = data2[key];
-          // });
-
-          // jointWeightsBuffers = device.createBuffer({
-          //   label: "Joint Weights Buffer",
-          //   size: jointWeights.byteLength,
-          //   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-          // });
-          // device.queue.writeBuffer(jointWeightsBuffers, 0, jointWeights.buffer, jointWeights.byteOffset, jointWeights.byteLength);
+          jointIndicesBuffers = device.createBuffer({
+            label: "Joint Indices Buffer",
+            size: jointIndices.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+          });
         }
 
          //@ts-ignore
          const geometry = new Geometry(_positions[0], _indices[0], _colors, undefined, _normals[0], _materials[0]);
 
          const geometryBuffers = new GLTFBuffers(device, geometry);
-         const gltfMesh = new GLTFMesh(mesh["name"], meshPrimitives, device, camera, shadowCamera, ambientLight, directionalLight, pointLights, geometryBuffers /*, jointIndicesBuffers, jointWeightsBuffers*/);
+         const gltfMesh = new GLTFMesh(mesh["name"], meshPrimitives, device, camera, shadowCamera, ambientLight, directionalLight, pointLights, geometryBuffers);
          sceneMeshes.push(gltfMesh);
         }
     }

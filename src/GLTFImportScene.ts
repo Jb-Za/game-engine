@@ -13,9 +13,9 @@ import { InputManager } from "./input/InputManager";
 import { ShadowCamera } from "./camera/ShadowCamera";
 //import { Cube } from "./game_objects/Cube";
 import { ObjectMap } from "./game_objects/ObjectMap";
-import { GLTFScene, uploadGLB } from "./gltb/GLB_Upload";
+import { GLTFScene, uploadGLB } from "./gltf/GLB_Upload";
 import shaderSource from "./shaders/GLTFShader.wgsl?raw";
-import { GLTFMesh } from "./gltb/GLTFMesh";
+import { GLTFMesh } from "./gltf/GLTFMesh";
 
 async function init() {
   const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -103,12 +103,12 @@ async function init() {
     return uploadGLB(arrayBuffer, device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   }
 
-  const glbScene: GLTFScene[] = await loadGLBFromURL("../assets/gltf/Fox.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
+  const glbScene: GLTFScene[] = await loadGLBFromURL("../assets/gltf/walking.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   const glbMesh: GLTFMesh[] = glbScene[0].meshes;
   for (let i = 0; i < glbMesh.length; i++) {
     glbMesh[i].pipeline.shadowTexture = shadowTexture;
-    glbMesh[i].scale = new Vec3(100,100, 100);
-    glbMesh[i].position = new Vec3(0, 0, 0);
+    glbMesh[i].scale = new Vec3(1,1,1);
+    glbMesh[i].position = new Vec3(0, -2, 0);
   }
   //gltfObjects.shadow;
 

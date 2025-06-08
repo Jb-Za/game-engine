@@ -14,6 +14,7 @@ export class GLTFBuffers
     constructor(device: GPUDevice, geometry: Geometry) 
     {
         // Convert the view object to a Uint16Array
+        //@ts-ignore
         let data = geometry.positions.view;
         let buffer = new ArrayBuffer(data.view.length);
         let view = new Uint8Array(buffer);
@@ -38,8 +39,10 @@ export class GLTFBuffers
         
         //... ignore below
         // INDICES
+        //@ts-ignore
         if (geometry.indices?.view.length > 0) 
         {
+            //@ts-ignore
             data = geometry.indices.view;
             buffer = new ArrayBuffer(data.view.length);
             view = new Uint8Array(buffer);
@@ -56,6 +59,7 @@ export class GLTFBuffers
             device.queue.writeBuffer(this.indicesBuffer, 0, view.buffer, byteOffset, view.byteLength);
             
 
+            //@ts-ignore
             this.indexCount = geometry.indices.view.length / 2;
         }
     
@@ -96,6 +100,7 @@ export class GLTFBuffers
                 usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
             });
     
+            //@ts-ignore
             data = geometry.normals.view;
             buffer = new ArrayBuffer(data.view.length);
             view = new Uint8Array(buffer);
