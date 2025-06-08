@@ -56,18 +56,20 @@ export class gLTFRenderPipeline {
     this.shininessBuffer.update(new Float32Array([value]));
   }
 
+  private globalBoneTransformBuffer: UniformBuffer;
+
   constructor(
     private device: GPUDevice,
     camera: Camera,
     shadowCamera: ShadowCamera,
     transformsBuffer: UniformBuffer,
     normalmatrixBuffer: UniformBuffer,
-    joinIndicesBuffer: GPUBuffer,
-    jointWeightsBuffer: GPUBuffer,
+    globalBoneTransformBuffer: UniformBuffer,
     ambientLight: AmbientLight,
     directionalLight: DirectionalLight,
     pointLights: PointLightsCollection
   ) {
+    this.globalBoneTransformBuffer = globalBoneTransformBuffer;
     this.textureTilingBuffer = new UniformBuffer(device, this._textureTiling, "Texture Tilling Buffer");
 
     this.diffuseColorBuffer = new UniformBuffer(device, this._diffuseColor, "Diffuse Color Buffer");
@@ -130,7 +132,7 @@ export class gLTFRenderPipeline {
         {
           shaderLocation: 4,
           offset: 0,
-          format: "float32x3",
+          format: "float32x4",
         },
       ],
     });
@@ -141,14 +143,14 @@ export class gLTFRenderPipeline {
         {
           shaderLocation: 5,
           offset: 0,
-          format: "float32x3",
+          format: "float32x4",
         },
       ],
     });
 
     const vertexGroupLayout = device.createBindGroupLayout({
       label: "Vertex Group Layout",
-        entries: [
+      entries: [
         {
           binding: 0,
           visibility: GPUShaderStage.VERTEX,
@@ -165,14 +167,9 @@ export class gLTFRenderPipeline {
           buffer: {},
         },
         {
-            binding: 3,
-            visibility: GPUShaderStage.VERTEX,
-            buffer: {},
-        },
-        {
-            binding: 4,
-            visibility: GPUShaderStage.VERTEX,
-            buffer: {},
+          binding: 3,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: {},
         },
       ],
     });
@@ -321,13 +318,7 @@ export class gLTFRenderPipeline {
         {
           binding: 3,
           resource: {
-            buffer: joinIndicesBuffer, 
-          },
-        },
-        {
-          binding: 4,
-          resource: {
-            buffer: jointWeightsBuffer,
+            buffer: globalBoneTransformBuffer.buffer,
           },
         },
       ],
@@ -425,8 +416,8 @@ export class gLTFRenderPipeline {
     renderPassEncoder.setVertexBuffer(1, buffers.colorsBuffer);
     renderPassEncoder.setVertexBuffer(2, buffers.texCoordsBuffer);
     renderPassEncoder.setVertexBuffer(3, buffers.normalsBuffer);
-    renderPassEncoder.setVertexBuffer(2, jointIndicesBuffer);
-    renderPassEncoder.setVertexBuffer(3, jointWeightsBuffer);
+    renderPassEncoder.setVertexBuffer(4, jointIndicesBuffer);
+    renderPassEncoder.setVertexBuffer(5, jointWeightsBuffer);
 
     // passes texture
     renderPassEncoder.setBindGroup(0, this.vertexBindGroup);

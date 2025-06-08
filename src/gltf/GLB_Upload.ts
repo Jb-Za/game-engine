@@ -14,6 +14,7 @@ import { GLTFBuffers } from "../attribute_buffers/GLTFBuffers";
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec3 } from "../math/Vec3";
 import { GLTFAnimation } from "./GLTFAnimation";
+import { UniformBuffer } from "../uniform_buffers/UniformBuffer";
 
 export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight, pointLights: PointLightsCollection) {
   let header = new Uint32Array(buffer, 0, 5);
@@ -61,7 +62,26 @@ export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera
 
   let animations: GLTFAnimation[] = [];
   if (jsonChunk["animations"] !== undefined) {
-    animations = jsonChunk["animations"];
+    // Parse each animation into a GLTFAnimation object
+    for (const anim of jsonChunk["animations"]) {
+      const samplers = anim.samplers.map((s: any) => ({
+        input: s.input,
+        interpolation: s.interpolation,
+        output: s.output,
+      }));
+      const channels = anim.channels.map((c: any) => ({
+        sampler: c.sampler,
+        target: {
+          node: c.target.node,
+          path: c.target.path,
+        },
+      }));
+      animations.push({
+        name: anim.name,
+        samplers,
+        channels,
+      });
+    }
   }
 
   const scenes = [];
@@ -71,7 +91,7 @@ export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera
     const sceneMeshes: GLTFMesh[] = [];
 
     const flattenedNodes: any[] = [];
-    // Flatten the node tree
+    // Flatten the node tree for mesh transforms, but do NOT use for skin/joint hierarchy
     for (let index = 0; index < nodes.length; index++) {
       const flattenedTree = GLTFUtils.flattenTree(jsonChunk.nodes, jsonChunk.nodes[nodes[index]]);
       flattenedNodes.push(...flattenedTree);
@@ -149,44 +169,34 @@ export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera
           _colors.set(baseColor, i * 4);
         }
 
-        let jointIndicesBuffers: GPUBuffer;
-        let jointWeightsBuffers: GPUBuffer;
-       
         if (node.skin !== undefined) {
           const skin = jsonChunk.skins[node.skin];
-          const joints = skin.joints.map((jointIndex: number) => flattenedNodes[jointIndex]);
+          // Use the original nodes array for joints to preserve hierarchy
+          const joints = skin.joints.map((jointIndex: number) => jsonChunk.nodes[jointIndex]);
           const inverseBindMatricesAccessor = accessors[skin.inverseBindMatrices];
-          const inverseBindMatrices = new Float32Array(inverseBindMatricesAccessor.view.view);
+          const inverseBindMatrices = inverseBindMatricesAccessor.getArray();
 
-          const jointIndices = new Uint16Array(_jointIndices[0]!.view.view);
-          const jointWeights = new Float32Array(_jointWeights[0]!.view.view);
-
-          jointIndicesBuffers = device.createBuffer({
-            label: "Joint Indices Buffer",
-            size: jointIndices.byteLength,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-          });
+          //@ts-ignore
+          const geometry = new Geometry(_positions[0], _indices[0], _colors, undefined, _normals[0], _materials[0]);
+          const geometryBuffers = new GLTFBuffers(device, geometry);
+          const gltfMesh = new GLTFMesh(mesh["name"], meshPrimitives, device, camera, shadowCamera, ambientLight, directionalLight, pointLights, geometryBuffers);
+          sceneMeshes.push(gltfMesh);
         }
-
-         //@ts-ignore
-         const geometry = new Geometry(_positions[0], _indices[0], _colors, undefined, _normals[0], _materials[0]);
-
-         const geometryBuffers = new GLTFBuffers(device, geometry);
-         const gltfMesh = new GLTFMesh(mesh["name"], meshPrimitives, device, camera, shadowCamera, ambientLight, directionalLight, pointLights, geometryBuffers);
-         sceneMeshes.push(gltfMesh);
-        }
+      }
     }
 
-    scenes.push({ name: scene.name, meshes: sceneMeshes, nodes: flattenedNodes });
+    scenes.push({ name: scene.name, meshes: sceneMeshes, nodes: flattenedNodes, animations, accessors, skins: jsonChunk.skins });
   }
 
-  return scenes;
+  return { scenes, accessors };
 }
 
 export interface GLTFScene {
   name: string;
   meshes: GLTFMesh[];
   nodes: any[];
+  animations: GLTFAnimation[];
+  accessors: GLTFAccessor[];
 }
 
 export interface GLTFMaterial {

@@ -16,6 +16,7 @@ import { ObjectMap } from "./game_objects/ObjectMap";
 import { GLTFScene, uploadGLB } from "./gltf/GLB_Upload";
 import shaderSource from "./shaders/GLTFShader.wgsl?raw";
 import { GLTFMesh } from "./gltf/GLTFMesh";
+import { GLTFAnimationPlayer } from "./gltf/GLTFAnimationPlayer";
 
 async function init() {
   const canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -103,14 +104,22 @@ async function init() {
     return uploadGLB(arrayBuffer, device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   }
 
-  const glbScene: GLTFScene[] = await loadGLBFromURL("../assets/gltf/walking.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
+  const { scenes: glbScene, accessors } = await loadGLBFromURL("../assets/gltf/walking.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   const glbMesh: GLTFMesh[] = glbScene[0].meshes;
   for (let i = 0; i < glbMesh.length; i++) {
     glbMesh[i].pipeline.shadowTexture = shadowTexture;
     glbMesh[i].scale = new Vec3(1,1,1);
+    //glbMesh[i].scale = new Vec3(100,100,100);
     glbMesh[i].position = new Vec3(0, -2, 0);
   }
-  //gltfObjects.shadow;
+
+  // --- Animation Player Setup ---
+  let animationPlayer: GLTFAnimationPlayer | null = null;
+  if (glbScene[0].animations && glbScene[0].animations.length > 0) {
+    const animation = glbScene[0].animations[0];
+    animationPlayer = new GLTFAnimationPlayer(animation, glbScene[0], accessors);
+    animationPlayer.play();
+  }
 
   window.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "e") {
@@ -119,12 +128,16 @@ async function init() {
     }
   });
 
-  const update = () => {
+  const update = (deltaTime: number) => {
     camera.update();
     ambientLight.update();
     directionalLight.update();
     pointLights.update();
     shadowCamera.update();
+    if (animationPlayer) {
+      animationPlayer.update(deltaTime);
+      // Update the globalBoneTransformBuffer for each mes
+    }
     glbMesh.forEach(glbMesh => {
       glbMesh.update();
     });
@@ -182,7 +195,7 @@ async function init() {
     renderPassEncoder.end();
   };
 
-  let then = 0;
+  let then = performance.now() * 0.001;
 
   const draw = () => {
     let now = performance.now();
@@ -190,7 +203,7 @@ async function init() {
     const deltaTime = now - then;
     then = now;
     const startTime = performance.now();
-    update();
+    update(deltaTime);
     const commandEncoder = device.createCommandEncoder();
     shadowPass(commandEncoder);
     scenePass(commandEncoder);

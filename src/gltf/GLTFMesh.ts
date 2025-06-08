@@ -28,18 +28,20 @@ export class GLTFMesh {
   private transformBuffer: UniformBuffer;
   private transform = Mat4x4.identity();
   private normalMatrixBuffer: UniformBuffer;
-  //public pipeline: gLTFRenderPipeline;
   public pipeline: RenderPipeline;
+  //public pipeline: gLTFRenderPipeline;
   private device: GPUDevice;
+  // private jointIndicesBuffer: GPUBuffer;
+  // private jointWeightsBuffer: GPUBuffer;
+  // private globalBoneTransformBuffer: UniformBuffer;
 
   constructor(name: string, primitives: any, device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight, pointLights: PointLightsCollection, private buffers: GLTFBuffers) {
     this.device = device;
     this.primitives = primitives;
     this.transformBuffer = new UniformBuffer(device, this.transform, "GLTF Transform");
-
     this.normalMatrixBuffer = new UniformBuffer(device, 16 * Float32Array.BYTES_PER_ELEMENT, "GLTF Normal Matrix");
-    //this.pipeline = new gLTFRenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, jointIndicesBuffer, jointWeightsBuffer, ambientLight, directionalLight, pointLights);
-    this.pipeline = new RenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, ambientLight, directionalLight, pointLights);
+    //this.pipeline = new gLTFRenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, globalBoneTransformBuffer, ambientLight, directionalLight, pointLights);
+    this.pipeline =  new RenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, ambientLight, directionalLight, pointLights);
     this.shadowPipeline = new ShadowRenderPipeline(device, shadowCamera, this.transformBuffer);
   }
 
