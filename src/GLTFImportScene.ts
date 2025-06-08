@@ -104,13 +104,14 @@ async function init() {
     return uploadGLB(arrayBuffer, device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   }
 
-  const { scenes: glbScene, accessors } = await loadGLBFromURL("../assets/gltf/walking.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
+  const { scenes: glbScene, accessors } = await loadGLBFromURL("../assets/gltf/CesiumMan.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   const glbMesh: GLTFMesh[] = glbScene[0].meshes;
   for (let i = 0; i < glbMesh.length; i++) {
     glbMesh[i].pipeline.shadowTexture = shadowTexture;
     glbMesh[i].scale = new Vec3(1,1,1);
     //glbMesh[i].scale = new Vec3(100,100,100);
     glbMesh[i].position = new Vec3(0, -2, 0);
+    glbMesh[i].rotation = new Vec3(-Math.PI / -2, 0, 0);
   }
 
   // --- Animation Player Setup ---

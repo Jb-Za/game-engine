@@ -172,12 +172,31 @@ export function uploadGLB(buffer: ArrayBuffer, device: GPUDevice, camera: Camera
         if (node.skin !== undefined) {
           const skin = jsonChunk.skins[node.skin];
           // Use the original nodes array for joints to preserve hierarchy
-          const joints = skin.joints.map((jointIndex: number) => jsonChunk.nodes[jointIndex]);
+          // const joints = skin.joints.map((jointIndex: number) => jsonChunk.nodes[jointIndex]);
           const inverseBindMatricesAccessor = accessors[skin.inverseBindMatrices];
-          const inverseBindMatrices = inverseBindMatricesAccessor.getArray();
+          // const inverseBindMatrices = inverseBindMatricesAccessor.getArray();
 
-          //@ts-ignore
-          const geometry = new Geometry(_positions[0], _indices[0], _colors, undefined, _normals[0], _materials[0]);
+          function toFloat32Array(arr: any) {
+            if (!arr) return new Float32Array();
+            if (arr instanceof Float32Array) return arr;
+            return new Float32Array(arr);
+          }
+          function toUint16Array(arr: any) {
+            if (!arr) return new Uint16Array();
+            if (arr instanceof Uint16Array) return arr;
+            return new Uint16Array(arr);
+          }
+
+          const geometry = new Geometry(
+            toFloat32Array(_positions[0] && _positions[0].getArray()),
+            toUint16Array(_indices[0] && _indices[0].getArray()),
+            _colors || new Float32Array(),
+            undefined,
+            toFloat32Array(_normals[0] && _normals[0].getArray()),
+            null, // Pass null for material
+            toFloat32Array(_jointIndices[0] && _jointIndices[0].getArray()),
+            toFloat32Array(_jointWeights[0] && _jointWeights[0].getArray())
+          );
           const geometryBuffers = new GLTFBuffers(device, geometry);
           const gltfMesh = new GLTFMesh(mesh["name"], meshPrimitives, device, camera, shadowCamera, ambientLight, directionalLight, pointLights, geometryBuffers);
           sceneMeshes.push(gltfMesh);
