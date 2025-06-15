@@ -346,4 +346,96 @@ export class Mat4x4 extends Float32Array{
         out[2] = m[2] * x + m[6] * y + m[10] * z + m[14];
         return out;
     }
+
+    public static inverse(m: Mat4x4): Mat4x4 {
+        const inv = new Mat4x4();
+        const a = m;
+        const out = inv;
+        // Standard 4x4 matrix inversion (see gl-matrix or WebGL math)
+        const b00 = a[0] * a[5] - a[1] * a[4];
+        const b01 = a[0] * a[6] - a[2] * a[4];
+        const b02 = a[0] * a[7] - a[3] * a[4];
+        const b03 = a[1] * a[6] - a[2] * a[5];
+        const b04 = a[1] * a[7] - a[3] * a[5];
+        const b05 = a[2] * a[7] - a[3] * a[6];
+        const b06 = a[8] * a[13] - a[9] * a[12];
+        const b07 = a[8] * a[14] - a[10] * a[12];
+        const b08 = a[8] * a[15] - a[11] * a[12];
+        const b09 = a[9] * a[14] - a[10] * a[13];
+        const b10 = a[9] * a[15] - a[11] * a[13];
+        const b11 = a[10] * a[15] - a[11] * a[14];
+
+        // Calculate the determinant
+        let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+        if (!det) {
+            return Mat4x4.identity();
+        }
+        det = 1.0 / det;
+
+        out[0] = ( a[5] * b11 - a[6] * b10 + a[7] * b09) * det;
+        out[1] = (-a[1] * b11 + a[2] * b10 - a[3] * b09) * det;
+        out[2] = ( a[13] * b05 - a[14] * b04 + a[15] * b03) * det;
+        out[3] = (-a[9] * b05 + a[10] * b04 - a[11] * b03) * det;
+        out[4] = (-a[4] * b11 + a[6] * b08 - a[7] * b07) * det;
+        out[5] = ( a[0] * b11 - a[2] * b08 + a[3] * b07) * det;
+        out[6] = (-a[12] * b05 + a[14] * b02 - a[15] * b01) * det;
+        out[7] = ( a[8] * b05 - a[10] * b02 + a[11] * b01) * det;
+        out[8] = ( a[4] * b10 - a[5] * b08 + a[7] * b06) * det;
+        out[9] = (-a[0] * b10 + a[1] * b08 - a[3] * b06) * det;
+        out[10]= ( a[12] * b04 - a[13] * b02 + a[15] * b00) * det;
+        out[11]= (-a[8] * b04 + a[9] * b02 - a[11] * b00) * det;
+        out[12]= (-a[4] * b09 + a[5] * b07 - a[6] * b06) * det;
+        out[13]= ( a[0] * b09 - a[1] * b07 + a[2] * b06) * det;
+        out[14]= (-a[12] * b03 + a[13] * b01 - a[14] * b00) * det;
+        out[15]= ( a[8] * b03 - a[9] * b01 + a[10] * b00) * det;
+        return out;
+    }
+
+    // Extract translation from a 4x4 matrix
+    public static getTranslation(m: Mat4x4): Vec3 {
+        return new Vec3(m[12], m[13], m[14]);
+    }
+
+    // Extract scale from a 4x4 matrix
+    public static getScale(m: Mat4x4): Vec3 {
+        return new Vec3(
+            Math.hypot(m[0], m[1], m[2]),
+            Math.hypot(m[4], m[5], m[6]),
+            Math.hypot(m[8], m[9], m[10])
+        );
+    }
+
+    // Extract rotation quaternion from a 4x4 matrix
+    public static getRotationQuaternion(m: Mat4x4): number[] {
+        const trace = m[0] + m[5] + m[10];
+        let qw, qx, qy, qz;
+        if (trace > 0) {
+            let s = 0.5 / Math.sqrt(trace + 1.0);
+            qw = 0.25 / s;
+            qx = (m[6] - m[9]) * s;
+            qy = (m[8] - m[2]) * s;
+            qz = (m[1] - m[4]) * s;
+        } else {
+            if (m[0] > m[5] && m[0] > m[10]) {
+                let s = 2.0 * Math.sqrt(1.0 + m[0] - m[5] - m[10]);
+                qw = (m[6] - m[9]) / s;
+                qx = 0.25 * s;
+                qy = (m[4] + m[1]) / s;
+                qz = (m[8] + m[2]) / s;
+            } else if (m[5] > m[10]) {
+                let s = 2.0 * Math.sqrt(1.0 + m[5] - m[0] - m[10]);
+                qw = (m[8] - m[2]) / s;
+                qx = (m[4] + m[1]) / s;
+                qy = 0.25 * s;
+                qz = (m[9] + m[6]) / s;
+            } else {
+                let s = 2.0 * Math.sqrt(1.0 + m[10] - m[0] - m[5]);
+                qw = (m[1] - m[4]) / s;
+                qx = (m[8] + m[2]) / s;
+                qy = (m[9] + m[6]) / s;
+                qz = 0.25 * s;
+            }
+        }
+        return [qx, qy, qz, qw];
+    }
 }

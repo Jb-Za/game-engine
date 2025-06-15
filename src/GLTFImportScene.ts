@@ -13,14 +13,14 @@ import { InputManager } from "./input/InputManager";
 import { ShadowCamera } from "./camera/ShadowCamera";
 //import { Cube } from "./game_objects/Cube";
 import { ObjectMap } from "./game_objects/ObjectMap";
-import { GLTFScene, uploadGLB } from "./gltf/GLB_Upload";
-import shaderSource from "./shaders/GLTFShader.wgsl?raw";
-import { GLTFMesh } from "./gltf/GLTFMesh";
-import { GLTFAnimationPlayer } from "./gltf/GLTFAnimationPlayer";
+import gltfWGSL from "./shaders/gltf.wgsl?raw";
+import { convertGLBToJSONAndBinary, GLTFSkin } from "./gltf/glbUtils";
+import { Mat4x4 } from "./math/Mat4x4";
 
 async function init() {
   const canvas = document.getElementById("canvas") as HTMLCanvasElement;
   const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
+  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
   const infoElem = document.querySelector("#info");
   if (!gpuContext) {
@@ -38,7 +38,7 @@ async function init() {
 
   gpuContext.configure({
     device: device,
-    format: "bgra8unorm",
+    format: presentationFormat,
   });
 
   //Input Manager
@@ -48,11 +48,11 @@ async function init() {
   const objectMap = new ObjectMap();
 
   // DEPTH TEXTURE
-  const depthTexture = Texture2D.createDepthTexture(
-    device,
-    canvas.width,
-    canvas.height
-  );
+  const depthTexture = device.createTexture({
+    size: [canvas.width, canvas.height],
+    format: "depth32float", // CHANGED from "depth24plus" to "depth32float"
+    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  });
   const shadowTexture = Texture2D.createShadowTexture(device, 3072, 3072);
   // LIGHTS
   const ambientLight = new AmbientLight(device);
@@ -86,46 +86,100 @@ async function init() {
   shadowCamera.target = new Vec3(4.85, 2.38, -2.61);
 
   // Game Objects
-  const floor = new Floor(
-    device,
-    camera,
-    shadowCamera,
-    ambientLight,
-    directionalLight,
-    pointLights
-  );
+  const floor = new Floor(device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   floor.pipeline.shadowTexture = shadowTexture;
-  floor.scale = new Vec3(40, 0.1, 40)
+  floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
 
-  async function loadGLBFromURL(url: string, device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight,  pointLights: PointLightsCollection) {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    return uploadGLB(arrayBuffer, device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
+  // Fetch whale resources from the glb file
+  const gltfScene = await fetch("../../assets/gltf/whale.glb")
+    .then((res) => res.arrayBuffer())
+    .then((buffer) => convertGLBToJSONAndBinary(buffer, device));
+
+  // Debug: print mesh attributes
+  if (gltfScene.meshes && gltfScene.meshes.length > 0) {
+    const mesh = gltfScene.meshes[0];
+    if (mesh.primitives && mesh.primitives.length > 0) {
+      console.log("Whale mesh attributes:", Object.keys(mesh.primitives[0]['attributeMap']));
+    }
   }
 
-  const { scenes: glbScene, accessors } = await loadGLBFromURL("../assets/gltf/CesiumMan.glb", device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
-  const glbMesh: GLTFMesh[] = glbScene[0].meshes;
-  for (let i = 0; i < glbMesh.length; i++) {
-    glbMesh[i].pipeline.shadowTexture = shadowTexture;
-    glbMesh[i].scale = new Vec3(1,1,1);
-    //glbMesh[i].scale = new Vec3(100,100,100);
-    glbMesh[i].position = new Vec3(0, -2, 0);
-    glbMesh[i].rotation = new Vec3(-Math.PI / -2, 0, 0);
-  }
+  // Camera bind group layout for whale: single mat4x4 (projectionView)
+  const cameraBGCluster = device.createBindGroupLayout({
+    label: "Camera.bindGroupLayout",
+    entries: [
+      {
+        binding: 0,
+        buffer: { type: "uniform" },
+        visibility: GPUShaderStage.VERTEX,
+      },
+    ],
+  });
 
-  // --- Animation Player Setup ---
-  let animationPlayer: GLTFAnimationPlayer | null = null;
-  if (glbScene[0].animations && glbScene[0].animations.length > 0) {
-    const animation = glbScene[0].animations[0];
-    animationPlayer = new GLTFAnimationPlayer(animation, glbScene[0], accessors);
-    animationPlayer.play();
-  }
+  const generalUniformsBGCLuster = device.createBindGroupLayout({
+    label: "General.bindGroupLayout",
+    entries: [
+      {
+        binding: 0,
+        buffer: { type: "uniform" },
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      },
+    ],
+  });
+
+  // Node uniforms bind group layout (already in your code)
+  const nodeUniformsBindGroupLayout = device.createBindGroupLayout({
+    label: "NodeUniforms.bindGroupLayout",
+    entries: [
+      {
+        binding: 0,
+        buffer: { type: "uniform" },
+        visibility: GPUShaderStage.VERTEX,
+      },
+    ],
+  });
+
+  // Build whale pipeline with new camera layout (single mat4x4)
+  gltfScene.meshes[0].buildRenderPipeline(device, gltfWGSL, gltfWGSL, presentationFormat, depthTexture.format, [
+    cameraBGCluster,
+    generalUniformsBGCLuster,
+    nodeUniformsBindGroupLayout,
+    GLTFSkin.skinBindGroupLayout,
+  ]);
+
+  
+  // --- BEGIN: Whale GLTF Uniform Buffers and Bind Groups ---
+  // Use the Camera class's buffer for MVP matrices (projView or whatever is in camera.buffer)
+  const cameraBindGroup = device.createBindGroup({
+    layout: cameraBGCluster,
+    entries: [
+      { binding: 0, resource: { buffer: camera.buffer.buffer } },
+    ],
+  });
+
+  // General uniforms buffer (e.g., render mode, skin mode)
+  const generalUniformsBuffer = device.createBuffer({
+    size: Uint32Array.BYTES_PER_ELEMENT * 2,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const generalUniformsBindGroup = device.createBindGroup({
+    layout: generalUniformsBGCLuster,
+    entries: [
+      { binding: 0, resource: { buffer: generalUniformsBuffer } },
+    ],
+  });
+  // --- END: Whale GLTF Uniform Buffers and Bind Groups ---
+  // Track the skin mode to toggle between skinned and non-skinned
+  let skinMode = 1;
 
   window.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "e") {
       console.log(camera.eye);
       console.log(camera.target);
+    }    // Toggle skin mode with 'E' key
+    if (e.key === "e" || e.key === "E") {
+      skinMode = skinMode === 0 ? 1 : 0;
+      console.log(`Skin mode switched to: ${skinMode === 0 ? 'Skinned' : 'Non-skinned'} (skin_mode=${skinMode})`);
     }
   });
 
@@ -135,13 +189,6 @@ async function init() {
     directionalLight.update();
     pointLights.update();
     shadowCamera.update();
-    if (animationPlayer) {
-      animationPlayer.update(deltaTime);
-      // Update the globalBoneTransformBuffer for each mes
-    }
-    glbMesh.forEach(glbMesh => {
-      glbMesh.update();
-    });
     floor.update();
   };
 
@@ -176,7 +223,7 @@ async function init() {
       ],
       // CONFIGURE DEPTH
       depthStencilAttachment: {
-        view: depthTexture.texture.createView(),
+        view: depthTexture.createView(),
         depthLoadOp: "clear",
         depthStoreOp: "store",
         depthClearValue: 1.0,
@@ -184,17 +231,17 @@ async function init() {
     });
 
     // DRAW HERE
-    
+
     objectMap.objects.forEach((object) => {
       object.draw(renderPassEncoder);
     });
 
-    glbMesh.forEach(glbMesh => {
-      glbMesh.draw(renderPassEncoder);
-    });
     floor.draw(renderPassEncoder);
     renderPassEncoder.end();
   };
+
+  // Store original matrices for skin joints
+  const origMatrices = new Map<number, any>();
 
   let then = performance.now() * 0.001;
 
@@ -205,9 +252,86 @@ async function init() {
     then = now;
     const startTime = performance.now();
     update(deltaTime);
+
+    // --- BEGIN: Whale GLTF Uniform Buffer Updates ---
+    // Animate whale skin joints (simple example: swing bones by angle)
+    if (gltfScene.skins && gltfScene.skins.length > 0) {
+      const t = now * 0.5; // time-based angle
+      const angle = Math.sin(t) * 0.3; // amplitude can be adjusted
+      const skin = gltfScene.skins[0];
+      for (let i = 0; i < skin.joints.length; i++) {
+        const joint = skin.joints[i];
+        const node = gltfScene.nodes[joint];
+        if (!origMatrices.has(joint)) {
+          origMatrices.set(joint, node.source.getMatrix());
+        }
+        const origMatrix = origMatrices.get(joint);
+        let m: any;
+        if (joint === 0 || joint === 1) {
+          m = Mat4x4.multiply(origMatrix, Mat4x4.rotationY(-angle));
+        } else if (joint === 3 || joint === 4) {
+          m = Mat4x4.multiply(origMatrix, Mat4x4.rotationX(joint === 3 ? angle : -angle));
+        } else {
+          m = Mat4x4.multiply(origMatrix, Mat4x4.rotationZ(angle));
+        }        // Use the setMatrix method which handles everything properly
+        node.source.setMatrix(m);
+        //console.log("Animating joint", joint, "angle", angle, node.source.position, node.source.scale, node.source.rotation);
+      }
+    }
+    // After animating joints, update all node world matrices
+    for (const scene of gltfScene.scenes) {
+      scene.root.updateWorldMatrix(device);
+    }
+    // Update all skins (for animation)
+    if (gltfScene.skins) {
+      for (let i = 0; i < gltfScene.skins.length; ++i) {
+        // Find the node index that uses this skin
+        for (let n = 0; n < gltfScene.nodes.length; ++n) {
+          if (gltfScene.nodes[n].skin === gltfScene.skins[i]) {
+            gltfScene.skins[i].update(device, n, gltfScene.nodes);
+          }
+        }
+      }    }
+    // Set skin_mode based on our skinMode variable (0=skinned, 1=non-skinned) and render_mode=0 (default)
+    device.queue.writeBuffer(generalUniformsBuffer, 0, new Uint32Array([0, skinMode])); //render_mode=0, skin_mode=variable
+    // --- END: Whale GLTF Uniform Buffer Updates ---
+
     const commandEncoder = device.createCommandEncoder();
     shadowPass(commandEncoder);
-    scenePass(commandEncoder);
+    const renderPassEncoder = commandEncoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: gpuContext.getCurrentTexture().createView(),
+          storeOp: "store",
+          clearValue: { r: 0.4, g: 0.9, b: 0.9, a: 1.0 },
+          loadOp: "clear",
+        },
+      ],
+      depthStencilAttachment: {
+        view: depthTexture.createView(),
+        depthLoadOp: "clear",
+        depthStoreOp: "store",
+        depthClearValue: 1.0,
+      },
+    });
+
+    // --- BEGIN: Whale GLTF Draw Call ---
+    // Draw the whale mesh using the correct bind groups
+    for (const scene of gltfScene.scenes) {
+      scene.root.renderDrawables(renderPassEncoder, [
+        cameraBindGroup,
+        generalUniformsBindGroup,
+      ]);
+    }
+    // --- END: Whale GLTF Draw Call ---
+
+    // Draw your other objects as before
+    objectMap.objects.forEach((object) => {
+      object.draw(renderPassEncoder);
+    });
+    floor.draw(renderPassEncoder);
+    renderPassEncoder.end();
+
     device.queue.submit([commandEncoder.finish()]);
 
     const jsTime = performance.now() - startTime;
