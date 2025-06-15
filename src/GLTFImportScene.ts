@@ -14,8 +14,9 @@ import { ShadowCamera } from "./camera/ShadowCamera";
 //import { Cube } from "./game_objects/Cube";
 import { ObjectMap } from "./game_objects/ObjectMap";
 import gltfWGSL from "./shaders/gltf.wgsl?raw";
-import { convertGLBToJSONAndBinary, GLTFSkin } from "./gltf/glbUtils";
+import { convertGLBToJSONAndBinary } from "./gltf/GLTFUtils";
 import { Mat4x4 } from "./math/Mat4x4";
+import { GLTFSkin } from "./gltf/GLTFSkin";
 
 async function init() {
   const canvas = document.getElementById("canvas") as HTMLCanvasElement;

@@ -1,5 +1,6 @@
 import { Mat4x4 } from '../math/Mat4x4';
-import { GLTFNode } from './glbUtils';
+import { GLTFAccessor } from './GLTFAccessor';
+import { GLTFNode } from './GLTFNode';
 
 /* eslint @typescript-eslint/no-explicit-any: "off" */
 
@@ -223,4 +224,42 @@ export interface GlTf {
   scenes?: Scene[];
   skins?: Skin[];
   textures?: Texture[];
+}
+
+export interface AttributeMapInterface {
+  [key: string]: GLTFAccessor;
+}
+
+// Associates the mode paramete of a gltf primitive object with the primitive's intended render mode
+export enum GLTFRenderMode {
+  POINTS = 0,
+  LINE = 1,
+  LINE_LOOP = 2,
+  LINE_STRIP = 3,
+  TRIANGLES = 4,
+  TRIANGLE_STRIP = 5,
+  TRIANGLE_FAN = 6,
+}
+
+// Determines how to interpret the structure of the values accessed by an accessor
+export enum GLTFDataStructureType {
+  SCALAR = 0,
+  VEC2 = 1,
+  VEC3 = 2,
+  VEC4 = 3,
+  MAT2 = 4,
+  MAT3 = 5,
+  MAT4 = 6,
+}
+
+// Determines how to interpret each element of the structure that is accessed from our accessor
+export enum GLTFDataComponentType {
+  BYTE = 5120,
+  UNSIGNED_BYTE = 5121,
+  SHORT = 5122,
+  UNSIGNED_SHORT = 5123,
+  INT = 5124,
+  UNSIGNED_INT = 5125,
+  FLOAT = 5126,
+  DOUBLE = 5130,
 }
