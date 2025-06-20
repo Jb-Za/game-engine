@@ -1,5 +1,4 @@
-import { Accessor, BufferView, GlTf, GLTFDataComponentType, GLTFDataStructureType, GLTFRenderMode, Scene } from './Interfaces.ts';
-import { Mat4x4 } from "../math/Mat4x4.ts";
+import { GlTf, GLTFDataComponentType, GLTFDataStructureType, GLTFRenderMode } from './Interfaces.ts';
 import { Vec3 } from "../math/Vec3.ts";
 import { GLTFScene } from './GLTFScene.ts';
 import { BaseTransformation } from './BaseTransformation.ts';
@@ -211,6 +210,7 @@ export type TempReturn = {
   nodes: GLTFNode[];
   scenes: GLTFScene[];
   skins: GLTFSkin[];
+  animations: any[]; //TODO: Define a proper type for animations
 };
 
 // Upload a GLB model, parse its JSON and Binary components, and create the requisite GPU resources
@@ -262,40 +262,46 @@ export const convertGLBToJSONAndBinary = async (
   //Often necessary due to infrequencey with which the BufferView target field is populated.
   for (const mesh of jsonChunk.meshes ?? []) {
     for (const primitive of mesh.primitives ?? []) {
-      if ('indices' in primitive) {
-        const accessor = jsonChunk.accessors[primitive.indices];
-        jsonChunk.accessors[primitive.indices].bufferViewUsage |=
-          GPUBufferUsage.INDEX;
-        jsonChunk.bufferViews[accessor.bufferView].usage |=
-          GPUBufferUsage.INDEX;
+      if ('indices' in primitive && jsonChunk.accessors && jsonChunk.bufferViews) {
+        const indicesIdx = primitive.indices;
+        if (indicesIdx !== undefined && jsonChunk.accessors[indicesIdx] && jsonChunk.accessors[indicesIdx].bufferView !== undefined) {
+          jsonChunk.accessors[indicesIdx].bufferViewUsage = (jsonChunk.accessors[indicesIdx].bufferViewUsage ?? 0) | GPUBufferUsage.INDEX;
+          jsonChunk.bufferViews[jsonChunk.accessors[indicesIdx].bufferView].usage = (jsonChunk.bufferViews[jsonChunk.accessors[indicesIdx].bufferView].usage ?? 0) | GPUBufferUsage.INDEX;
+        }
       }
-      for (const attribute of Object.values(primitive.attributes)) {
-        const accessor = jsonChunk.accessors[attribute];
-        jsonChunk.accessors[attribute].bufferViewUsage |= GPUBufferUsage.VERTEX;
-        jsonChunk.bufferViews[accessor.bufferView].usage |=
-          GPUBufferUsage.VERTEX;
+      if (jsonChunk.accessors && jsonChunk.bufferViews) {
+        for (const attribute of Object.values(primitive.attributes ?? {})) {
+          const accessor = jsonChunk.accessors[attribute];
+          if (accessor && accessor.bufferView !== undefined) {
+            jsonChunk.accessors[attribute].bufferViewUsage = (jsonChunk.accessors[attribute].bufferViewUsage ?? 0) | GPUBufferUsage.VERTEX;
+            jsonChunk.bufferViews[accessor.bufferView].usage = (jsonChunk.bufferViews[accessor.bufferView].usage ?? 0) | GPUBufferUsage.VERTEX;
+          }
+        }
       }
     }
   }
 
   // Create GLTFBufferView objects for all the buffer views in the glTF file
   const bufferViews: GLTFBufferView[] = [];
-  for (let i = 0; i < jsonChunk.bufferViews.length; ++i) {
-    bufferViews.push(new GLTFBufferView(binaryChunk, jsonChunk.bufferViews[i]));
+  for (let i = 0; i < (jsonChunk.bufferViews?.length ?? 0); ++i) {
+    bufferViews.push(new GLTFBufferView(binaryChunk, jsonChunk.bufferViews![i]));
   }
 
   const accessors: GLTFAccessor[] = [];
-  for (let i = 0; i < jsonChunk.accessors.length; ++i) {
-    const accessorInfo = jsonChunk.accessors[i];
+  for (let i = 0; i < (jsonChunk.accessors?.length ?? 0); ++i) {
+    const accessorInfo = jsonChunk.accessors![i];
     const viewID = accessorInfo['bufferView'];
+    if (viewID === undefined) {
+      throw new Error(`Accessor at index ${i} does not have a bufferView defined.`);
+    }
     accessors.push(new GLTFAccessor(bufferViews[viewID], accessorInfo));
   }
   // Load the first mesh
   const meshes: GLTFMesh[] = [];
-  for (let i = 0; i < jsonChunk.meshes.length; i++) {
-    const mesh = jsonChunk.meshes[i];
+  for (let i = 0; i < (jsonChunk.meshes?.length ?? 0); i++) {
+    const mesh = jsonChunk.meshes![i];
     const meshPrimitives: GLTFPrimitive[] = [];
-    for (let j = 0; j < mesh.primitives.length; ++j) {
+    for (let j = 0; j < (mesh.primitives?.length ?? 0); ++j) {
       const prim = mesh.primitives[j];
       let topology = prim['mode'];
       // Default is triangles if mode specified
@@ -311,21 +317,24 @@ export const convertGLBToJSONAndBinary = async (
 
       const primitiveAttributeMap: Record<string, GLTFAccessor> = {};
       const attributes = [];
-      if (jsonChunk['accessors'][prim['indices']] !== undefined) {
+      if (prim['indices'] !== undefined && jsonChunk.accessors && accessors[prim['indices']] !== undefined) {
         const indices = accessors[prim['indices']];
         primitiveAttributeMap['INDICES'] = indices;
       }
 
       // Loop through all the attributes and store within our attributeMap
-      for (const attr in prim['attributes']) {
-        const accessor = accessors[prim['attributes'][attr]];
-        primitiveAttributeMap[attr] = accessor;
-        if (accessor.structureType > 3) {
-          throw Error(
-            'Vertex attribute accessor accessed an unsupported data type for vertex attribute'
-          );
+      for (const attr in prim['attributes'] ?? {}) {
+        const accessorIdx = prim['attributes'][attr];
+        if (accessors[accessorIdx] !== undefined) {
+          const accessor = accessors[accessorIdx];
+          primitiveAttributeMap[attr] = accessor;
+          if (accessor.structureType > 3) {
+            throw Error(
+              'Vertex attribute accessor accessed an unsupported data type for vertex attribute'
+            );
+          }
+          attributes.push(attr);
         }
-        attributes.push(attr);
       }
       meshPrimitives.push(
         new GLTFPrimitive(topology, primitiveAttributeMap, attributes)
@@ -336,11 +345,13 @@ export const convertGLBToJSONAndBinary = async (
 
   const skins: GLTFSkin[] = [];
   for (const skin of jsonChunk.skins ?? []) {
-    const inverseBindMatrixAccessor = accessors[skin.inverseBindMatrices];
-    inverseBindMatrixAccessor.view.addUsage(
-      GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-    );
-    inverseBindMatrixAccessor.view.needsUpload = true;
+    if (skin.inverseBindMatrices !== undefined && accessors[skin.inverseBindMatrices] !== undefined) {
+      const inverseBindMatrixAccessor = accessors[skin.inverseBindMatrices];
+      inverseBindMatrixAccessor.view.addUsage(
+        GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+      );
+      inverseBindMatrixAccessor.view.needsUpload = true;
+    }
   }
 
   // Upload the buffer views used by mesh
@@ -352,9 +363,11 @@ export const convertGLBToJSONAndBinary = async (
 
   GLTFSkin.createSharedBindGroupLayout(device);
   for (const skin of jsonChunk.skins ?? []) {
-    const inverseBindMatrixAccessor = accessors[skin.inverseBindMatrices];
-    const joints = skin.joints;
-    skins.push(new GLTFSkin(device, inverseBindMatrixAccessor, joints));
+    if (skin.inverseBindMatrices !== undefined && accessors[skin.inverseBindMatrices] !== undefined) {
+      const inverseBindMatrixAccessor = accessors[skin.inverseBindMatrices];
+      const joints = skin.joints;
+      skins.push(new GLTFSkin(device, inverseBindMatrixAccessor, joints));
+    }
   }
 
   const nodes: GLTFNode[] = [];
@@ -383,9 +396,9 @@ export const convertGLBToJSONAndBinary = async (
       nodeUniformsBindGroupLayout,
       nodeTransform,
       currNode.name,
-      skins[currNode.skin]
+      currNode.skin !== undefined && skins[currNode.skin] !== undefined ? skins[currNode.skin] : undefined
     );
-    const meshToAdd = meshes[currNode.mesh];
+    const meshToAdd = currNode.mesh !== undefined && meshes[currNode.mesh] !== undefined ? meshes[currNode.mesh] : undefined;
     if (meshToAdd) {
       nodeToCreate.drawables.push(meshToAdd);
     }
@@ -394,7 +407,7 @@ export const convertGLBToJSONAndBinary = async (
 
   // Assign each node its children
   nodes.forEach((node, idx) => {
-    const children = jsonChunk.nodes[idx].children;
+    const children = jsonChunk.nodes?.[idx]?.children;
     if (children) {
       children.forEach((childIdx) => {
         const child = nodes[childIdx];
@@ -402,6 +415,8 @@ export const convertGLBToJSONAndBinary = async (
       });
     }
   });
+
+  const animations = jsonChunk.animations ?? [];
 
   const scenes: GLTFScene[] = [];
 
@@ -419,5 +434,6 @@ export const convertGLBToJSONAndBinary = async (
     nodes,
     scenes,
     skins,
+    animations
   };
 };

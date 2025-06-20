@@ -28,35 +28,39 @@ struct NodeUniforms {
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
   var output: VertexOutput;
-  // Compute joint_matrices * inverse_bind_matrices
+  
+  // Local space vertex position
+  let local_position = vec4f(input.position.x, input.position.y, input.position.z, 1.0);
+  
+  // Calculate skinned position (when skin_mode == 0)
   let joint0 = joint_matrices[input.joints[0]] * inverse_bind_matrices[input.joints[0]];
   let joint1 = joint_matrices[input.joints[1]] * inverse_bind_matrices[input.joints[1]];
   let joint2 = joint_matrices[input.joints[2]] * inverse_bind_matrices[input.joints[2]];
   let joint3 = joint_matrices[input.joints[3]] * inverse_bind_matrices[input.joints[3]];
-  // Compute influence of joint based on weight
+  
   let skin_matrix = 
     joint0 * input.weights[0] +
     joint1 * input.weights[1] +
     joint2 * input.weights[2] +
     joint3 * input.weights[3];
-  // Position of the vertex relative to our world
-  let world_position = vec4f(input.position.x, input.position.y, input.position.z, 1.0);
-  // Vertex position with only the model rotation applied.
-  let rotated_position = world_position;
-  // Vertex position with model rotation, skinning, and the mesh's node transformation applied.
-  let skinned_position = skin_matrix * world_position;
- 
-  // Determine which position to used based on whether skinMode is turnd on or off.
-  let transformed_position = select(
-    rotated_position,
-    skinned_position,
-    general_uniforms.skin_mode == 0
-  );
-  // Apply the camera and projection matrix transformations to our transformed position;
-  output.Position = projectionView * transformed_position;
-  output.normal = input.normal;
-  // Convert u32 joint data to f32s to prevent flat interpolation error.
-  output.joints = vec4f(f32(input.joints[0]), f32(input.joints[1]), f32(input.joints[2]), f32(input.joints[3]));
+  
+  // Apply skinning and then node world matrix for skinned mode
+  var world_position: vec4f;
+  if (general_uniforms.skin_mode == 0) {
+    // Skin mode: Apply skin deformation THEN node world matrix
+    world_position = node_uniforms.world_matrix * (skin_matrix * local_position);
+  } else {
+    // Rigid mode: Just apply node world matrix
+    world_position = node_uniforms.world_matrix *local_position;
+  }
+  
+  // Apply camera projection view matrix
+  output.Position = projectionView * world_position;
+  
+  // Process other outputs
+  output.normal = input.normal; // Note: should transform normals too
+  output.joints = vec4f(f32(input.joints[0]), f32(input.joints[1]), 
+                        f32(input.joints[2]), f32(input.joints[3]));
   output.weights = input.weights;
   return output;
 }

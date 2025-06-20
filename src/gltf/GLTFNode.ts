@@ -1,4 +1,6 @@
 import { Mat4x4 } from "../math/Mat4x4";
+import { Vec3 } from "../math/Vec3";
+import { Vec4 } from "../math/Vec4";
 import { BaseTransformation } from "./BaseTransformation";
 import { GLTFMesh } from "./GLTFMesh";
 import { GLTFSkin } from "./GLTFSkin";
@@ -16,16 +18,8 @@ export class GLTFNode {
   private nodeTransformGPUBuffer: GPUBuffer;
   private nodeTransformBindGroup: GPUBindGroup;
 
-  constructor(
-    device: GPUDevice,
-    bgLayout: GPUBindGroupLayout,
-    source: BaseTransformation,
-    name?: string,
-    skin?: GLTFSkin
-  ) {
-    this.name = name
-      ? name
-      : `node_${source.position} ${source.rotation} ${source.scale}`;
+  constructor(device: GPUDevice, bgLayout: GPUBindGroupLayout, source: BaseTransformation, name?: string, skin?: GLTFSkin) {
+    this.name = name ? name : `node_${source.position} ${source.rotation} ${source.scale}`;
     this.source = source;
     this.parent = null;
     this.children = [];
@@ -68,13 +62,7 @@ export class GLTFNode {
       for (let i = 0; i < 16; ++i) this.worldMatrix[i] = this.localMatrix[i];
     }
     const worldMatrix = this.worldMatrix;
-    device.queue.writeBuffer(
-      this.nodeTransformGPUBuffer,
-      0,
-      worldMatrix.buffer,
-      worldMatrix.byteOffset,
-      worldMatrix.byteLength
-    );
+    device.queue.writeBuffer(this.nodeTransformGPUBuffer, 0, worldMatrix.buffer, worldMatrix.byteOffset, worldMatrix.byteLength);
     for (const child of this.children) {
       child.updateWorldMatrix(device, worldMatrix);
     }
@@ -87,23 +75,13 @@ export class GLTFNode {
     }
   }
 
-  renderDrawables(
-    passEncoder: GPURenderPassEncoder,
-    bindGroups: GPUBindGroup[]
-  ) {
+  renderDrawables(passEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[]) {
     if (this.drawables !== undefined) {
       for (const drawable of this.drawables) {
         if (this.skin) {
-          drawable.render(passEncoder, [
-            ...bindGroups,
-            this.nodeTransformBindGroup,
-            this.skin.skinBindGroup,
-          ]);
+          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup, this.skin.skinBindGroup]);
         } else {
-          drawable.render(passEncoder, [
-            ...bindGroups,
-            this.nodeTransformBindGroup,
-          ]);
+          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup]);
         }
       }
     }
