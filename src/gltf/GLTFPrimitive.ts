@@ -1,6 +1,10 @@
 import { convertGPUVertexFormatToWGSLFormat } from "./GLTFUtils.ts";
 import { AttributeMapInterface, GLTFRenderMode } from "./Interfaces.ts";
 
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
+
 export class GLTFPrimitive {
   topology: GLTFRenderMode;
   renderPipeline: GPURenderPipeline | undefined;
@@ -42,18 +46,15 @@ export class GLTFPrimitive {
     let VertexInputShaderString = `struct VertexInput {\n`;
     const vertexBuffers: GPUVertexBufferLayout[] = this.attributes.map(
       (attr, idx) => {
-        const vertexFormat: GPUVertexFormat =
-          this.attributeMap[attr].vertexType as GPUVertexFormat;
+        const vertexFormat: GPUVertexFormat = this.attributeMap[attr].vertexType as GPUVertexFormat;
         const attrString = attr.toLowerCase().replace(/_0$/, '');
-        VertexInputShaderString += `\t@location(${idx}) ${attrString}: ${convertGPUVertexFormatToWGSLFormat(
-          vertexFormat
-        )},\n`;
+        VertexInputShaderString += `\t@location(${idx}) ${attrString}: ${convertGPUVertexFormatToWGSLFormat(vertexFormat)},\n`;
         return {
           arrayStride: this.attributeMap[attr].byteStride,
           attributes: [
             {
               format: this.attributeMap[attr].vertexType,
-              offset: this.attributeMap[attr].byteOffset,
+              offset: 0, // <-- Always 0 for non-interleaved buffers
               shaderLocation: idx,
             },
           ],

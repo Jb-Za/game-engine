@@ -5,6 +5,10 @@ import { BaseTransformation } from "./BaseTransformation";
 import { GLTFMesh } from "./GLTFMesh";
 import { GLTFSkin } from "./GLTFSkin";
 
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
+
 export class GLTFNode {
   name: string;
   source: BaseTransformation;

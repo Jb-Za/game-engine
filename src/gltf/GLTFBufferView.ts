@@ -2,6 +2,10 @@ import { alignTo } from "./GLTFUtils";
 import { BufferView } from "./Interfaces";
 import { GLTFBuffer } from "./GLTFBuffer";
 
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
+
 export class GLTFBufferView {
   byteLength: number;
   byteStride: number;

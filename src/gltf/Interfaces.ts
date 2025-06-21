@@ -4,6 +4,10 @@ import { GLTFNode } from './GLTFNode';
 
 /* eslint @typescript-eslint/no-explicit-any: "off" */
 
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
+
 /* Sourced from https://github.com/bwasty/gltf-loader-ts/blob/master/source/gltf.ts */
 /* License for use can be found here: https://github.com/bwasty/gltf-loader-ts/blob/master/LICENSE */
 /* Comments and types have been excluded from original source for sake of cleanliness and brevity */

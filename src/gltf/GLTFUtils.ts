@@ -10,7 +10,10 @@ import { GLTFBuffer } from './GLTFBuffer.ts';
 import { GLTFAccessor } from './GLTFAccessor.ts';
 import { GLTFBufferView } from './GLTFBufferView.ts';
 
-//NOTE: GLTF code is not generally extensible to all gltf models
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
+
 // Modified from Will Usher code found at this link https://www.willusher.io/graphics/2023/05/16/0-to-gltf-first-mesh
 
 export const alignTo = (val: number, align: number): number => {

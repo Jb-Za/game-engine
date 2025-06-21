@@ -1,6 +1,10 @@
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec3 } from "../math/Vec3";
 
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
+
 export class BaseTransformation {
   position: Vec3;
   rotation: number[]; // quaternion [x, y, z, w]

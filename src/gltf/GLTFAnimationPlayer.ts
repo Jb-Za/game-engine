@@ -5,7 +5,7 @@ export class GLTFAnimationPlayer {
   private animations: any[];
   private nodes: any[];
   private currentTime: number;
-  private activeAnimation: number = 0; 
+  private activeAnimation: number = 1; 
   public speed: number = 0.5; // Add this line
   
   constructor(animations: any[], nodes: GLTFNode[]) {
@@ -23,7 +23,6 @@ export class GLTFAnimationPlayer {
     
     // Skip if no animations
     if (!this.animations || this.animations.length === 0) {
-      console.warn("No animations available");
       return;
     }
     

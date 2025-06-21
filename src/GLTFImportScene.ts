@@ -94,13 +94,13 @@ async function init() {
   floor.position = new Vec3(0, -2, 0);
 
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
-  await _gltfGameObject.initialize("../../assets/gltf/whale.glb");
+  await _gltfGameObject.initialize("../../assets/gltf/Duck.glb");
   _gltfGameObject.skinMode = 1;
 
   // Set position, scale, and rotation for the GLTF model
   _gltfGameObject.position = new Vec3(0, 0, 0); // Place at origin
-  _gltfGameObject.scale = new Vec3(0.5, 0.5, 0.5); // Use 1:1 scale (adjust as needed)
-  _gltfGameObject.rotation = [0.7071, 0, 0, 0.7071]; // No rotation (identity quaternion)
+  _gltfGameObject.scale = new Vec3(0.01, 0.01, 0.01);
+  _gltfGameObject.rotation = [0, 0, 0, 1]; // TODO: turn this into Vec4
 
   // Add key controls to move the model
   window.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -112,29 +112,15 @@ async function init() {
     if (e.key === "e" || e.key === "E") {
       _gltfGameObject.skinMode = _gltfGameObject.skinMode === 0 ? 1 : 0;
       if (_gltfGameObject.skinMode === 0) {
-        _gltfGameObject.position = new Vec3(0, 0, 25); // Place at origin
-        _gltfGameObject.scale = new Vec3(1.5, 1.5, 1.5); // Use 1:1 scale (adjust as needed)
-        _gltfGameObject.rotation = [1, 0, 0, 0]; // No rotation (identity quaternion)
+        _gltfGameObject.position = new Vec3(0, 0, 25); 
+        _gltfGameObject.scale = new Vec3(1.5, 1.5, 1.5);
+        _gltfGameObject.rotation = [1, 0, 0, 0]; 
       } else {
-        _gltfGameObject.position = new Vec3(0, 0, 0); // Place at origin
-        _gltfGameObject.scale = new Vec3(0.5, 0.5, 0.5); // Use 1:1 scale (adjust as needed)
-        _gltfGameObject.rotation = [0.7071, 0, 0, 0.7071]; // No rotation (identity quaternion)
+        _gltfGameObject.position = new Vec3(0, 0, 0)
+        _gltfGameObject.scale = new Vec3(0.05, 0.05, 0.05);
+        _gltfGameObject.rotation = [0, 0, 0, 1];
       }
       console.log(`Skin mode switched to: ${_gltfGameObject.skinMode === 0 ? "Skinned" : "Non-skinned"} (skin_mode=${_gltfGameObject.skinMode})`);
-    }
-
-    // WASD controls for model position
-    const moveSpeed = 0.5;
-  
-     if (e.key === "z") {
-      _gltfGameObject.position.z += moveSpeed;
-    }
-
-    // Scale controls
-    if (e.key === "1") {
-      _gltfGameObject.scale = new Vec3(_gltfGameObject.scale.x * 1.1, _gltfGameObject.scale.y * 1.1, _gltfGameObject.scale.z * 1.1);
-    } else if (e.key === "2") {
-      _gltfGameObject.scale = new Vec3(_gltfGameObject.scale.x / 1.1, _gltfGameObject.scale.y / 1.1, _gltfGameObject.scale.z / 1.1);
     }
 
     console.log(`Model position: (${_gltfGameObject.position.x.toFixed(2)}, ${_gltfGameObject.position.y.toFixed(2)}, ${_gltfGameObject.position.z.toFixed(2)})`);

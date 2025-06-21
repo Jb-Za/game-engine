@@ -2,16 +2,21 @@ import { Camera } from "../camera/Camera";
 import { ShadowCamera } from "../camera/ShadowCamera";
 import { AmbientLight } from "../lights/AmbientLight";
 import { DirectionalLight } from "../lights/DirectionalLight";
-import { PointLightsCollection } from "../lights/PointLight";
 import { Mat4x4 } from "../math/Mat4x4";
 import { GLTFMesh } from "./GLTFMesh";
 import { GLTFScene } from "./GLTFScene";
 import { GLTFSkin } from "./GLTFSkin";
 import { convertGLBToJSONAndBinary, TempReturn } from "./GLTFUtils";
-import gltfWGSL from "../shaders/gltf.wgsl?raw";
+import gltfSkinnedWGSL from "../shaders/gltfSkinned.wgsl?raw";
+import gltfRigidWGSL from "../shaders/gltfRigid.wgsl?raw";
 import { GLTFAnimationPlayer } from "./GLTFAnimationPlayer";
 import { Vec3 } from "../math/Vec3";
 import { GLTFNode } from "./GLTFNode";
+import { PointLightsCollection } from "../lights/PointLight";
+
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
 
 export class GLTFGameObject {
   private _gltfScene: any;
@@ -23,9 +28,8 @@ export class GLTFGameObject {
   public generalUniformsBuffer: GPUBuffer;
   public generalUniformsBGCLuster: GPUBindGroupLayout;
   private animationPlayer?: GLTFAnimationPlayer;
+  //public materialBindGroupLayout: GPUBindGroupLayout;
 
-  // Store original matrices for skin joints
-  private origMatrices = new Map<number, any>();
 
   public get gltfScene(): any {
     return this._gltfScene;
@@ -117,6 +121,23 @@ export class GLTFGameObject {
       layout: this.generalUniformsBGCLuster,
       entries: [{ binding: 0, resource: { buffer: this.generalUniformsBuffer } }],
     });
+
+    // // Add this after your other bind group layouts
+    // this.materialBindGroupLayout = device.createBindGroupLayout({
+    //   label: "Material.bindGroupLayout",
+    //   entries: [
+    //     {
+    //       binding: 0,
+    //       visibility: GPUShaderStage.FRAGMENT,
+    //       texture: {},
+    //     },
+    //     {
+    //       binding: 1,
+    //       visibility: GPUShaderStage.FRAGMENT,
+    //       sampler: {},
+    //     },
+    //   ],
+    // });
   }
 
   public update(deltaTime: number, now: number) {
@@ -138,7 +159,7 @@ export class GLTFGameObject {
       if (scene.root) {
         scene.root.source.position = this.position;
         scene.root.source.scale = this.scale; // Scale down to fit the scene;
-        scene.root.source.rotation =  this.rotation;
+        scene.root.source.rotation = this.rotation;
       }
     }
     // After animating joints, update all node world matrices
@@ -174,7 +195,11 @@ export class GLTFGameObject {
 
     // Build gltf pipeline with new camera layout (single mat4x4)
     this._gltfScene.meshes.forEach((mesh: GLTFMesh) => {
-      mesh.buildRenderPipeline(this.device, gltfWGSL, gltfWGSL, this.presentationFormat, this.depthTexture.format, [this.cameraBGCluster, this.generalUniformsBGCLuster, this.nodeUniformsBindGroupLayout, GLTFSkin.skinBindGroupLayout]);
+      if (this.skinMode === 0) {
+        mesh.buildRenderPipeline(this.device, gltfRigidWGSL, gltfRigidWGSL, this.presentationFormat, this.depthTexture.format, [this.cameraBGCluster, this.generalUniformsBGCLuster, this.nodeUniformsBindGroupLayout]);
+      } else {
+        mesh.buildRenderPipeline(this.device, gltfSkinnedWGSL, gltfSkinnedWGSL, this.presentationFormat, this.depthTexture.format, [this.cameraBGCluster, this.generalUniformsBGCLuster, this.nodeUniformsBindGroupLayout, GLTFSkin.skinBindGroupLayout]);
+      }
     });
   }
 }

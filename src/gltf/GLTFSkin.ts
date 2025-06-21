@@ -1,7 +1,11 @@
 import { Mat4x4 } from "../math/Mat4x4";
 import { GLTFAccessor } from "./GLTFAccessor";
 import { GLTFNode } from "./GLTFNode";
-import { GLTFDataComponentType } from "./Interfaces.ts";
+import { GLTFDataComponentType, GLTFDataStructureType } from "./Interfaces.ts";
+
+//most of this implementation is based on the gltf-skinning example from the webgpu samples repo
+//https://webgpu.github.io/webgpu-samples/.
+// I have adapted it to fit my project with an attempt to build upon its features
 
 export class GLTFSkin {
   // Nodes of the skin's joints
@@ -51,21 +55,19 @@ export class GLTFSkin {
     inverseBindMatricesAccessor: GLTFAccessor,
     joints: number[]
   ) {
-    if (
-      inverseBindMatricesAccessor.componentType !==
-        GLTFDataComponentType.FLOAT ||
-      inverseBindMatricesAccessor.byteStride !== 64
-    ) {
-      throw Error(
-        `This skin's provided accessor does not access a mat4x4f matrix, or does not access the provided mat4x4f data correctly`
-      );
+    // Verify it's a matrix type and float component type
+    if (inverseBindMatricesAccessor.structureType !== GLTFDataStructureType.MAT4) {
+      throw Error("Inverse bind matrices must be of type MAT4");
     }
-    // NOTE: Come back to this uint8array to float32array conversion in case it is incorrect
-    this.inverseBindMatrices = new Float32Array(
-      inverseBindMatricesAccessor.view.view.buffer,
-      inverseBindMatricesAccessor.view.view.byteOffset,
-      inverseBindMatricesAccessor.view.view.byteLength / 4
-    );
+    if (inverseBindMatricesAccessor.componentType !== GLTFDataComponentType.FLOAT) {
+      throw Error("Inverse bind matrices must have FLOAT component type");
+    }
+    // Use the accessor's getTypedArray to get the correct type
+    const matrixArray = inverseBindMatricesAccessor.getTypedArray();
+    if (!(matrixArray instanceof Float32Array)) {
+      throw new Error("Inverse bind matrices must be stored as float32 in GLTF (per spec)");
+    }
+    this.inverseBindMatrices = matrixArray;
     this.joints = joints;
     const skinGPUBufferUsage: GPUBufferDescriptor = {
       size: Float32Array.BYTES_PER_ELEMENT * 16 * joints.length,
