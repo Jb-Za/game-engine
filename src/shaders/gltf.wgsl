@@ -25,43 +25,41 @@ struct NodeUniforms {
 @group(3) @binding(0) var<storage, read> joint_matrices: array<mat4x4f>;
 @group(3) @binding(1) var<storage, read> inverse_bind_matrices: array<mat4x4f>;
 
+const MAX_JOINTS_PER_VERTEX = 4u;
+
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
   var output: VertexOutput;
-  
-  // Local space vertex position
+
   let local_position = vec4f(input.position.x, input.position.y, input.position.z, 1.0);
-  
-  // Calculate skinned position (when skin_mode == 0)
-  let joint0 = joint_matrices[input.joints[0]] * inverse_bind_matrices[input.joints[0]];
-  let joint1 = joint_matrices[input.joints[1]] * inverse_bind_matrices[input.joints[1]];
-  let joint2 = joint_matrices[input.joints[2]] * inverse_bind_matrices[input.joints[2]];
-  let joint3 = joint_matrices[input.joints[3]] * inverse_bind_matrices[input.joints[3]];
-  
-  let skin_matrix = 
-    joint0 * input.weights[0] +
-    joint1 * input.weights[1] +
-    joint2 * input.weights[2] +
-    joint3 * input.weights[3];
-  
-  // Apply skinning and then node world matrix for skinned mode
+
+  // Generic skinning calculation
+  var skin_matrix = mat4x4f();
+  for (var i = 0u; i < MAX_JOINTS_PER_VERTEX; i = i + 1u) {
+    let joint_idx = input.joints[i];
+    let weight = input.weights[i];
+    let joint_matrix = joint_matrices[joint_idx] * inverse_bind_matrices[joint_idx];
+    skin_matrix = skin_matrix + joint_matrix * weight;
+  }
+
   var world_position: vec4f;
-  if (general_uniforms.skin_mode == 0) {
-    // Skin mode: Apply skin deformation THEN node world matrix
+  if (general_uniforms.skin_mode == 0u) {
     world_position = node_uniforms.world_matrix * (skin_matrix * local_position);
   } else {
-    // Rigid mode: Just apply node world matrix
-    world_position = node_uniforms.world_matrix *local_position;
+    world_position = node_uniforms.world_matrix * local_position;
   }
-  
-  // Apply camera projection view matrix
+
   output.Position = projectionView * world_position;
-  
-  // Process other outputs
-  output.normal = input.normal; // Note: should transform normals too
-  output.joints = vec4f(f32(input.joints[0]), f32(input.joints[1]), 
-                        f32(input.joints[2]), f32(input.joints[3]));
+  output.normal = input.normal;
+
+  // Output joints as vec4f (pad with 0 if fewer than 4)
+  var joints_vec = vec4f(0.0, 0.0, 0.0, 0.0);
+  for (var i = 0u; i < MAX_JOINTS_PER_VERTEX && i < 4u; i = i + 1u) {
+    joints_vec[i] = f32(input.joints[i]);
+  }
+  output.joints = joints_vec;
   output.weights = input.weights;
+
   return output;
 }
 

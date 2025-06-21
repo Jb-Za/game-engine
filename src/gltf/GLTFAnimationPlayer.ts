@@ -5,7 +5,8 @@ export class GLTFAnimationPlayer {
   private animations: any[];
   private nodes: any[];
   private currentTime: number;
-  private activeAnimation: number = 0; // Default to animation index 1
+  private activeAnimation: number = 0; 
+  public speed: number = 0.5; // Add this line
   
   constructor(animations: any[], nodes: GLTFNode[]) {
     this.animations = animations;
@@ -18,7 +19,7 @@ export class GLTFAnimationPlayer {
   }
 
   update(deltaTime: number) {
-    this.currentTime += deltaTime;
+    this.currentTime += deltaTime * this.speed;
     
     // Skip if no animations
     if (!this.animations || this.animations.length === 0) {
@@ -94,10 +95,9 @@ export class GLTFAnimationPlayer {
         return [i, i + 1];
       }
     }
-    // Loop or clamp to last keyframe
-    return [times.length - 2, times.length - 1];
-  }
-
+    // Wrap: interpolate from last keyframe to first for seamless looping
+    return [times.length - 1, 0];
+}
   private lerp(a: number, b: number, t: number): number {
     return a * (1 - t) + b * t;
   }
