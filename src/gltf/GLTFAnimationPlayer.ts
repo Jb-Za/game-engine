@@ -1,26 +1,53 @@
+import { Mat4x4 } from "../math/Mat4x4";
 import { GLTFNode } from "./GLTFNode";
 
 export class GLTFAnimationPlayer {
   private animations: any[];
   private nodes: any[];
   private currentTime: number;
+  private activeAnimation: number = 0; // Default to animation index 1
+  
   constructor(animations: any[], nodes: GLTFNode[]) {
     this.animations = animations;
     this.nodes = nodes;
     this.currentTime = 0;
-    // TODO: parse and cache samplers/channels for efficiency
+    // Use animation 0 if animation 1 doesn't exist
+    if (animations && animations.length > 0 && (!animations[1] || !animations[1].channels)) {
+      this.activeAnimation = 0;
+    }
   }
 
   update(deltaTime: number) {
-  this.currentTime += deltaTime;
-  for (const anim of this.animations) {
+    this.currentTime += deltaTime;
+    
+    // Skip if no animations
+    if (!this.animations || this.animations.length === 0) {
+      console.warn("No animations available");
+      return;
+    }
+    
+    // Check if active animation is valid
+    const anim = this.animations[this.activeAnimation];
+    if (!anim || !anim.channels) {
+      console.warn(`Invalid animation data at index ${this.activeAnimation}`);
+      return;
+    }
+    
+    // Process each animation channel
     for (const channel of anim.channels) {
+      if (!channel || !channel.target) continue;
+      
       const sampler = anim.samplers[channel.sampler];
+      if (!sampler) continue;
+      
       const node = this.nodes[channel.target.node];
-      const input = sampler.input;   // keyframe times (Float32Array or array)
-      const output = sampler.output; // keyframe values (array)
-      const path = channel.target.path; // "translation", "rotation", "scale"
-      if (!input || !output) continue;
+      if (!node) continue;
+      
+      const input = sampler.input;
+      const output = sampler.output;
+      const path = channel.target.path;
+      
+      if (!input || !output || input.length === 0) continue;
 
       // Loop animation
       let time = this.currentTime % input[input.length - 1];
@@ -30,23 +57,34 @@ export class GLTFAnimationPlayer {
       const t0 = input[i0], t1 = input[i1];
       const localT = (time - t0) / (t1 - t0);
 
-      // Get values
+      // Prepare storage for interpolated values
+      if (!node._animState) node._animState = {};
+      
       if (path === "translation" || path === "scale") {
         const stride = 3;
         const v0 = output.slice(i0 * stride, i0 * stride + stride);
         const v1 = output.slice(i1 * stride, i1 * stride + stride);
         const value = this.lerpVec3(v0, v1, localT);
-        if (path === "translation") node.setTranslation(value);
-        else node.setScale(value);
+        node._animState[path] = value;
       } else if (path === "rotation") {
         const stride = 4;
         const v0 = output.slice(i0 * stride, i0 * stride + stride);
         const v1 = output.slice(i1 * stride, i1 * stride + stride);
         const value = this.slerpQuat(v0, v1, localT);
-        node.setRotation(value);
+        node._animState[path] = value;
       }
     }
-  }
+
+    // After all channels, set the matrix for each node that was animated
+    for (const node of this.nodes) {
+      if (node._animState) {
+        const t = node._animState["translation"] || [0, 0, 0];
+        const r = node._animState["rotation"] || [0, 0, 0, 1];
+        const s = node._animState["scale"] || [1, 1, 1];
+        const mat = Mat4x4.compose(t, r, s);
+        node.source.setMatrix(mat);
+      }
+    }
   }
 
   // Find the two keyframes surrounding the current time

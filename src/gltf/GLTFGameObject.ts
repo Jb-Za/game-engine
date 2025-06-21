@@ -122,14 +122,14 @@ export class GLTFGameObject {
   public update(deltaTime: number, now: number) {
     if (!this._gltfScene) return;
 
-    // // --- BEGIN: Animation playback ---
-    // if (this.animationPlayer) {
-    //   this.animationPlayer.update(deltaTime);
-    // }
-    // --- END: Animation playback --
-
-    // --- BEGIN: Whale GLTF Uniform Buffer Updates ---
-    // Animate whale skin joints (simple example: swing bones by angle)
+    // --- BEGIN: Animation playback ---
+    if (this.animationPlayer) {
+      this.animationPlayer.update(deltaTime);
+    }
+    else{
+      this.animationPlayer = new GLTFAnimationPlayer(this._gltfScene.animations, this._gltfScene.nodes);
+    }
+    //--- END: Animation playback --
 
     if (this._gltfScene.scenes && this._gltfScene.scenes.length > 0) {
       const scene = this._gltfScene.scenes[0];
@@ -139,31 +139,6 @@ export class GLTFGameObject {
         scene.root.source.position = this.position;
         scene.root.source.scale = this.scale; // Scale down to fit the scene;
         scene.root.source.rotation =  this.rotation;
-      }
-    }
-
-    if (this.gltfScene.skins && this.gltfScene.skins.length > 0) {
-      const t = now * 0.5; // time-based angle
-      const angle = Math.sin(t) * 0.3; // amplitude can be adjusted
-      const skin = this.gltfScene.skins[0];
-
-      for (let i = 0; i < skin.joints.length; i++) {
-        const joint = skin.joints[i];
-        const node = this.gltfScene.nodes[joint];
-        if (!this.origMatrices.has(joint)) {
-          this.origMatrices.set(joint, node.source.getMatrix());
-        }
-        const origMatrix = this.origMatrices.get(joint);
-        let m: any;
-        if (joint === 0 || joint === 1) {
-          m = Mat4x4.multiply(origMatrix, Mat4x4.rotationY(-angle));
-        } else if (joint === 3 || joint === 4) {
-          m = Mat4x4.multiply(origMatrix, Mat4x4.rotationX(joint === 3 ? angle : -angle));
-        } else {
-          m = Mat4x4.multiply(origMatrix, Mat4x4.rotationZ(angle));
-        } // Use the setMatrix method which handles everything properly
-        node.source.setMatrix(m);
-        //console.log("Animating joint", joint, "angle", angle, node.source.position, node.source.scale, node.source.rotation);
       }
     }
     // After animating joints, update all node world matrices

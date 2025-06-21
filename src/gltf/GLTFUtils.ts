@@ -415,8 +415,31 @@ export const convertGLBToJSONAndBinary = async (
       });
     }
   });
-
-  const animations = jsonChunk.animations ?? [];
+  // Process animations - resolve accessor indices to actual data arrays
+  const animations = (jsonChunk.animations ?? []).map(anim => {
+    const processedAnim = { ...anim };
+    
+    // Process each sampler to resolve input/output accessor indices to actual data
+    processedAnim.samplers = anim.samplers.map(sampler => {
+      const processedSampler = { ...sampler };
+      
+      // Resolve input accessor (typically time keyframes)
+      if (sampler.input !== undefined && accessors[sampler.input]) {
+        //@ts-ignore //TODO: Fix this type issue
+        processedSampler.input = accessors[sampler.input].getFloat32Array();
+      }
+      
+      // Resolve output accessor (translation, rotation, scale values)
+      if (sampler.output !== undefined && accessors[sampler.output]) {
+        //@ts-ignore //TODO: Fix this type issue
+        processedSampler.output = accessors[sampler.output].getFloat32Array();
+      }
+      
+      return processedSampler;
+    });
+    
+    return processedAnim;
+  });
 
   const scenes: GLTFScene[] = [];
 

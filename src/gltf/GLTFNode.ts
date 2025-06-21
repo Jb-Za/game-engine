@@ -17,6 +17,7 @@ export class GLTFNode {
   skin?: GLTFSkin;
   private nodeTransformGPUBuffer: GPUBuffer;
   private nodeTransformBindGroup: GPUBindGroup;
+  public _animState?: any;
 
   constructor(device: GPUDevice, bgLayout: GPUBindGroupLayout, source: BaseTransformation, name?: string, skin?: GLTFSkin) {
     this.name = name ? name : `node_${source.position} ${source.rotation} ${source.scale}`;
