@@ -36,6 +36,7 @@ export class GLTFNode {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     this.nodeTransformBindGroup = device.createBindGroup({
+      label: `NodeTransformBindGroup_${this.name}`,
       layout: bgLayout,
       entries: [
         {
@@ -84,9 +85,18 @@ export class GLTFNode {
     if (this.drawables !== undefined) {
       for (const drawable of this.drawables) {
         if (this.skin) {
-          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup, this.skin.skinBindGroup], materialBindGroups);
+          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup, this.skin.skinBindGroup]);
         } else {
-          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup], materialBindGroups);
+          
+          const reorderedBindGroups = [...bindGroups];
+          if (reorderedBindGroups.length >= 3) {
+            const last = reorderedBindGroups.pop();
+            reorderedBindGroups.splice(2, 0, this.nodeTransformBindGroup);
+            if (last !== undefined) reorderedBindGroups.splice(4, 0, last);
+          } else {
+            reorderedBindGroups.push(this.nodeTransformBindGroup);
+          }
+          drawable.render(passEncoder, [...reorderedBindGroups]);
         }
       }
     }

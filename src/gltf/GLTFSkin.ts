@@ -22,22 +22,35 @@ export class GLTFSkin {
   private jointMatricesUniformBuffer: GPUBuffer;
   private inverseBindMatricesUniformBuffer: GPUBuffer;
   static skinBindGroupLayout: GPUBindGroupLayout;
+  static rigidBindGroupLayout: GPUBindGroupLayout;
 
   static createSharedBindGroupLayout(device: GPUDevice) {
     this.skinBindGroupLayout = device.createBindGroupLayout({
-      label: 'StaticGLTFSkin.bindGroupLayout',
+      label: 'GLTFSkin&Material.bindGroupLayout',
       entries: [
-        // Holds the initial joint matrices buffer
+        //  texture
         {
           binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {},
+        },
+        // sampler
+        {
+          binding: 1,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {},
+        },
+        // initial joint matrices buffer
+        {
+          binding: 2,
           buffer: {
             type: 'read-only-storage',
           },
           visibility: GPUShaderStage.VERTEX,
         },
-        // Holds the inverse bind matrices buffer
+        // inverse bind matrices buffer
         {
-          binding: 1,
+          binding: 3,
           buffer: {
             type: 'read-only-storage',
           },
@@ -47,13 +60,12 @@ export class GLTFSkin {
     });
   }
 
-  // For the sake of simplicity and easier debugging, we're going to convert our skin gpu accessor to a
-  // float32array, which should be performant enough for this example since there is only one skin (again, this)
-  // is not a comprehensive gltf parser
   constructor(
     device: GPUDevice,
     inverseBindMatricesAccessor: GLTFAccessor,
-    joints: number[]
+    joints: number[],
+    baseColorTexture: any,
+    baseColorSampler: any,
   ) {
     // Verify it's a matrix type and float component type
     if (inverseBindMatricesAccessor.structureType !== GLTFDataStructureType.MAT4) {
@@ -67,6 +79,7 @@ export class GLTFSkin {
     if (!(matrixArray instanceof Float32Array)) {
       throw new Error("Inverse bind matrices must be stored as float32 in GLTF (per spec)");
     }
+    // JOINTS
     this.inverseBindMatrices = matrixArray;
     this.joints = joints;
     const skinGPUBufferUsage: GPUBufferDescriptor = {
@@ -83,20 +96,29 @@ export class GLTFSkin {
     );
     this.skinBindGroup = device.createBindGroup({
       layout: GLTFSkin.skinBindGroupLayout,
-      label: 'StaticGLTFSkin.bindGroup',
+      label: 'GLTFSkin&Material.bindGroup',
       entries: [
         {
           binding: 0,
+          resource: baseColorTexture.createView(),
+        },
+        {
+          binding: 1,
+          resource: baseColorSampler,
+        },
+          // Skin data
+        {
+          binding: 2,
           resource: {
             buffer: this.jointMatricesUniformBuffer,
           },
         },
         {
-          binding: 1,
+          binding: 3,
           resource: {
             buffer: this.inverseBindMatricesUniformBuffer,
           },
-        },
+        }
       ],
     });
   }

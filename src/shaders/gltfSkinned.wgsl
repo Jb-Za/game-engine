@@ -20,15 +20,12 @@ struct NodeUniforms {
 
 // All main uniforms in group 0
 @group(0) @binding(0) var<uniform> projectionView: mat4x4f;
-@group(0) @binding(1) var<uniform> general_uniforms: GeneralUniforms;
-
-@group(1) @binding(0) var<uniform> node_uniforms: NodeUniforms;
-
-@group(2) @binding(0) var<storage, read> joint_matrices: array<mat4x4f>;
-@group(2) @binding(1) var<storage, read> inverse_bind_matrices: array<mat4x4f>;
-
+@group(1) @binding(0) var<uniform> general_uniforms: GeneralUniforms;
+@group(2) @binding(0) var<uniform> node_uniforms: NodeUniforms;
 @group(3) @binding(0) var baseColorTexture: texture_2d<f32>;
 @group(3) @binding(1) var baseColorSampler: sampler;
+@group(3) @binding(2) var<storage, read> joint_matrices: array<mat4x4f>;
+@group(3) @binding(3) var<storage, read> inverse_bind_matrices: array<mat4x4f>;
 
 const MAX_JOINTS_PER_VERTEX = 4u;
 

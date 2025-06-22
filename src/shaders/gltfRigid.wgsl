@@ -17,7 +17,6 @@ struct NodeUniforms {
 @group(0) @binding(0) var<uniform> projectionView: mat4x4f;
 @group(1) @binding(0) var<uniform> general_uniforms: GeneralUniforms;
 @group(2) @binding(0) var<uniform> node_uniforms: NodeUniforms;
-
 @group(3) @binding(0) var baseColorTexture: texture_2d<f32>;
 @group(3) @binding(1) var baseColorSampler: sampler;
 

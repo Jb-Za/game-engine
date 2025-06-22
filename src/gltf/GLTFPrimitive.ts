@@ -114,19 +114,18 @@ export class GLTFPrimitive {
     this.renderPipeline = device.createRenderPipeline(rpDescript);
   }
 
-  render(renderPassEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[], materialBindGroups?: GPUBindGroup[]) {
+  render(renderPassEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[]) {
     if (!this.renderPipeline) throw new Error("Render pipeline not built");
     renderPassEncoder.setPipeline(this.renderPipeline);
     
     // Set required bind groups
-    bindGroups.forEach((bg, idx) => {
-      renderPassEncoder.setBindGroup(idx, bg);
+    bindGroups.forEach((bg: GPUBindGroup, idx) => {
+      if (Array.isArray(bg)) {
+        renderPassEncoder.setBindGroup(idx, bg[this.materialIndex ?? 0]);
+      } else {
+        renderPassEncoder.setBindGroup(idx, bg);
+      }
     });
-
-    // Set material bind group if available and primitive has a material
-    if (materialBindGroups && this.materialIndex !== undefined && materialBindGroups[this.materialIndex]) {
-      renderPassEncoder.setBindGroup(bindGroups.length, materialBindGroups[this.materialIndex]);
-    }
 
     // Set vertex buffers
     this.attributes.map((attr, idx) => {

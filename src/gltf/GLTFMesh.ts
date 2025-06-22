@@ -35,11 +35,11 @@ export class GLTFMesh {
     }
   }
 
-  render(renderPassEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[], materialBindGroups?: GPUBindGroup[]) {
+  render(renderPassEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[]) {
     // We take a pretty simple approach to start. Just loop through all the primitives and
     // call their individual draw methods
     for (let i = 0; i < this.primitives.length; ++i) {
-      this.primitives[i].render(renderPassEncoder, bindGroups, materialBindGroups);
+      this.primitives[i].render(renderPassEncoder, bindGroups);
     }
   }
 }
