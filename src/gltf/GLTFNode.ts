@@ -80,19 +80,19 @@ export class GLTFNode {
     }
   }
 
-  renderDrawables(passEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[]) {
+  renderDrawables(passEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[], materialBindGroups?: GPUBindGroup[]) {
     if (this.drawables !== undefined) {
       for (const drawable of this.drawables) {
         if (this.skin) {
-          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup, this.skin.skinBindGroup]);
+          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup, this.skin.skinBindGroup], materialBindGroups);
         } else {
-          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup]);
+          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup], materialBindGroups);
         }
       }
     }
     // Render any of its children
     for (const child of this.children) {
-      child.renderDrawables(passEncoder, bindGroups);
+      child.renderDrawables(passEncoder, bindGroups, materialBindGroups);
     }
   }
 

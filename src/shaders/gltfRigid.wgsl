@@ -6,21 +6,20 @@ struct VertexOutput {
     @location(1) texcoord: vec2f,
 }
 
-// Camera uniform: single mat4x4f (projectionView)
-@group(0) @binding(0) var<uniform> projectionView: mat4x4f;
-
 struct GeneralUniforms {
     render_mode: u32,
 }
 
-struct NodeUniforms {
+struct NodeUniforms { 
     world_matrix: mat4x4f,
 }
 
+@group(0) @binding(0) var<uniform> projectionView: mat4x4f;
 @group(1) @binding(0) var<uniform> general_uniforms: GeneralUniforms;
 @group(2) @binding(0) var<uniform> node_uniforms: NodeUniforms;
-//@group(3) @binding(0) var diffuseTexture: texture_2d<f32>;
-//@group(3) @binding(1) var diffuseSampler: sampler;
+
+@group(3) @binding(0) var baseColorTexture: texture_2d<f32>;
+@group(3) @binding(1) var baseColorSampler: sampler;
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
@@ -35,17 +34,19 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
-    // Simple normal visualization or use texcoord for debug
+    // Handle different render modes
     switch general_uniforms.render_mode {
-        //case 2: {
-            //return textureSample(diffuseTexture, diffuseSampler, input.texcoord);
-        //}
+        case 2: {
+            // Texture mode - sample the texture with provided UV coordinates
+            return textureSample(baseColorTexture, baseColorSampler, input.texcoord);
+        }
         case 1: {
+            // UV debug mode - visualize the UV coordinates
             return vec4f(input.texcoord, 0.0, 1.0);
         }
         default: {
-            return vec4f(input.normal, 1.0);
+            // Default mode - visualize normals
+            return vec4f(input.normal * 0.5 + 0.5, 1.0);
         }
     }
-    
 }

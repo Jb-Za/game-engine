@@ -1,6 +1,4 @@
 import { Camera } from "./camera/Camera";
-//mport { Ball } from "./game_objects/Ball";
-//import { Paddle } from "./game_objects/Paddle";
 import { GeometryBuffersCollection } from "./attribute_buffers/GeometryBuffersCollection";
 import { AmbientLight } from "./lights/AmbientLight";
 import { Color } from "./math/Color";
@@ -11,12 +9,8 @@ import { PointLightsCollection } from "./lights/PointLight";
 import { Floor } from "./game_objects/Floor";
 import { InputManager } from "./input/InputManager";
 import { ShadowCamera } from "./camera/ShadowCamera";
-//import { Cube } from "./game_objects/Cube";
 import { ObjectMap } from "./game_objects/ObjectMap";
 
-import { convertGLBToJSONAndBinary } from "./gltf/GLTFUtils";
-import { Mat4x4 } from "./math/Mat4x4";
-import { GLTFSkin } from "./gltf/GLTFSkin";
 import { GLTFGameObject } from "./gltf/GLTFGameObject";
 
 async function init() {
@@ -126,13 +120,13 @@ async function init() {
     console.log(`Model position: (${_gltfGameObject.position.x.toFixed(2)}, ${_gltfGameObject.position.y.toFixed(2)}, ${_gltfGameObject.position.z.toFixed(2)})`);
   });
 
-  const update = (deltaTime: number, now: number) => {
+  const update = (deltaTime: number) => {
     camera.update();
     ambientLight.update();
     directionalLight.update();
     pointLights.update();
     shadowCamera.update();
-    _gltfGameObject.update(deltaTime, now);
+    _gltfGameObject.update(deltaTime);
     floor.update();
   };
 
@@ -192,7 +186,7 @@ async function init() {
     const deltaTime = now - then;
     then = now;
     const startTime = performance.now();
-    update(deltaTime, now);
+    update(deltaTime);
 
     const commandEncoder = device.createCommandEncoder();
     shadowPass(commandEncoder);

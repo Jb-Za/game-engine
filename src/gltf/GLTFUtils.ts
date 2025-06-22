@@ -1,4 +1,4 @@
-import { GlTf, GLTFDataComponentType, GLTFDataStructureType, GLTFRenderMode } from './Interfaces.ts';
+import { GlTf, GLTFDataComponentType, GLTFDataStructureType, GLTFRenderMode, Texture } from './Interfaces.ts';
 import { Vec3 } from "../math/Vec3.ts";
 import { GLTFScene } from './GLTFScene.ts';
 import { BaseTransformation } from './BaseTransformation.ts';
@@ -213,7 +213,9 @@ export type TempReturn = {
   nodes: GLTFNode[];
   scenes: GLTFScene[];
   skins: GLTFSkin[];
-  animations: any[]; //TODO: Define a proper type for animations
+  animations: any[]; //TODO: Define a proper type for animations,
+  textures: any[]; //TODO: Define a proper type for textures
+  materials: any[]; //TODO: Define a proper type for materials
 };
 
 // Upload a GLB model, parse its JSON and Binary components, and create the requisite GPU resources
@@ -259,6 +261,40 @@ export const convertGLBToJSONAndBinary = async (
       sampler.wrapS = sampler.wrapS ?? 10497; //GL.REPEAT
       sampler.wrapT = sampler.wrapT ?? 10947; //GL.REPEAT
     }
+  }
+
+  const textures: any[] = [];
+  if (jsonChunk.textures) {
+    textures.push(...jsonChunk.textures.map((tex) => {
+      const source = tex.source !== undefined ? jsonChunk.images?.[tex.source] : undefined;
+      return {
+        sampler: tex.sampler !== undefined ? jsonChunk.samplers?.[tex.sampler] : undefined,
+        source: source?.bufferView !== undefined ? new GLTFBufferView(binaryChunk, jsonChunk.bufferViews![source.bufferView]) : undefined,
+        name: tex.name ?? "unnamed_texture"
+      };
+    }));
+  }
+  // Parse materials
+  const materials: any[] = [];
+  if (jsonChunk.materials) {
+    materials.push(...jsonChunk.materials.map((material, index) => {
+      // Create our own material object with the information we need
+      return {
+        name: material.name ?? `material_${index}`,
+        pbrMetallicRoughness: material.pbrMetallicRoughness ?? {
+          baseColorFactor: [1, 1, 1, 1],
+          metallicFactor: 1.0,
+          roughnessFactor: 1.0
+        },
+        normalTexture: material.normalTexture,
+        occlusionTexture: material.occlusionTexture,
+        emissiveTexture: material.emissiveTexture,
+        emissiveFactor: material.emissiveFactor ?? [0, 0, 0],
+        alphaMode: material.alphaMode ?? 'OPAQUE',
+        alphaCutoff: material.alphaCutoff ?? 0.5,
+        doubleSided: material.doubleSided ?? false
+      };
+    }));
   }
 
   //Mark each accessor with its intended usage within the vertexShader.
@@ -316,9 +352,7 @@ export const convertGLBToJSONAndBinary = async (
         topology != GLTFRenderMode.TRIANGLE_STRIP
       ) {
         throw Error(`Unsupported primitive mode ${prim['mode']}`);
-      }
-
-      const primitiveAttributeMap: Record<string, GLTFAccessor> = {};
+      }      const primitiveAttributeMap: Record<string, GLTFAccessor> = {};
       const attributes = [];
       if (prim['indices'] !== undefined && jsonChunk.accessors && accessors[prim['indices']] !== undefined) {
         const indices = accessors[prim['indices']];
@@ -339,8 +373,12 @@ export const convertGLBToJSONAndBinary = async (
           attributes.push(attr);
         }
       }
+      
+      // Get material index if it exists
+      const materialIndex = prim.material !== undefined ? prim.material : undefined;
+      
       meshPrimitives.push(
-        new GLTFPrimitive(topology, primitiveAttributeMap, attributes)
+        new GLTFPrimitive(topology, primitiveAttributeMap, attributes, materialIndex)
       );
     }
     meshes.push(new GLTFMesh(mesh.name ?? "unnamed_mesh", meshPrimitives));
@@ -454,12 +492,13 @@ export const convertGLBToJSONAndBinary = async (
       child.setParent(scene.root);
     });
     scenes.push(scene);
-  }
-  return {
+  }  return {
     meshes,
     nodes,
     scenes,
     skins,
-    animations
+    animations, 
+    textures,
+    materials
   };
 };

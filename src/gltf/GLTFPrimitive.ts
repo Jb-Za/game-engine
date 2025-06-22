@@ -10,16 +10,19 @@ export class GLTFPrimitive {
   renderPipeline: GPURenderPipeline | undefined;
   private attributeMap: AttributeMapInterface;
   private attributes: string[] = [];
+  materialIndex?: number; // Track which material this primitive uses
   constructor(
     topology: GLTFRenderMode,
     attributeMap: AttributeMapInterface,
-    attributes: string[]
+    attributes: string[],
+    materialIndex?: number
   ) {
     this.topology = topology;
     this.renderPipeline = undefined;
     // Maps attribute names to accessors
     this.attributeMap = attributeMap;
     this.attributes = attributes;
+    this.materialIndex = materialIndex;
 
     for (const key in this.attributeMap) {
       this.attributeMap[key].view.needsUpload = true;
@@ -111,14 +114,21 @@ export class GLTFPrimitive {
     this.renderPipeline = device.createRenderPipeline(rpDescript);
   }
 
-  render(renderPassEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[]) {
+  render(renderPassEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[], materialBindGroups?: GPUBindGroup[]) {
     if (!this.renderPipeline) throw new Error("Render pipeline not built");
     renderPassEncoder.setPipeline(this.renderPipeline);
+    
+    // Set required bind groups
     bindGroups.forEach((bg, idx) => {
       renderPassEncoder.setBindGroup(idx, bg);
     });
 
-    //if skin do something with bone bind group
+    // Set material bind group if available and primitive has a material
+    if (materialBindGroups && this.materialIndex !== undefined && materialBindGroups[this.materialIndex]) {
+      renderPassEncoder.setBindGroup(bindGroups.length, materialBindGroups[this.materialIndex]);
+    }
+
+    // Set vertex buffers
     this.attributes.map((attr, idx) => {
       renderPassEncoder.setVertexBuffer(
         idx,
