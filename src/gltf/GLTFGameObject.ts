@@ -91,11 +91,33 @@ export class GLTFGameObject {
     for (const scene of this._gltfScene.scenes) {
       scene.root.renderDrawables(renderPassEncoder, [this._gltfScene.bindGroupLayouts.cameraBindGroup, this._gltfScene.bindGroupLayouts.generalUniformsBindGroup, this._gltfScene.selectedBindGroup]);
     }
-  }
-  public async initialize(assetLocation: string) {
-    this._gltfScene = await fetch(assetLocation)
-      .then((res) => res.arrayBuffer())
-      .then((buffer) => convertGLBToJSONAndBinary(buffer, this.device, this.camera, this.depthTexture, this.presentationFormat));
+  }  public async initialize(assetLocation: string) {
+    try {
+      const response = await fetch(assetLocation);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch GLB file from ${assetLocation}: ${response.status} ${response.statusText}`);
+      }
+      
+      const buffer = await response.arrayBuffer();
+      
+      if (buffer.byteLength === 0) {
+        throw new Error(`Empty GLB file from ${assetLocation}`);
+      }
+      
+      console.log(`Successfully loaded GLB file from ${assetLocation}, size: ${buffer.byteLength} bytes`);
+      
+      this._gltfScene = await convertGLBToJSONAndBinary(
+        buffer, 
+        this.device, 
+        this.camera, 
+        this.depthTexture, 
+        this.presentationFormat
+      );
+    } catch (error) {
+      console.error(`Error initializing GLTFGameObject with ${assetLocation}:`, error);
+      throw error;
+    }
   }
 
   /**

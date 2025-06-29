@@ -70,10 +70,10 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
   // Game Objects
   const floor = new Floor(device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
-  floor.pipeline.shadowTexture = shadowTexture;
-  floor.scale = new Vec3(40, 0.1, 40);
+  floor.pipeline.shadowTexture = shadowTexture;  floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
-  const gltfPath = options?.gltfPath || "../../assets/gltf/MushroomGuy.glb";
+  // Use absolute paths for assets in production
+  const gltfPath = options?.gltfPath || "/assets/gltf/MushroomGuy.glb";
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
   await _gltfGameObject.initialize(gltfPath);
   _gltfGameObject.skinMode = options?.skinMode ? options?.skinMode === true ? 1 : 0 : 0;
