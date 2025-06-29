@@ -24,6 +24,8 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
 
   // Track the current scene module for disposal
   const sceneModuleRef = useRef<any>(null);
+  // Preload all scene modules for dynamic imports
+  const sceneModules = import.meta.glob<any>('../scenes/**/*.ts');
 
   useEffect(() => {
     let isActive = true;
@@ -82,7 +84,23 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
         if (!deviceRef.current || !gpuContextRef.current || !presentationFormatRef.current) {
           return;
         }
-        const SceneModule = await import(/* @vite-ignore */ scene.importPath);
+        
+        // Convert importPath to match the format used by import.meta.glob
+        // Remove leading '../' to match the relative path from src directory
+        const normalizedPath = scene.importPath.replace(/^\.\.\//, '');
+        
+        // Find the matching module in our preloaded scene modules
+        const moduleKey = Object.keys(sceneModules).find(key => 
+          key.endsWith(normalizedPath.replace('.js', '.ts'))
+        );
+        
+        if (!moduleKey) {
+          console.error(`Could not find module for path: ${scene.importPath}`);
+          return;
+        }
+        
+        // Load the module
+        const SceneModule = await sceneModules[moduleKey]();
         sceneModuleRef.current = SceneModule;
         if (scene.components.includes('animationMenu') && gltfOptions) {
           await SceneModule.init(

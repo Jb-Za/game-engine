@@ -7,29 +7,26 @@ export type SceneInfo = {
   components: string[]; // List of components to include in the scene
 };
 
-export const scenes: SceneInfo[] = [
-  {
+export const scenes: SceneInfo[] = [  {
     id: "gltf",
     name: "GLTF Import Scene",
     description: "A demo of GLTF model loading and rendering with animated models.",
     thumbnail: "/thumbnails/gltf.svg",
-    importPath: "../scenes/GLTFImportScene/GLTFImportScene.js",
+    importPath: "../scenes/GLTFImportScene/GLTFImportScene.ts",
     components: ['backButton','animationMenu']
-  },
-  {
+  },  {
     id: "shadow",
     name: "Shadow Demo",
     description: "A demonstration of shadow mapping techniques.",
     thumbnail: "/thumbnails/shadow.svg",
-    importPath: "../scenes/shadowDemoScene.js",
+    importPath: "../scenes/shadowDemoScene.ts",
     components: ['backButton']
-  },
-  {
+  },  {
     id: "pong",
     name: "Pong Game",
-    description: "A simple Pong game implementation (WIP).",
+    description: "A simple Pong game implementation (Currently Broken).",
     thumbnail: "/thumbnails/pong.svg",
-    importPath: "../scenes/pong-broken.js", 
+    importPath: "../scenes/pong-broken.ts", 
     components: ['backButton']
   } 
 ];
