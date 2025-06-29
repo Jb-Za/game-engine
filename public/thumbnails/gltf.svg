@@ -1,0 +1,8 @@
+<!-- This is a simple SVG placeholder for the GLTF scene -->
+<svg width="400" height="225" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#1e293b"/>
+  <text x="50%" y="45%" font-family="Arial" font-size="24" fill="#60a5fa" text-anchor="middle">GLTF Models</text>
+  <rect x="130" y="100" width="140" height="80" fill="#3b82f6" rx="10"/>
+  <rect x="150" y="120" width="100" height="40" fill="#1e40af" rx="5"/>
+  <circle cx="200" cy="90" r="20" fill="#60a5fa"/>
+</svg>

@@ -11,12 +11,12 @@ import { PointLightsCollection } from "../lights/PointLight";
 import { Floor } from "../game_objects/Floor";
 import { InputManager } from "../input/InputManager";
 import { ShadowCamera } from "../camera/ShadowCamera";
-async function init() {
-  const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
   const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
+  const presentationFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
 
   if (!gpuContext) {
-    alert("WebGPU not supported")
+    alert("WebGPU not supported");
     return;
   }
 
@@ -167,4 +167,4 @@ async function init() {
 }
 
 
-init();
+export { init };

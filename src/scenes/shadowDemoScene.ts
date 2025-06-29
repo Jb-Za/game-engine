@@ -16,13 +16,17 @@ import { ObjectMap } from "../game_objects/ObjectMap";
 import { Ball } from "../game_objects/Ball";
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec4 } from "../math/Vec4";
-async function init() {
-  const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+
+async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
   const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
-  
-  const infoElem = document.querySelector('#info');
+  const presentationFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
   if (!gpuContext) {
     alert("WebGPU not supported");
+    return;
+  }
+
+  if (!infoElem) {
+    alert("Info element not found");
     return;
   }
 
@@ -271,4 +275,4 @@ async function init() {
   draw();
 }
 
-init();
+export { init };
