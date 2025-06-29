@@ -18,7 +18,7 @@ export class Camera {
     // PERSPECTIVE PROPERTIES
     public fov = 45;
     public near = 0.01;
-    public far = 100;
+    public far = 1000;
 
     // CAMERA MOVEMENT
     private sensitivity = 0.005;

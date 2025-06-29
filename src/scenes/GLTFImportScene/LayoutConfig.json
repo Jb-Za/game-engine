@@ -1,0 +1,74 @@
+{
+    "MushroomGuy":{
+        "static":{
+            "scale": 30,
+            "position": [1, -2, 0],
+            "rotation": [0, 0, 0, 1]
+        },
+        "skinned":{
+           "scale": 30,
+           "position": [0, 0, 0],
+           "rotation": [0, 0, 0, 1]
+        }
+    },
+    "AntiqueCamera":{
+        "static":{
+            "scale": 0.3,
+            "position": [1, -2, 0],
+            "rotation": [0, 0, 0, 1]
+        },
+        "skinned":{
+           "scale": 31,
+           "position": [0, 0, 0],
+           "rotation": [0, 0, 0, 1]
+        }
+    },
+    "CesiumMan":{
+        "static":{
+            "scale": 1,
+            "position": [1, -1.9, 0],
+             "rotation": [0.7071068, 0, 0, 0.7071068]
+        },
+        "skinned":{
+           "scale": 1,
+           "position": [0, 0, 0],
+            "rotation": [0.7071068, 0, 0, 0.7071068]
+        }
+    },
+    "Duck":{
+        "static":{
+            "scale": 0.01,
+            "position": [1, -1.9, 0],
+             "rotation": [0, 0, 0, 1]
+        },
+        "skinned":{
+           "scale": 31,
+           "position": [0, 0, 0],
+           "rotation": [0, 0, 0, 1]
+        }
+    },
+    "sponza":{
+        "static":{
+            "scale": 1,
+            "position": [0, -1, 1.5],
+             "rotation": [0, 0, 0, 1]
+        },
+        "skinned":{
+           "scale": 31,
+           "position": [0, 0, 0],
+           "rotation": [0, 0, 0, 1]
+        }
+    },
+    "default" :{
+        "static":{
+            "scale": 1,
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0, 1]
+        },
+        "skinned":{
+           "scale": 1,
+           "position": [0, 0, 0],
+           "rotation": [0, 0, 0, 1]
+        }
+    }
+}

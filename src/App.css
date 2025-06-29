@@ -1,0 +1,13 @@
+:root {
+  --bg-color: #0f172a;
+  --text-color: #f8fafc;
+}
+
+.app {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}

@@ -1,4 +1,4 @@
-import { EventEmitter } from "../Events/EventEmitter";
+import { EventEmitter } from "../events/EventEmitter";
 
 
 export type Coordinates = { x: number; y: number };

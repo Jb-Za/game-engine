@@ -199,6 +199,15 @@ export class Mat4x4 extends Float32Array{
         return new Vec3(x, y, z);
     }
 
+    public static multiplyVec4(matrix: Mat4x4, vector: Vec4): Vec4 {
+        const x = matrix[0] * vector.x + matrix[4] * vector.y + matrix[8] * vector.z + matrix[12] * vector.w;
+        const y = matrix[1] * vector.x + matrix[5] * vector.y + matrix[9] * vector.z + matrix[13] * vector.w;
+        const z = matrix[2] * vector.x + matrix[6] * vector.y + matrix[10] * vector.z + matrix[14] * vector.w;
+        const w = matrix[3] * vector.x + matrix[7] * vector.y + matrix[11] * vector.z + matrix[15] * vector.w;
+    
+        return new Vec4(x, y, z, w);
+    }
+
     // Returns the matrix as a Float32Array in column-major order
     public static toFloat32Array(a: Mat4x4): Float32Array {
         const array = new Float32Array(16);
@@ -260,5 +269,178 @@ export class Mat4x4 extends Float32Array{
         const w = matrix[3] * vector.x + matrix[7] * vector.y + matrix[11] * vector.z + matrix[15] * vector.w;
     
         return new Vec4(x, y, z, w);
+    }
+
+    public static compose(translation: number[], rotation: number[], scale: number[]): Mat4x4 {
+        const t = Mat4x4.translation(translation[0], translation[1], translation[2]);
+        const r = Mat4x4.rotationFromQuaternion(rotation);
+        const s = Mat4x4.scale(scale[0], scale[1], scale[2]);
+    
+        return Mat4x4.multiply(t, Mat4x4.multiply(r, s));
+    }
+    
+    public static rotationFromQuaternion(q: number[]): Mat4x4 {
+        const [x, y, z, w] = q;
+        const x2 = x + x, y2 = y + y, z2 = z + z;
+        const xx = x * x2, xy = x * y2, xz = x * z2;
+        const yy = y * y2, yz = y * z2, zz = z * z2;
+        const wx = w * x2, wy = w * y2, wz = w * z2;
+
+        const m = new Mat4x4();
+
+        m.set( [
+            1 - (yy + zz), xy - wz, xz + wy, 0,
+            xy + wz, 1 - (xx + zz), yz - wx, 0,
+            xz - wy, yz + wx, 1 - (xx + yy), 0,
+            0, 0, 0, 1
+        ]);
+
+        return m;
+    }
+
+    public static fromValues(
+        m00: number, m01: number, m02: number, m03: number,
+        m10: number, m11: number, m12: number, m13: number,
+        m20: number, m21: number, m22: number, m23: number,
+        m30: number, m31: number, m32: number, m33: number): Mat4x4 {
+        const m = new Mat4x4();
+        m.set([
+            m00, m01, m02, m03,
+            m10, m11, m12, m13,
+            m20, m21, m22, m23,
+            m30, m31, m32, m33
+        ]);
+        return m;
+    }
+
+    public static fromArray(array: Float32Array, offset: number = 0): Mat4x4 {
+        const mat = new Mat4x4();
+        for (let i = 0; i < 16; i++) {
+          mat[i] = array[offset + i];
+        }
+        return mat;
+    }
+
+    public static fromRotationTranslationScale(m: Mat4x4, rotation: number[], translation: number[], scale: number[]): Mat4x4 {
+        const [x, y, z, w] = rotation;
+        const x2 = x + x, y2 = y + y, z2 = z + z;
+        const xx = x * x2, xy = x * y2, xz = x * z2;
+        const yy = y * y2, yz = y * z2, zz = z * z2;
+        const wx = w * x2, wy = w * y2, wz = w * z2;
+        const sx = scale[0], sy = scale[1], sz = scale[2];
+
+        m.set([
+            (1 - (yy + zz)) * sx, (xy + wz) * sx, (xz - wy) * sx, 0,
+            (xy - wz) * sy, (1 - (xx + zz)) * sy, (yz + wx) * sy, 0,
+            (xz + wy) * sz, (yz - wx) * sz, (1 - (xx + yy)) * sz, 0,
+            translation[0], translation[1], translation[2], 1
+        ]);
+
+        return m;
+    }
+
+    public static transformMat4(out: Vec3, a: Vec3, m: Mat4x4): Vec3 {
+        let x = a[0], y = a[1], z = a[2];
+        out[0] = m[0] * x + m[4] * y + m[8] * z + m[12];
+        out[1] = m[1] * x + m[5] * y + m[9] * z + m[13];
+        out[2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+        return out;
+    }
+
+    public static inverse(m: Mat4x4): Mat4x4 {
+        const out = new Mat4x4();
+        const a = m;
+
+        const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+        const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+        const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+        const a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+        const b00 = a00 * a11 - a01 * a10;
+        const b01 = a00 * a12 - a02 * a10;
+        const b02 = a00 * a13 - a03 * a10;
+        const b03 = a01 * a12 - a02 * a11;
+        const b04 = a01 * a13 - a03 * a11;
+        const b05 = a02 * a13 - a03 * a12;
+        const b06 = a20 * a31 - a21 * a30;
+        const b07 = a20 * a32 - a22 * a30;
+        const b08 = a20 * a33 - a23 * a30;
+        const b09 = a21 * a32 - a22 * a31;
+        const b10 = a21 * a33 - a23 * a31;
+        const b11 = a22 * a33 - a23 * a32;
+
+        // Calculate the determinant
+        let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+        if (!det) {
+            return Mat4x4.identity();
+        }
+        det = 1.0 / det;
+
+        out[0]  = ( a11 * b11 - a12 * b10 + a13 * b09) * det;
+        out[1]  = (-a01 * b11 + a02 * b10 - a03 * b09) * det;
+        out[2]  = ( a31 * b05 - a32 * b04 + a33 * b03) * det;
+        out[3]  = (-a21 * b05 + a22 * b04 - a23 * b03) * det;
+        out[4]  = (-a10 * b11 + a12 * b08 - a13 * b07) * det;
+        out[5]  = ( a00 * b11 - a02 * b08 + a03 * b07) * det;
+        out[6]  = (-a30 * b05 + a32 * b02 - a33 * b01) * det;
+        out[7]  = ( a20 * b05 - a22 * b02 + a23 * b01) * det;
+        out[8]  = ( a10 * b10 - a11 * b08 + a13 * b06) * det;
+        out[9]  = (-a00 * b10 + a01 * b08 - a03 * b06) * det;
+        out[10] = ( a30 * b04 - a31 * b02 + a33 * b00) * det;
+        out[11] = (-a20 * b04 + a21 * b02 - a23 * b00) * det;
+        out[12] = (-a10 * b09 + a11 * b07 - a12 * b06) * det;
+        out[13] = ( a00 * b09 - a01 * b07 + a02 * b06) * det;
+        out[14] = (-a30 * b03 + a31 * b01 - a32 * b00) * det;
+        out[15] = ( a20 * b03 - a21 * b01 + a22 * b00) * det;
+
+        return out;
+    }
+
+    // Extract translation from a 4x4 matrix
+    public static getTranslation(m: Mat4x4): Vec3 {
+        return new Vec3(m[12], m[13], m[14]);
+    }
+
+    // Extract scale from a 4x4 matrix
+    public static getScale(m: Mat4x4): Vec3 {
+        return new Vec3(
+            Math.hypot(m[0], m[1], m[2]),
+            Math.hypot(m[4], m[5], m[6]),
+            Math.hypot(m[8], m[9], m[10])
+        );
+    }
+
+    // Extract rotation quaternion from a 4x4 matrix
+    public static getRotationQuaternion(m: Mat4x4): number[] {
+        const trace = m[0] + m[5] + m[10];
+        let qw, qx, qy, qz;
+        if (trace > 0) {
+            let s = 0.5 / Math.sqrt(trace + 1.0);
+            qw = 0.25 / s;
+            qx = (m[6] - m[9]) * s;
+            qy = (m[8] - m[2]) * s;
+            qz = (m[1] - m[4]) * s;
+        } else {
+            if (m[0] > m[5] && m[0] > m[10]) {
+                let s = 2.0 * Math.sqrt(1.0 + m[0] - m[5] - m[10]);
+                qw = (m[6] - m[9]) / s;
+                qx = 0.25 * s;
+                qy = (m[4] + m[1]) / s;
+                qz = (m[8] + m[2]) / s;
+            } else if (m[5] > m[10]) {
+                let s = 2.0 * Math.sqrt(1.0 + m[5] - m[0] - m[10]);
+                qw = (m[8] - m[2]) / s;
+                qx = (m[4] + m[1]) / s;
+                qy = 0.25 * s;
+                qz = (m[9] + m[6]) / s;
+            } else {
+                let s = 2.0 * Math.sqrt(1.0 + m[10] - m[0] - m[5]);
+                qw = (m[1] - m[4]) / s;
+                qx = (m[8] + m[2]) / s;
+                qy = (m[9] + m[6]) / s;
+                qz = 0.25 * s;
+            }
+        }
+        return [qx, qy, qz, qw];
     }
 }

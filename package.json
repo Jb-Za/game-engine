@@ -1,5 +1,5 @@
 {
-  "name": "pong",
+  "name": "game-engine",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,8 +9,15 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.6.0",
     "@webgpu/types": "^0.1.38",
     "typescript": "^5.0.2",
     "vite": "^4.4.5"
+  },
+  "dependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   }
 }
