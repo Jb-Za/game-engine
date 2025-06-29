@@ -140,6 +140,19 @@ export interface MaterialOcclusionTextureInfo {
   strength?: number;
 }
 
+export interface MaterialPbrSpecularGlossiness {
+  diffuseFactor?: number[];
+  diffuseTexture?: TextureInfo;
+  specularFactor?: number[];
+  glossinessFactor?: number;
+  specularGlossinessTexture?: TextureInfo;
+}
+
+export interface MaterialExtensions {
+  KHR_materials_pbrSpecularGlossiness?: MaterialPbrSpecularGlossiness;
+  [key: string]: any;
+}
+
 export interface Material {
   name?: string;
   pbrMetallicRoughness?: MaterialPbrMetallicRoughness;
@@ -150,6 +163,7 @@ export interface Material {
   alphaMode?: 'OPAQUE' | 'MASK' | 'BLEND' | string;
   alphaCutoff?: number;
   doubleSided?: boolean;
+  extensions?: MaterialExtensions;
 }
 
 export interface MeshPrimitive {

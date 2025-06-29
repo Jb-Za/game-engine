@@ -84,11 +84,7 @@ export class GLTFNode {
   renderDrawables(passEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[], materialBindGroups?: GPUBindGroup[]) {
     if (this.drawables !== undefined) {
       for (const drawable of this.drawables) {
-        if (this.skin) {
-          drawable.render(passEncoder, [...bindGroups, this.nodeTransformBindGroup, this.skin.skinBindGroup]);
-        } else {
-          
-          const reorderedBindGroups = [...bindGroups];
+        const reorderedBindGroups = [...bindGroups];
           if (reorderedBindGroups.length >= 3) {
             const last = reorderedBindGroups.pop();
             reorderedBindGroups.splice(2, 0, this.nodeTransformBindGroup);
@@ -96,6 +92,11 @@ export class GLTFNode {
           } else {
             reorderedBindGroups.push(this.nodeTransformBindGroup);
           }
+        if (this.skin) {
+          drawable.render(passEncoder, [...reorderedBindGroups]);
+        } else {
+          
+          
           drawable.render(passEncoder, [...reorderedBindGroups]);
         }
       }

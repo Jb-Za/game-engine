@@ -88,12 +88,13 @@ async function init() {
   floor.position = new Vec3(0, -2, 0);
 
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
-  await _gltfGameObject.initialize("../../assets/gltf/Fox.glb");
+  await _gltfGameObject.initialize("../../assets/gltf/sponza.glb");
   _gltfGameObject.skinMode = 1;
 
   // Set position, scale, and rotation for the GLTF model
   _gltfGameObject.position = new Vec3(0, 0, 0); // Place at origin
-  _gltfGameObject.scale = new Vec3(1, 1, 1);
+  const scale = 4;
+  _gltfGameObject.scale = new Vec3(scale, scale, scale);
   _gltfGameObject.rotation = [0, 0, 0, 1]; // TODO: turn this into Vec4
 
   // Add key controls to move the model
@@ -106,12 +107,12 @@ async function init() {
     if (e.key === "e" || e.key === "E") {
       _gltfGameObject.skinMode = _gltfGameObject.skinMode === 0 ? 1 : 0;
       if (_gltfGameObject.skinMode === 0) {
-        _gltfGameObject.position = new Vec3(0, 0, 25); 
-        _gltfGameObject.scale = new Vec3(1.5, 1.5, 1.5);
-        _gltfGameObject.rotation = [1, 0, 0, 0]; 
+        _gltfGameObject.position = new Vec3(0, 0, 0); 
+        _gltfGameObject.scale = new Vec3(scale, scale, scale);
+        _gltfGameObject.rotation = [0, 0, 0, 1]; 
       } else {
         _gltfGameObject.position = new Vec3(0, 0, 0)
-        _gltfGameObject.scale = new Vec3(1, 1, 1);
+        _gltfGameObject.scale = new Vec3(scale, scale, scale);
         _gltfGameObject.rotation = [0, 0, 0, 1];
       }
       console.log(`Skin mode switched to: ${_gltfGameObject.skinMode === 0 ? "Skinned" : "Non-skinned"} (skin_mode=${_gltfGameObject.skinMode})`);

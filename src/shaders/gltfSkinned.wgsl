@@ -1,6 +1,4 @@
-// Whale.glb Vertex attributes
-// Read in VertexInput from attributes
-// f32x3    f32x3   f32x2       u8x4       f32x4
+
 struct VertexOutput {
   @builtin(position) Position: vec4f,
   @location(0) normal: vec3f,
@@ -28,43 +26,6 @@ struct NodeUniforms {
 @group(3) @binding(3) var<storage, read> inverse_bind_matrices: array<mat4x4f>;
 
 const MAX_JOINTS_PER_VERTEX = 4u;
-
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-  var output: VertexOutput;
-
-  let local_position = vec4f(input.position.x, input.position.y, input.position.z, 1.0);
-
-  // Generic skinning calculation
-  var skin_matrix = mat4x4f();
-  for (var i = 0u; i < MAX_JOINTS_PER_VERTEX; i = i + 1u) {
-    let joint_idx = input.joints[i];
-    let weight = input.weights[i];
-    let joint_matrix = joint_matrices[joint_idx] * inverse_bind_matrices[joint_idx];
-    skin_matrix = skin_matrix + joint_matrix * weight;
-  }
-
-  var world_position: vec4f;
-  if (general_uniforms.skin_mode == 0u) {
-    world_position = node_uniforms.world_matrix * (skin_matrix * local_position);
-  } else {
-    world_position = node_uniforms.world_matrix * local_position;
-  }
-
-  output.Position = projectionView * world_position;
-  output.normal = input.normal;
-
-  // Output joints as vec4f (pad with 0 if fewer than 4)
-  var joints_vec = vec4f(0.0, 0.0, 0.0, 0.0);
-  for (var i = 0u; i < MAX_JOINTS_PER_VERTEX && i < 4u; i = i + 1u) {
-    joints_vec[i] = f32(input.joints[i]);
-  }
-  output.joints = joints_vec;
-  output.weights = input.weights;
-  output.texcoord = input.texcoord;
-
-  return output;
-}
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {

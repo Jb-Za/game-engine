@@ -5,7 +5,7 @@ export class GLTFAnimationPlayer {
   private animations: any[];
   private nodes: any[];
   private currentTime: number;
-  private activeAnimation: number = 1; 
+  private activeAnimation: number = 0; 
   public speed: number = 0.5; // Add this line
   
   constructor(animations: any[], nodes: GLTFNode[]) {
@@ -72,6 +72,15 @@ export class GLTFAnimationPlayer {
         const v1 = output.slice(i1 * stride, i1 * stride + stride);
         const value = this.slerpQuat(v0, v1, localT);
         node._animState[path] = value;
+      }else if (path === "weights") {
+        const stride = output.length / input.length; // number of morph targets
+        const v0 = output.slice(i0 * stride, i0 * stride + stride);
+        const v1 = output.slice(i1 * stride, i1 * stride + stride);
+        // Interpolate each weight
+        const value = v0.map((w0: number, idx: string | number) => this.lerp(w0, v1[idx], localT));
+        node._animState[path] = value;
+      } else {
+        console.warn(`Unsupported animation path: ${path}`);
       }
     }
 
@@ -84,6 +93,10 @@ export class GLTFAnimationPlayer {
         const mat = Mat4x4.compose(t, r, s);
         node.source.setMatrix(mat);
       }
+      // // Apply morph target weights if present
+      // if (node._animState["weights"] && node.source.setWeights) {
+      //   node.source.setWeights(node._animState["weights"]);
+      // }
     }
   }
 

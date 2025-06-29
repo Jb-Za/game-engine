@@ -20,17 +20,6 @@ struct NodeUniforms {
 @group(3) @binding(0) var baseColorTexture: texture_2d<f32>;
 @group(3) @binding(1) var baseColorSampler: sampler;
 
-@vertex
-fn vertexMain(input: VertexInput) -> VertexOutput {
-    var output: VertexOutput;
-    let local_position = vec4f(input.position, 1.0);
-    let world_position = node_uniforms.world_matrix * local_position;
-    output.Position = projectionView * world_position;
-    output.normal = input.normal;
-    output.texcoord = input.texcoord;
-    return output;
-}
-
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
     // Handle different render modes

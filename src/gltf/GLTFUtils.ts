@@ -249,13 +249,14 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
         return {
           sampler: tex.sampler !== undefined ? jsonChunk.samplers?.[tex.sampler] : undefined,
           source: source?.bufferView !== undefined ? new GLTFBufferView(binaryChunk, jsonChunk.bufferViews![source.bufferView]) : undefined,
+          mimeType: source?.mimeType,
           name: tex.name ?? "unnamed_texture",
         };
       })
     );
 
     for (const texture of textures) {
-      if (texture.source.view !== undefined) {
+      if (texture.source && texture.source.view !== undefined) {
         // 1. Extract bytes from bufferView
         const bufferView = texture.source.view; // This should be your GLTFBufferView instance
         const imageBytes = new Uint8Array(bufferView.buffer, bufferView.byteOffset, bufferView.byteLength);
@@ -265,7 +266,7 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
         const imageBitmap = await createImageBitmap(blob); // 3. Upload to GPU
         const gpuTexture = device.createTexture({
           size: [imageBitmap.width, imageBitmap.height],
-          format: "rgba8unorm",
+          format: "rgba8unorm-srgb",
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
         });
         device.queue.copyExternalImageToTexture({ source: imageBitmap }, { texture: gpuTexture }, [imageBitmap.width, imageBitmap.height]);
@@ -383,20 +384,45 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
       bufferViews[i].upload(device);
     }
   }
-
   // Parse materials
   const materials: any[] = [];
   if (jsonChunk.materials) {
     materials.push(
       ...jsonChunk.materials.map((material, index) => {
+        // Handle KHR_materials_pbrSpecularGlossiness extension
+        let baseColorFactor = [1, 1, 1, 1];
+        let baseColorTexture = undefined;
+        
+        if (material.extensions && material.extensions.KHR_materials_pbrSpecularGlossiness) {
+          const ext = material.extensions.KHR_materials_pbrSpecularGlossiness;
+          // Use diffuseFactor as baseColorFactor if available
+          if (ext.diffuseFactor) {
+            baseColorFactor = ext.diffuseFactor;
+          }
+          // Use diffuseTexture as baseColorTexture if available
+          if (ext.diffuseTexture) {
+            baseColorTexture = ext.diffuseTexture;
+          }
+        }
+        
+        // Standard pbrMetallicRoughness takes precedence if present
+        const pbrMetallicRoughness = material.pbrMetallicRoughness ? {
+          ...material.pbrMetallicRoughness
+        } : {
+          baseColorFactor: baseColorFactor,
+          metallicFactor: 1.0,
+          roughnessFactor: 1.0,
+        };
+        
+        // Override baseColorTexture with extension's diffuseTexture if no baseColorTexture is present
+        if (!pbrMetallicRoughness.baseColorTexture && baseColorTexture) {
+          pbrMetallicRoughness.baseColorTexture = baseColorTexture;
+        }
+        
         // Create our own material object with the information we need
         return {
           name: material.name ?? `material_${index}`,
-          pbrMetallicRoughness: material.pbrMetallicRoughness ?? {
-            baseColorFactor: [1, 1, 1, 1],
-            metallicFactor: 1.0,
-            roughnessFactor: 1.0,
-          },
+          pbrMetallicRoughness: pbrMetallicRoughness,
           normalTexture: material.normalTexture,
           occlusionTexture: material.occlusionTexture,
           emissiveTexture: material.emissiveTexture,
@@ -413,7 +439,7 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
   const defaultTexture = device.createTexture({
     label: "Default_White_Texture",
     size: [1, 1],
-    format: "rgba8unorm",
+    format: "rgba8unorm-srgb",
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
@@ -431,8 +457,6 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
   let baseColorSampler = defaultSampler;
   for (const material of materials) {
     // Get base color texture from material or create one from baseColorFactor
-    let baseColorTexture = defaultTexture;
-    let baseColorSampler = defaultSampler;
 
     if (material.pbrMetallicRoughness) {
       // If there's a texture, use it
@@ -445,14 +469,14 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
           baseColorSampler = texture.gpuSampler || defaultSampler;
         }
       }
-      // If no texture but has baseColorFactor, create a 1x1 texture with that color
+      //If no texture but has baseColorFactor, create a 1x1 texture with that color
       else if (material.pbrMetallicRoughness.baseColorFactor) {
         const colorFactor = material.pbrMetallicRoughness.baseColorFactor;
 
         // Create a small texture with the base color
         const colorTexture = device.createTexture({
           size: [1, 1],
-          format: "rgba8unorm",
+          format: "rgba8unorm-srgb",
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
         });
 

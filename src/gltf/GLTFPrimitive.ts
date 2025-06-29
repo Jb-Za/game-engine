@@ -66,10 +66,67 @@ export class GLTFPrimitive {
     );
     VertexInputShaderString += '}';
 
+    let VertexMainShaderString = `
+    @vertex 
+    fn vertexMain(input: VertexInput) -> VertexOutput { 
+    var output: VertexOutput;\n`;
+
+    if(this.attributes.includes('JOINTS_0')){
+      VertexMainShaderString += 
+      `  let local_position = vec4f(input.position.x, input.position.y, input.position.z, 1.0);
+      // Generic skinning calculation
+        var skin_matrix = mat4x4f();
+        for (var i = 0u; i < MAX_JOINTS_PER_VERTEX; i = i + 1u) {
+          let joint_idx = input.joints[i];
+          let weight = input.weights[i];
+          let joint_matrix = joint_matrices[joint_idx] * inverse_bind_matrices[joint_idx];
+          skin_matrix = skin_matrix + joint_matrix * weight;
+        }
+
+        var world_position: vec4f;
+        if (general_uniforms.skin_mode == 0u) {
+          world_position = node_uniforms.world_matrix * (skin_matrix * local_position);
+        } else {
+          world_position = node_uniforms.world_matrix * local_position;
+        }
+
+        // Output joints as vec4f (pad with 0 if fewer than 4)
+        var joints_vec = vec4f(0.0, 0.0, 0.0, 0.0);
+        for (var i = 0u; i < MAX_JOINTS_PER_VERTEX && i < 4u; i = i + 1u) {
+          joints_vec[i] = f32(input.joints[i]);
+        }
+        output.joints = joints_vec;
+        `;
+    }
+    else{
+      VertexMainShaderString += 
+      `  let local_position = vec4f(input.position, 1.0);
+         let world_position = node_uniforms.world_matrix * local_position;
+      `;
+    }
+    VertexMainShaderString += `output.Position = projectionView * world_position;
+    `;
+    if (this.attributes.includes('NORMAL')) {
+      VertexMainShaderString += `output.normal = input.normal;
+      `;
+    }
+    if(this.attributes.includes('WEIGHTS_0')){
+      VertexMainShaderString += `output.weights = input.weights;
+      `;
+    }
+    if(this.attributes.includes('TEXCOORD_0')){
+      VertexMainShaderString += `output.texcoord = input.texcoord;
+      `;
+    }
+
+    VertexMainShaderString += `\nreturn output;\n}\n
+    `;
+
+
     const vertexState: GPUVertexState = {
       // Shader stage info
       module: device.createShaderModule({
-        code: VertexInputShaderString + vertexShader,
+        code: VertexInputShaderString + VertexMainShaderString + vertexShader,
       }),
       buffers: vertexBuffers,
       entryPoint: 'vertexMain'
@@ -78,7 +135,7 @@ export class GLTFPrimitive {
     const fragmentState: GPUFragmentState = {
       // Shader info
       module: device.createShaderModule({
-        code: VertexInputShaderString + fragmentShader,
+        code: VertexInputShaderString + VertexMainShaderString + fragmentShader,
       }),
       // Output render target info
       targets: [{ format: colorFormat }],
