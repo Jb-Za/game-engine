@@ -11,6 +11,8 @@ import { PointLightsCollection } from "../lights/PointLight";
 import { Floor } from "../game_objects/Floor";
 import { InputManager } from "../input/InputManager";
 import { ShadowCamera } from "../camera/ShadowCamera";
+let animationFrameId: number | null = null;
+
 async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
   const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
   const presentationFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -160,11 +162,17 @@ async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
       commandEncoder.finish()
     ]);
 
-    requestAnimationFrame(draw);
+    animationFrameId = requestAnimationFrame(draw);
   }
 
   draw();
 }
 
+export function dispose() {
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+}
 
 export { init };

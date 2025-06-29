@@ -5,8 +5,8 @@ export class GLTFAnimationPlayer {
   private animations: any[];
   private nodes: any[];
   private currentTime: number;
-  private activeAnimation: number = 0; 
-  public speed: number = 0.5; // Add this line
+  public activeAnimation: number = 0;
+  public speed: number = 0.5;
   
   constructor(animations: any[], nodes: GLTFNode[]) {
     this.animations = animations;

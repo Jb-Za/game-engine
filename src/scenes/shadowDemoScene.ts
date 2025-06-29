@@ -17,30 +17,11 @@ import { Ball } from "../game_objects/Ball";
 import { Mat4x4 } from "../math/Mat4x4";
 import { Vec4 } from "../math/Vec4";
 
-async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
-  const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
-  const presentationFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
-  if (!gpuContext) {
-    alert("WebGPU not supported");
-    return;
-  }
+let animationFrameId: number | null = null;
 
-  if (!infoElem) {
-    alert("Info element not found");
-    return;
-  }
-
-  canvas.addEventListener("click", async () => {
-    await canvas.requestPointerLock();
-  });
-
-  const adapter = await navigator.gpu.requestAdapter();
-
-  const device = await adapter!.requestDevice();
-
-  gpuContext.configure({
-    device: device,
-    format: "bgra8unorm",
+async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement){
+  canvas!.addEventListener("click", async () => {
+    await canvas!.requestPointerLock();
   });
 
   //Input Manager
@@ -269,10 +250,17 @@ async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
       js: ${jsTime.toFixed(1)}ms
       `;
     }
-    requestAnimationFrame(draw);
+    animationFrameId = requestAnimationFrame(draw);
   };
 
   draw();
+}
+
+export function dispose() {
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
 }
 
 export { init };

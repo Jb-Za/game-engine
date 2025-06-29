@@ -1,16 +1,17 @@
-import { Camera } from "../camera/Camera";
-import { GeometryBuffersCollection } from "../attribute_buffers/GeometryBuffersCollection";
-import { AmbientLight } from "../lights/AmbientLight";
-import { Color } from "../math/Color";
-import { Vec3 } from "../math/Vec3";
-import { Texture2D } from "../texture/Texture2D";
-import { DirectionalLight } from "../lights/DirectionalLight";
-import { PointLightsCollection } from "../lights/PointLight";
-import { Floor } from "../game_objects/Floor";
-import { InputManager } from "../input/InputManager";
-import { ShadowCamera } from "../camera/ShadowCamera";
-import { ObjectMap } from "../game_objects/ObjectMap";
-import { GLTFGameObject } from "../gltf/GLTFGameObject";
+import { Camera } from "../../camera/Camera";
+import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffersCollection";
+import { AmbientLight } from "../../lights/AmbientLight";
+import { Color } from "../../math/Color";
+import { Vec3 } from "../../math/Vec3";
+import { Texture2D } from "../../texture/Texture2D";
+import { DirectionalLight } from "../../lights/DirectionalLight";
+import { PointLightsCollection } from "../../lights/PointLight";
+import { Floor } from "../../game_objects/Floor";
+import { InputManager } from "../../input/InputManager";
+import { ShadowCamera } from "../../camera/ShadowCamera";
+import { ObjectMap } from "../../game_objects/ObjectMap";
+import { GLTFGameObject } from "../../gltf/GLTFGameObject";
+import LayoutConfig from "./LayoutConfig.json";
 
 let animationFrameId: number | null = null;
 
@@ -60,8 +61,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
   // Cameras
   const camera = new Camera(device, canvas.width / canvas.height, inputManager);
-  camera.eye = new Vec3(5.74, 1.96, 4.44);
-  camera.target = new Vec3(5.02, 1.94, 3.94);
+  camera.eye = new Vec3(3.9, -0.68, 2.75);
+  camera.target = new Vec3(3.2, -0.8, 2.1);
 
   const shadowCamera = new ShadowCamera(device);
   shadowCamera.eye = new Vec3(5.74, 2.48, -3.0); // Let's imagine it as a negative direction light * -20 or any other fitting scalar
@@ -80,34 +81,24 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     options.onGLTFGameObject(_gltfGameObject);
   }
 
+  const stripAssetName = (gltfPath: string) => {
+    return gltfPath.split('/').pop()?.split('.').shift() || "gltfModel";
+  }
+  const objectConfig = (LayoutConfig as Record<string, typeof LayoutConfig.default>)[stripAssetName(gltfPath)] ?? LayoutConfig.default;
+
   // Set position, scale, and rotation for the GLTF model
-  _gltfGameObject.position = new Vec3(0, 0, 0); // Place at origin
-  const scale = 4;
+  _gltfGameObject.position = new Vec3(objectConfig.static.position[0], objectConfig.static.position[1], objectConfig.static.position[2]); // Place at origin
+  const scale = objectConfig.static.scale;
   _gltfGameObject.scale = new Vec3(scale, scale, scale);
-  _gltfGameObject.rotation = [0, 0, 0, 1]; // TODO: turn this into Vec4
+  _gltfGameObject.rotation = objectConfig.static.rotation; // TODO: turn this into Vec4
 
   // Add key controls to move the model
   window.addEventListener("keydown", (e: KeyboardEvent) => {
     if (e.key === "e") {
       console.log(camera.eye);
       console.log(camera.target);
+      console.log(`Model position: (${_gltfGameObject.position.x.toFixed(2)}, ${_gltfGameObject.position.y.toFixed(2)}, ${_gltfGameObject.position.z.toFixed(2)})`);
     }
-    // Toggle skin mode with 'E' key
-    if (e.key === "e" || e.key === "E") {
-      _gltfGameObject.skinMode = _gltfGameObject.skinMode === 0 ? 1 : 0;
-      if (_gltfGameObject.skinMode === 0) {
-        _gltfGameObject.position = new Vec3(0, 0, 0); 
-        _gltfGameObject.scale = new Vec3(scale, scale, scale);
-        _gltfGameObject.rotation = [0, 0, 0, 1]; 
-      } else {
-        _gltfGameObject.position = new Vec3(0, 0, 0)
-        _gltfGameObject.scale = new Vec3(scale, scale, scale);
-        _gltfGameObject.rotation = [0, 0, 0, 1];
-      }
-      console.log(`Skin mode switched to: ${_gltfGameObject.skinMode === 0 ? "Skinned" : "Non-skinned"} (skin_mode=${_gltfGameObject.skinMode})`);
-    }
-
-    console.log(`Model position: (${_gltfGameObject.position.x.toFixed(2)}, ${_gltfGameObject.position.y.toFixed(2)}, ${_gltfGameObject.position.z.toFixed(2)})`);
   });
 
   const update = (deltaTime: number) => {

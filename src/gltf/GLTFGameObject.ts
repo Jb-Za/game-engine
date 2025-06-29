@@ -116,4 +116,46 @@ export class GLTFGameObject {
     // Update the general uniforms buffer with the new render mode
     this.device.queue.writeBuffer(this._gltfScene.generalUniformsBuffer, 0, new Uint32Array([mode, this.skinMode]));
   }
+
+  // Add a public method to set the active animation by index
+  public setActiveAnimation(idx: number) {
+    if (this.animationPlayer) {
+      this.animationPlayer.activeAnimation = idx;
+    }
+  }  // Add a public method to set the active animation by name
+  public setActiveAnimationByName(name: string) {
+    if (!this.gltfScene || !this.gltfScene.animations) {
+      console.warn("Cannot set animation: No animations available for this model");
+      return;
+    }
+    const animPlayer = this.animationPlayer;
+    if (!animPlayer) {
+      console.warn("Cannot set animation: No animation player available for this model");
+      return;
+    }
+    const idx = this.gltfScene.animations.findIndex((a: any) => a.name === name);
+    if (idx >= 0) {
+      animPlayer.activeAnimation = idx;
+    } else {
+      console.warn(`Animation "${name}" not found in this model`);
+    }
+  }
+
+  /**
+   * Set the animation playback speed
+   * @param speed Animation speed multiplier (0.0 to 1.0)
+   */
+  public setAnimationSpeed(speed: number) {
+    if (this.animationPlayer) {
+      this.animationPlayer.speed = Math.max(0, Math.min(1, speed));
+    } else {
+      console.warn("Cannot set animation speed: No animation player available for this model");
+    }
+  }
+}
+
+// Add a function to get animation names from a loaded GLTFGameObject
+export function getGLTFAnimationNames(gltfGameObject: any): string[] {
+  if (!gltfGameObject || !gltfGameObject.gltfScene || !gltfGameObject.gltfScene.animations) return [];
+  return gltfGameObject.gltfScene.animations.map((a: any, i: number) => a.name || `Animation ${i}`);
 }
