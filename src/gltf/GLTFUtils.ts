@@ -257,16 +257,55 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
 
     for (const texture of textures) {
       if (texture.source && texture.source.view !== undefined) {
-        // 1. Extract bytes from bufferView
-        const bufferView = texture.source.view; // This should be your GLTFBufferView instance
+        const bufferView = texture.source.view;
         const imageBytes = new Uint8Array(bufferView.buffer, bufferView.byteOffset, bufferView.byteLength);
-
-        // 2. Create a Blob and ImageBitmap
         const blob = new Blob([imageBytes], { type: texture.mimeType });
-        const imageBitmap = await createImageBitmap(blob); // 3. Upload to GPU
+        const imageBitmap = await createImageBitmap(blob);
+          // Determine if this is a color texture or non-color data
+        let format: GPUTextureFormat = "rgba8unorm";
+        const textureIndex = textures.indexOf(texture);
+        
+        // Check if this texture is used as a color texture in any material
+        const isColorTexture = jsonChunk.materials?.some(material => {
+          if (material.pbrMetallicRoughness?.baseColorTexture?.index === textureIndex) {
+            return true;
+          }
+          if (material.extensions?.KHR_materials_pbrSpecularGlossiness?.diffuseTexture?.index === textureIndex) {
+            return true;
+          }
+          if (material.emissiveTexture?.index === textureIndex) {
+            return true;
+          }
+          return false;
+        });
+        
+        // Check if this is a non-color data texture (normal maps, etc.)
+        const isNonColorDataTexture = jsonChunk.materials?.some(material => {
+          if (material.normalTexture?.index === textureIndex) {
+            return true;
+          }
+          if (material.pbrMetallicRoughness?.metallicRoughnessTexture?.index === textureIndex) {
+            return true;
+          }
+          if (material.occlusionTexture?.index === textureIndex) {
+            return true;
+          }
+          if (material.extensions?.KHR_materials_pbrSpecularGlossiness?.specularGlossinessTexture?.index === textureIndex) {
+            return true;
+          }
+          return false;
+        });
+        
+        // Use sRGB format for color textures, and linear format for non-color data
+        if (isColorTexture) {
+          format = "rgba8unorm-srgb";
+        } else if (isNonColorDataTexture) {
+          format = "rgba8unorm";
+        }
+        
         const gpuTexture = device.createTexture({
           size: [imageBitmap.width, imageBitmap.height],
-          format: "rgba8unorm-srgb",
+          format: format,
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
         });
         device.queue.copyExternalImageToTexture({ source: imageBitmap }, { texture: gpuTexture }, [imageBitmap.width, imageBitmap.height]);
@@ -435,11 +474,18 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
     );
   }
   const materialBindGroups = [];
-
-  const defaultTexture = device.createTexture({
-    label: "Default_White_Texture",
+  // Create two default textures - one for color data (sRGB) and one for non-color data (linear)
+  const defaultColorTexture = device.createTexture({
+    label: "Default_White_Color_Texture",
     size: [1, 1],
     format: "rgba8unorm-srgb",
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+  
+  const defaultNonColorTexture = device.createTexture({
+    label: "Default_White_NonColor_Texture",
+    size: [1, 1],
+    format: "rgba8unorm",
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
@@ -450,10 +496,12 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
     addressModeU: "repeat",
     addressModeV: "repeat",
   });
-  device.queue.writeTexture({ texture: defaultTexture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, { width: 1, height: 1 });
+  // Write white pixels to both textures
+  device.queue.writeTexture({ texture: defaultColorTexture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, { width: 1, height: 1 });
+  device.queue.writeTexture({ texture: defaultNonColorTexture }, new Uint8Array([255, 255, 255, 255]), { bytesPerRow: 4 }, { width: 1, height: 1 });
 
   // Get base color texture from material or use default
-  let baseColorTexture = defaultTexture;
+  let baseColorTexture = defaultColorTexture;
   let baseColorSampler = defaultSampler;
   for (const material of materials) {
     // Get base color texture from material or create one from baseColorFactor
@@ -468,15 +516,14 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
           baseColorTexture = texture.texture;
           baseColorSampler = texture.gpuSampler || defaultSampler;
         }
-      }
-      //If no texture but has baseColorFactor, create a 1x1 texture with that color
+      }      //If no texture but has baseColorFactor, create a 1x1 texture with that color
       else if (material.pbrMetallicRoughness.baseColorFactor) {
         const colorFactor = material.pbrMetallicRoughness.baseColorFactor;
 
-        // Create a small texture with the base color
+        // Create a small texture with the base color - always use sRGB for color data
         const colorTexture = device.createTexture({
           size: [1, 1],
-          format: "rgba8unorm-srgb",
+          format: "rgba8unorm-srgb", // Color data uses sRGB format
           usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
         });
 
@@ -518,7 +565,7 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
       entries: [
         {
           binding: 0,
-          resource: defaultTexture.createView(),
+          resource: defaultColorTexture.createView(),
         },
         {
           binding: 1,

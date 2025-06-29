@@ -266,7 +266,7 @@ export class RenderPipeline {
       }
     });
 
-    this._diffuseTexture = Texture2D.createEmpty(device);
+    this._diffuseTexture = Texture2D.createEmpty(device, true); // Use sRGB format for color textures
     // this._shadowTexture = Texture2D.createShadowTexture(device, 1024, 1024);
     // this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);
 

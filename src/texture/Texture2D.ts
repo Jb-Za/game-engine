@@ -6,24 +6,23 @@ export class Texture2D {
         if(texture){
             this.texture = texture;
         }
-    }
-
-    public static async create(device: GPUDevice, image: HTMLImageElement) {
+    }    public static async create(device: GPUDevice, image: HTMLImageElement, isColorTexture: boolean = true) {
         const texture = new Texture2D(device);
-        await texture.initialize(image);
+        const format = isColorTexture ? "rgba8unorm-srgb" : "rgba8unorm";
+        await texture.initialize(image, format);
+        return texture;
+    }public static createEmpty(device: GPUDevice, isColorTexture: boolean = true): Texture2D {
+        const texture = new Texture2D(device);
+        // Use sRGB format for color textures, linear format for non-color data
+        const format = isColorTexture ? "rgba8unorm-srgb" : "rgba8unorm";
+        texture.initializeFromData(new Uint8Array([255, 255, 255, 255]), 1, 1, format);
         return texture;
     }
 
-    public static createEmpty(device: GPUDevice): Texture2D {
-        const texture = new Texture2D(device);
-        texture.initializeFromData(new Uint8Array([255, 255, 255, 255]), 1, 1);
-        return texture;
-    }
-
-    private createTextureAndSampler(width: number, height: number) {
+    private createTextureAndSampler(width: number, height: number, format: GPUTextureFormat = "rgba8unorm") {
         this.texture = this.device.createTexture({
             size: { width, height },
-            format: "rgba8unorm",
+            format: format,
             usage: GPUTextureUsage.COPY_DST
                 | GPUTextureUsage.TEXTURE_BINDING
                 | GPUTextureUsage.RENDER_ATTACHMENT
@@ -35,10 +34,8 @@ export class Texture2D {
             addressModeU: "repeat",
             addressModeV: "repeat",
         });
-    }
-
-    public async initialize(image: HTMLImageElement) {
-        this.createTextureAndSampler(image.width, image.height);
+    }    public async initialize(image: HTMLImageElement, format: GPUTextureFormat = "rgba8unorm-srgb") {
+        this.createTextureAndSampler(image.width, image.height, format);
 
         const imageBitmap = await createImageBitmap(image);
 
@@ -81,10 +78,8 @@ export class Texture2D {
             }
           )
           return texture;
-    }
-
-    public async initializeFromData(data: ArrayBuffer, width: number, height: number) {
-        this.createTextureAndSampler(width, height);
+    }    public async initializeFromData(data: ArrayBuffer, width: number, height: number, format: GPUTextureFormat = "rgba8unorm") {
+        this.createTextureAndSampler(width, height, format);
 
         this.device.queue.writeTexture(
             { texture: this.texture },

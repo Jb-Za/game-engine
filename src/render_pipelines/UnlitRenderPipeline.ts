@@ -176,7 +176,7 @@ export class UnlitRenderPipeline {
       }
     });
 
-    this.diffuseTexture = Texture2D.createEmpty(device);
+    this.diffuseTexture = Texture2D.createEmpty(device, true); // Use sRGB format for color textures
 
     this.vertexBindGroup = device.createBindGroup({
       layout: vertexGroupLayout,

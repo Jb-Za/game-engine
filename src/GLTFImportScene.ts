@@ -88,7 +88,7 @@ async function init() {
   floor.position = new Vec3(0, -2, 0);
 
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
-  await _gltfGameObject.initialize("../../assets/gltf/sponza.glb");
+  await _gltfGameObject.initialize("../../assets/gltf/MushroomGuy.glb");
   _gltfGameObject.skinMode = 1;
 
   // Set position, scale, and rotation for the GLTF model
