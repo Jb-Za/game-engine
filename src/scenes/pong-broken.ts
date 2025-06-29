@@ -13,9 +13,9 @@ import { InputManager } from "../input/InputManager";
 import { ShadowCamera } from "../camera/ShadowCamera";
 let animationFrameId: number | null = null;
 
-async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
+async function init(canvas: HTMLCanvasElement) {
   const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
-  const presentationFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
+  //const presentationFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
 
   if (!gpuContext) {
     alert("WebGPU not supported");
