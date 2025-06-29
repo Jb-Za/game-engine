@@ -1,0 +1,19 @@
+.webgl-container {
+  position: relative;
+}
+
+canvas {
+  display: block;
+  background-color: cyan;
+}
+
+#info {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 120px;
+  height: 40px;
+  padding: inherit;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+}

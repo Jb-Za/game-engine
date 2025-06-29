@@ -2,7 +2,7 @@ import { Camera } from "../camera/Camera";
 import { ShadowCamera } from "../camera/ShadowCamera";
 import { AmbientLight } from "../lights/AmbientLight";
 import { DirectionalLight } from "../lights/DirectionalLight";
-import { convertGLBToJSONAndBinary, TempReturn } from "./GLTFUtils";
+import { convertGLBToJSONAndBinary } from "./GLTFUtils";
 
 import { GLTFAnimationPlayer } from "./GLTFAnimationPlayer";
 import { Vec3 } from "../math/Vec3";

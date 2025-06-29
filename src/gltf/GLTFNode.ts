@@ -1,6 +1,4 @@
 import { Mat4x4 } from "../math/Mat4x4";
-import { Vec3 } from "../math/Vec3";
-import { Vec4 } from "../math/Vec4";
 import { BaseTransformation } from "./BaseTransformation";
 import { GLTFMesh } from "./GLTFMesh";
 import { GLTFSkin } from "./GLTFSkin";

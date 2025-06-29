@@ -1,4 +1,4 @@
-import { GlTf, GLTFDataComponentType, GLTFDataStructureType, GLTFRenderMode, Texture } from "./Interfaces.ts";
+import { GlTf, GLTFDataComponentType, GLTFDataStructureType, GLTFRenderMode } from "./Interfaces.ts";
 import { Vec3 } from "../math/Vec3.ts";
 import { GLTFScene } from "./GLTFScene.ts";
 import { BaseTransformation } from "./BaseTransformation.ts";
@@ -335,7 +335,7 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
         const indicesIdx = primitive.indices;
         if (indicesIdx !== undefined && jsonChunk.accessors[indicesIdx] && jsonChunk.accessors[indicesIdx].bufferView !== undefined) {
           jsonChunk.accessors[indicesIdx].bufferViewUsage = (jsonChunk.accessors[indicesIdx].bufferViewUsage ?? 0) | GPUBufferUsage.INDEX;
-          jsonChunk.bufferViews[jsonChunk.accessors[indicesIdx].bufferView].usage = (jsonChunk.bufferViews[jsonChunk.accessors[indicesIdx].bufferView].usage ?? 0) | GPUBufferUsage.INDEX;
+          jsonChunk.bufferViews[jsonChunk.accessors[indicesIdx].bufferView!].usage = (jsonChunk.bufferViews[jsonChunk.accessors[indicesIdx].bufferView!].usage ?? 0) | GPUBufferUsage.INDEX;
         }
       }
       if (jsonChunk.accessors && jsonChunk.bufferViews) {

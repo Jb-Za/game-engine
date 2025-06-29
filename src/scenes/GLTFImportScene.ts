@@ -1,24 +1,21 @@
-import { Camera } from "./camera/Camera";
-import { GeometryBuffersCollection } from "./attribute_buffers/GeometryBuffersCollection";
-import { AmbientLight } from "./lights/AmbientLight";
-import { Color } from "./math/Color";
-import { Vec3 } from "./math/Vec3";
-import { Texture2D } from "./texture/Texture2D";
-import { DirectionalLight } from "./lights/DirectionalLight";
-import { PointLightsCollection } from "./lights/PointLight";
-import { Floor } from "./game_objects/Floor";
-import { InputManager } from "./input/InputManager";
-import { ShadowCamera } from "./camera/ShadowCamera";
-import { ObjectMap } from "./game_objects/ObjectMap";
+import { Camera } from "../camera/Camera";
+import { GeometryBuffersCollection } from "../attribute_buffers/GeometryBuffersCollection";
+import { AmbientLight } from "../lights/AmbientLight";
+import { Color } from "../math/Color";
+import { Vec3 } from "../math/Vec3";
+import { Texture2D } from "../texture/Texture2D";
+import { DirectionalLight } from "../lights/DirectionalLight";
+import { PointLightsCollection } from "../lights/PointLight";
+import { Floor } from "../game_objects/Floor";
+import { InputManager } from "../input/InputManager";
+import { ShadowCamera } from "../camera/ShadowCamera";
+import { ObjectMap } from "../game_objects/ObjectMap";
+import { GLTFGameObject } from "../gltf/GLTFGameObject";
 
-import { GLTFGameObject } from "./gltf/GLTFGameObject";
-
-async function init() {
-  const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+async function init(canvas: HTMLCanvasElement, infoElem: HTMLPreElement) {
   const gpuContext = canvas.getContext("webgpu") as GPUCanvasContext;
   const presentationFormat: GPUTextureFormat = navigator.gpu.getPreferredCanvasFormat();
 
-  const infoElem = document.querySelector("#info");
   if (!gpuContext) {
     alert("WebGPU not supported");
     return;
@@ -170,12 +167,11 @@ async function init() {
     });
 
     // DRAW HERE
-
     objectMap.objects.forEach((object) => {
       object.draw(renderPassEncoder);
     });
-
     floor.draw(renderPassEncoder);
+    _gltfGameObject.draw(renderPassEncoder);
     renderPassEncoder.end();
   };
 
@@ -191,30 +187,7 @@ async function init() {
 
     const commandEncoder = device.createCommandEncoder();
     shadowPass(commandEncoder);
-    const renderPassEncoder = commandEncoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: gpuContext.getCurrentTexture().createView(),
-          storeOp: "store",
-          clearValue: { r: 0.4, g: 0.9, b: 0.9, a: 1.0 },
-          loadOp: "clear",
-        },
-      ],
-      depthStencilAttachment: {
-        view: depthTexture.createView(),
-        depthLoadOp: "clear",
-        depthStoreOp: "store",
-        depthClearValue: 1.0,
-      },
-    });
-
-    // Draw your other objects as before
-    objectMap.objects.forEach((object) => {
-      object.draw(renderPassEncoder);
-    });
-    floor.draw(renderPassEncoder);
-    _gltfGameObject.draw(renderPassEncoder);
-    renderPassEncoder.end();
+    scenePass(commandEncoder);
 
     device.queue.submit([commandEncoder.finish()]);
 
@@ -232,4 +205,4 @@ async function init() {
   draw();
 }
 
-init();
+export { init };
