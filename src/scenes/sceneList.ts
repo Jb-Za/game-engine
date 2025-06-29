@@ -13,7 +13,7 @@ export const scenes: SceneInfo[] = [
     name: "GLTF Import Scene",
     description: "A demo of GLTF model loading and rendering with animated models.",
     thumbnail: "/thumbnails/gltf.svg",
-    importPath: "../scenes/GLTFImportScene/GLTFImportScene.ts",
+    importPath: "../scenes/GLTFImportScene/GLTFImportScene.js",
     components: ['backButton','animationMenu']
   },
   {
@@ -21,7 +21,7 @@ export const scenes: SceneInfo[] = [
     name: "Shadow Demo",
     description: "A demonstration of shadow mapping techniques.",
     thumbnail: "/thumbnails/shadow.svg",
-    importPath: "../scenes/shadowDemoScene.ts",
+    importPath: "../scenes/shadowDemoScene.js",
     components: ['backButton']
   },
   {
@@ -29,7 +29,7 @@ export const scenes: SceneInfo[] = [
     name: "Pong Game",
     description: "A simple Pong game implementation (WIP).",
     thumbnail: "/thumbnails/pong.svg",
-    importPath: "../scenes/pong-broken.ts", 
+    importPath: "../scenes/pong-broken.js", 
     components: ['backButton']
   } 
 ];
