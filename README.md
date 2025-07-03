@@ -23,8 +23,8 @@ This application requires a WebGPU-compatible browser:
 
 - **GPU**: DirectX 12, Vulkan, or Metal compatible graphics card
 - **OS**: Windows 10/11, macOS, or Linux with modern GPU drivers
-- **Node.js**: Version 16 or higher
-- **npm**: Version 7 or higher (comes with Node.js)
+- **Node.js**: Version 18.17.0 or higher (required for React 19)
+- **npm**: Version 9.0.0 or higher
 
 ## Installation
 
