@@ -82,7 +82,7 @@ npm run preview
 ### Asset Management
 
 3D models and textures are stored in `public/assets/`. Supported formats:
-- **Models**: GLTF/GLB files
+- **Models**: GLB files
 - **Textures**: PNG, JPG formats
 
 ## Troubleshooting
