@@ -1,24 +1,25 @@
-import { Camera } from "../camera/Camera";
-import { GeometryBuffersCollection } from "../attribute_buffers/GeometryBuffersCollection";
-import { AmbientLight } from "../lights/AmbientLight";
-import { Color } from "../math/Color";
-import { Vec3 } from "../math/Vec3";
-import { Texture2D } from "../texture/Texture2D";
-import { DirectionalLight } from "../lights/DirectionalLight";
-import { PointLightsCollection } from "../lights/PointLight";
-import { Floor } from "../game_objects/Floor";
-import { InputManager } from "../input/InputManager";
-import { ShadowCamera } from "../camera/ShadowCamera";
-import { ObjectMap } from "../game_objects/ObjectMap";
-import { GLTFGameObject } from "../gltf/GLTFGameObject";
+import { Camera } from "../../camera/Camera";
+import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffersCollection";
+import { AmbientLight } from "../../lights/AmbientLight";
+import { Color } from "../../math/Color";
+import { Vec3 } from "../../math/Vec3";
+import { Texture2D } from "../../texture/Texture2D";
+import { DirectionalLight } from "../../lights/DirectionalLight";
+import { PointLightsCollection } from "../../lights/PointLight";
+import { Floor } from "../../game_objects/Floor";
+import { InputManager } from "../../input/InputManager";
+import { ShadowCamera } from "../../camera/ShadowCamera";
+import { ObjectMap } from "../../game_objects/ObjectMap";
+import { GLTFGameObject } from "../../gltf/GLTFGameObject";
+import { CharacterController } from "../../characterController/characterController";
+import { Arrow } from "../../game_objects/Arrow";
+import { Quaternion } from "../../math/Quaternion";
 
 let animationFrameId: number | null = null;
 
 async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement, options?: {
-  gltfPath?: string;
-  skinMode?: boolean;
   onGLTFGameObject?: (gltfGameObject: any) => void;
-}){
+}) {
   canvas!.addEventListener("click", async () => {
     await canvas!.requestPointerLock();
   });
@@ -60,8 +61,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
   // Cameras
   const camera = new Camera(device, canvas.width / canvas.height, inputManager);
-  camera.eye = new Vec3(5.74, 1.96, 4.44);
-  camera.target = new Vec3(5.02, 1.94, 3.94);
+  camera.eye = new Vec3(3.9, -0.68, 2.75);
+  camera.target = new Vec3(3.2, -0.8, 2.1);
 
   const shadowCamera = new ShadowCamera(device);
   shadowCamera.eye = new Vec3(5.74, 2.48, -3.0); // Let's imagine it as a negative direction light * -20 or any other fitting scalar
@@ -69,46 +70,28 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
   // Game Objects
   const floor = new Floor(device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
-  floor.pipeline.shadowTexture = shadowTexture;  floor.scale = new Vec3(40, 0.1, 40);
+  floor.pipeline.shadowTexture = shadowTexture; floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
   // Use absolute paths for assets in production
-  const gltfPath = options?.gltfPath || "/assets/gltf/MushroomGuy.glb";
+  const gltfPath = "../../../assets/gltf/MushroomGuy.glb";
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
   await _gltfGameObject.initialize(gltfPath);
-  _gltfGameObject.skinMode = options?.skinMode ? options?.skinMode === true ? 1 : 0 : 0;
+  _gltfGameObject.skinMode = 1;
   if (typeof options?.onGLTFGameObject === "function") {
     options.onGLTFGameObject(_gltfGameObject);
   }
 
   // Set position, scale, and rotation for the GLTF model
-  _gltfGameObject.position = new Vec3(0, 0, 0); // Place at origin
-  const scale = 4;
+  _gltfGameObject.position = new Vec3(0, -1.5, 0); // Place at origin
+  const scale = 30;
   _gltfGameObject.scale = new Vec3(scale, scale, scale);
-  _gltfGameObject.rotation = [0, 0, 0, 1]; // TODO: turn this into Vec4
+  _gltfGameObject.rotation = new Quaternion();
+  camera.targetObject = _gltfGameObject;
 
-  // Add key controls to move the model
-  window.addEventListener("keydown", (e: KeyboardEvent) => {
-    if (e.key === "e") {
-      console.log(camera.eye);
-      console.log(camera.target);
-    }
-    // Toggle skin mode with 'E' key
-    if (e.key === "e" || e.key === "E") {
-      _gltfGameObject.skinMode = _gltfGameObject.skinMode === 0 ? 1 : 0;
-      if (_gltfGameObject.skinMode === 0) {
-        _gltfGameObject.position = new Vec3(0, 0, 0); 
-        _gltfGameObject.scale = new Vec3(scale, scale, scale);
-        _gltfGameObject.rotation = [0, 0, 0, 1]; 
-      } else {
-        _gltfGameObject.position = new Vec3(0, 0, 0)
-        _gltfGameObject.scale = new Vec3(scale, scale, scale);
-        _gltfGameObject.rotation = [0, 0, 0, 1];
-      }
-      console.log(`Skin mode switched to: ${_gltfGameObject.skinMode === 0 ? "Skinned" : "Non-skinned"} (skin_mode=${_gltfGameObject.skinMode})`);
-    }
+  const characterController = new CharacterController(_gltfGameObject, inputManager);
 
-    console.log(`Model position: (${_gltfGameObject.position.x.toFixed(2)}, ${_gltfGameObject.position.y.toFixed(2)}, ${_gltfGameObject.position.z.toFixed(2)})`);
-  });
+  const arrow = objectMap.createArrow({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, false)
+
 
   const update = (deltaTime: number) => {
     camera.update();
@@ -118,6 +101,10 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     shadowCamera.update();
     _gltfGameObject.update(deltaTime);
     floor.update();
+    characterController.update();
+    arrow.position = _gltfGameObject.position; 
+    arrow.setDirection(Quaternion.rotateVector(_gltfGameObject.rotation, new Vec3(0, 0, -1)));
+    arrow.update();
   };
 
   const shadowPass = (commandEncoder: GPUCommandEncoder) => {
@@ -164,15 +151,25 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     });
     floor.draw(renderPassEncoder);
     _gltfGameObject.draw(renderPassEncoder);
+    arrow.draw(renderPassEncoder);
     renderPassEncoder.end();
   };
 
   let then = performance.now() * 0.001;
+  const targetFPS = 60;
+  const minFrameTime = 1 / targetFPS;
+  let lastDrawTime = performance.now() * 0.001;
 
   const draw = () => {
     let now = performance.now();
     now *= 0.001; // convert to seconds
     const deltaTime = now - then;
+    // Only proceed if enough time has passed for the target FPS
+    if (now - lastDrawTime < minFrameTime) {
+      animationFrameId = requestAnimationFrame(draw);
+      return;
+    }
+    lastDrawTime = now;
     then = now;
     const startTime = performance.now();
     update(deltaTime);

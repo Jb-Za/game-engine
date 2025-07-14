@@ -1,4 +1,5 @@
 import { MathUtils } from "./MathUtil";
+import { Quaternion } from "./Quaternion";
 import { Vec3 } from "./Vec3";
 import { Vec4 } from "./Vec4";
 
@@ -271,7 +272,7 @@ export class Mat4x4 extends Float32Array{
         return new Vec4(x, y, z, w);
     }
 
-    public static compose(translation: number[], rotation: number[], scale: number[]): Mat4x4 {
+    public static compose(translation: number[], rotation: number[] | Quaternion, scale: number[]): Mat4x4 {
         const t = Mat4x4.translation(translation[0], translation[1], translation[2]);
         const r = Mat4x4.rotationFromQuaternion(rotation);
         const s = Mat4x4.scale(scale[0], scale[1], scale[2]);
@@ -279,7 +280,10 @@ export class Mat4x4 extends Float32Array{
         return Mat4x4.multiply(t, Mat4x4.multiply(r, s));
     }
     
-    public static rotationFromQuaternion(q: number[]): Mat4x4 {
+    public static rotationFromQuaternion(q: number[] | Quaternion): Mat4x4 {
+        if (q instanceof Quaternion) { //TODO: make it all quaternions
+            q = [q.x, q.y, q.z, q.w];
+        }
         const [x, y, z, w] = q;
         const x2 = x + x, y2 = y + y, z2 = z + z;
         const xx = x * x2, xy = x * y2, xz = x * z2;
@@ -442,5 +446,22 @@ export class Mat4x4 extends Float32Array{
             }
         }
         return [qx, qy, qz, qw];
+    }
+
+    public static fromQuartonian(q: Quaternion): Mat4x4 {
+        const x = q.x, y = q.y, z = q.z, w = q.w;
+        const x2 = x + x, y2 = y + y, z2 = z + z;
+        const xx = x * x2, xy = x * y2, xz = x * z2;
+        const yy = y * y2, yz = y * z2, zz = z * z2;
+        const wx = w * x2, wy = w * y2, wz = w * z2;
+
+        const m = new Mat4x4();
+        m.set([
+            1 - (yy + zz), xy - wz, xz + wy, 0,
+            xy + wz, 1 - (xx + zz), yz - wx, 0,
+            xz - wy, yz + wx, 1 - (xx + yy), 0,
+            0, 0, 0, 1
+        ]);
+        return m;
     }
 }

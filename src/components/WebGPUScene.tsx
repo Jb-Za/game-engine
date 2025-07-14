@@ -121,7 +121,9 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
           );
         }
       } catch (err) {
-        if (!disposed) setError(err instanceof Error ? err.message : String(err));
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error('Failed to load scene module:', err);
+        if (!disposed) setError(errorMessage);
       } finally {
         if (!disposed) setIsLoading(false);
       }

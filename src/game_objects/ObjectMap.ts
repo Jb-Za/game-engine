@@ -10,6 +10,8 @@ import { Texture2D } from "../texture/Texture2D";
 import { Ball } from "./Ball";
 // import { Ball } from "./Ball";
 import { Cube } from "./Cube";
+import { Arrow } from "./Arrow";
+import { Quaternion } from "../math/Quaternion";
 // import { Floor } from "./Floor";
 // import { Paddle } from "./Paddle";
 
@@ -60,6 +62,28 @@ export class ObjectMap {
     return sphere;
   }
 
+  public createArrow(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, color?: Color) {
+    const arrow = new Arrow(
+      objectParameters.device,
+      objectParameters.camera,
+      objectParameters.shadowCamera,
+      objectParameters.ambientLight,
+      objectParameters.directionalLight,
+      objectParameters.pointLights
+    );
+    arrow.pipeline.shadowTexture = shadowTexture;
+    if(randomColor === true){
+      arrow.color = this.generateRandomColor();
+    }
+    else{
+      arrow.color = color || new Color(1, 0, 0, 1); // Default to red if no color is provided
+    }
+    // Assign a unique ID to the object
+    const id = this.objectIdCounter++;
+    this._objects.set(id, arrow);
+    return arrow;
+  }
+
   private generateRandomColor() : Color {
     return new Color(Math.random(), Math.random(), Math.random(), Math.random());
   }
@@ -69,19 +93,20 @@ export interface GameObject {
     pipeline: RenderPipeline;
     scale: Vec3;
     position: Vec3;
+    rotation: Quaternion;
     color: Color;
     draw: Function;
     update: Function;
     drawShadows: Function;
     
-    orbit: boolean;
-    orbitDistance: number;
-    orbitSpeed: number;
-    orthogonalVector: Vec3;
-    orbitAxis: Vec3;
-    orbitDirection: number;
-    orbitInitialPosition: Vec3;
-    orbitPoint: Vec3;
+    orbit?: boolean; // TODO: Decouple orbiting from the game object. this was POC
+    orbitDistance?: number;
+    orbitSpeed?: number;
+    orthogonalVector?: Vec3;
+    orbitAxis?: Vec3;
+    orbitDirection?: number;
+    orbitInitialPosition?: Vec3;
+    orbitPoint?: Vec3;
     // Add any other common properties and methods here
 }
 

@@ -11,7 +11,7 @@ export const scenes: SceneInfo[] = [  {
     id: "gltf",
     name: "GLTF Import Scene",
     description: "A demo of GLTF model loading and rendering with animated models.",
-    thumbnail: "/thumbnails/gltf.svg",
+    thumbnail: "/thumbnails/walking-character.svg",
     importPath: "../scenes/GLTFImportScene/GLTFImportScene.ts",
     components: ['backButton','animationMenu']
   },  {
@@ -27,6 +27,14 @@ export const scenes: SceneInfo[] = [  {
     description: "A simple Pong game implementation (Currently Broken).",
     thumbnail: "/thumbnails/pong.svg",
     importPath: "../scenes/pong-broken.ts", 
+    components: ['backButton']
+  },
+   {
+    id: "characterController",
+    name: "Character Controller Scene",
+    description: "A Scene to test the character controller with a GLTF model.",
+    thumbnail: "/thumbnails/pong.svg",
+    importPath: "../scenes/characterControllerScene/characterControllerScene.ts", 
     components: ['backButton']
   } 
 ];

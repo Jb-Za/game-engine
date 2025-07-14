@@ -1,4 +1,5 @@
 import { Mat4x4 } from "../math/Mat4x4";
+import { Quaternion } from "../math/Quaternion";
 import { Vec3 } from "../math/Vec3";
 
 //most of this implementation is based on the gltf-skinning example from the webgpu samples repo

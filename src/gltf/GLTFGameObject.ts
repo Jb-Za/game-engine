@@ -7,6 +7,7 @@ import { convertGLBToJSONAndBinary } from "./GLTFUtils";
 import { GLTFAnimationPlayer } from "./GLTFAnimationPlayer";
 import { Vec3 } from "../math/Vec3";
 import { PointLightsCollection } from "../lights/PointLight";
+import { Quaternion } from "../math/Quaternion";
 
 //most of this implementation is based on the gltf-skinning example from the webgpu samples repo
 //https://webgpu.github.io/webgpu-samples/.
@@ -40,7 +41,7 @@ export class GLTFGameObject {
     private depthTexture: GPUTexture,
     public scale: Vec3 = new Vec3(1, 1, 1),
     public position: Vec3 = new Vec3(0, 0, 0),
-    public rotation: number[] = [0, 0, 0, 1] // quaternion [x, y, z, w]
+    public rotation: Quaternion = new Quaternion() // quaternion [x, y, z, w]
   ) {
    
   }

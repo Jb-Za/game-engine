@@ -12,6 +12,7 @@ import { Mat3x3 } from "../math/Mat3x3";
 import { PointLightsCollection } from "../lights/PointLight";
 import { ShadowRenderPipeline } from "../render_pipelines/ShadowRenderPipeline";
 import { ShadowCamera } from "../camera/ShadowCamera";
+import { Quaternion } from "../math/Quaternion";
 // import { Vec2 } from "../math/Vec2";
 //import { Vec4 } from "../math/Vec4";
 // import { RectCollider } from "../collider/RectCollider";
@@ -21,6 +22,7 @@ export class Cube{
     public scale = new Vec3(1,1,1);
     public position = new Vec3(0,0,0);
     public color = new Color(1,0,0,1);
+    public rotation = new Quaternion();
 
     public orbit: boolean = false;
     public orbitPoint: Vec3 = new Vec3(0,0,0);
