@@ -169,13 +169,18 @@ export class Quaternion {
     }
 
     /**
-     * Returns the forward vector from this quaternion (equivalent to rotating [0,0,-1])
+     * Returns the forward vector corrected for this coordinate system
+     * Based on calculation: (sin(θ), 0, -cos(θ))
      */
     public getForwardVector(): Vec3 {
+        // Extract the Y rotation angle from the quaternion
+        // For a Y-axis rotation quaternion: q = (0, sin(θ/2), 0, cos(θ/2))
+        const yAngle = 2 * Math.atan2(this.y, this.w);
+        
         return new Vec3(
-            2 * (this.x * this.z - this.w * this.y),
-            2 * (this.y * this.z + this.w * this.x),
-            -(1 - 2 * (this.x * this.x + this.y * this.y))
+            Math.sin(yAngle),
+            0,
+            -Math.cos(yAngle)
         );
     }
 

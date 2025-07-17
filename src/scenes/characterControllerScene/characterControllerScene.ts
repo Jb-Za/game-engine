@@ -72,21 +72,24 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   const floor = new Floor(device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   floor.pipeline.shadowTexture = shadowTexture; floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
-  // Use absolute paths for assets in production
+  
+
   const gltfPath = "../../../assets/gltf/MushroomGuy.glb";
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
   await _gltfGameObject.initialize(gltfPath);
-  _gltfGameObject.skinMode = 1;
+  _gltfGameObject.skinMode = 0;
   if (typeof options?.onGLTFGameObject === "function") {
     options.onGLTFGameObject(_gltfGameObject);
   }
 
-  // Set position, scale, and rotation for the GLTF model
+  //Set position, scale, and rotation for the GLTF model
   _gltfGameObject.position = new Vec3(0, -1.5, 0); // Place at origin
   const scale = 30;
   _gltfGameObject.scale = new Vec3(scale, scale, scale);
   _gltfGameObject.rotation = new Quaternion();
   camera.targetObject = _gltfGameObject;
+
+  //const cube = objectMap.createCube({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, true);
 
   const characterController = new CharacterController(_gltfGameObject, inputManager);
 
@@ -102,8 +105,11 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     _gltfGameObject.update(deltaTime);
     floor.update();
     characterController.update();
-    arrow.position = _gltfGameObject.position; 
-    arrow.setDirection(Quaternion.rotateVector(_gltfGameObject.rotation, new Vec3(0, 0, -1)));
+    arrow.position = _gltfGameObject.position;
+    //arrow.position = Vec3.add(_gltfGameObject.position, new Vec3(0, 1, 0));
+    // Use the corrected quaternion method
+    arrow.setDirection(_gltfGameObject.rotation.getForwardVector());
+
     arrow.update();
   };
 

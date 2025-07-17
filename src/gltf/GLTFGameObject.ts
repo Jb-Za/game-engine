@@ -3,11 +3,13 @@ import { ShadowCamera } from "../camera/ShadowCamera";
 import { AmbientLight } from "../lights/AmbientLight";
 import { DirectionalLight } from "../lights/DirectionalLight";
 import { convertGLBToJSONAndBinary } from "./GLTFUtils";
+import { GameObject } from "../game_objects/ObjectMap";
 
 import { GLTFAnimationPlayer } from "./GLTFAnimationPlayer";
 import { Vec3 } from "../math/Vec3";
 import { PointLightsCollection } from "../lights/PointLight";
 import { Quaternion } from "../math/Quaternion";
+import { Color } from "../math/Color";
 
 //most of this implementation is based on the gltf-skinning example from the webgpu samples repo
 //https://webgpu.github.io/webgpu-samples/.
@@ -20,10 +22,17 @@ import { Quaternion } from "../math/Quaternion";
  * 2: Texture rendering (if available) or weights visualization for skinned models
  * 3: Weights visualization (skinned models only)
  */
-export class GLTFGameObject {
+export class GLTFGameObject implements GameObject {
   private _gltfScene: any;
-  private animationPlayer?: GLTFAnimationPlayer;
+  private _animationPlayer?: GLTFAnimationPlayer;
   public materialBindGroups: GPUBindGroup[] = [];
+  public pipeline: any;
+  public color: Color = new Color(1, 1, 1, 1); // Default color
+  public drawShadows: any;
+
+  public get animationPlayer(): GLTFAnimationPlayer | undefined {
+    return this._animationPlayer;
+  }
 
   public get gltfScene(): any {
     return this._gltfScene;
@@ -50,10 +59,10 @@ export class GLTFGameObject {
     if (!this._gltfScene) return;
 
     // --- BEGIN: Animation playback ---
-    if (this.animationPlayer) {
-      this.animationPlayer.update(deltaTime);
+    if (this._animationPlayer) {
+      this._animationPlayer.update(deltaTime);
     } else {
-      this.animationPlayer = new GLTFAnimationPlayer(this._gltfScene.animations, this._gltfScene.nodes);
+      this._animationPlayer = new GLTFAnimationPlayer(this._gltfScene.animations, this._gltfScene.nodes);
     }
     //--- END: Animation playback --
 
@@ -142,8 +151,8 @@ export class GLTFGameObject {
 
   // Add a public method to set the active animation by index
   public setActiveAnimation(idx: number) {
-    if (this.animationPlayer) {
-      this.animationPlayer.activeAnimation = idx;
+    if (this._animationPlayer) {
+      this._animationPlayer.activeAnimation = idx;
     }
   }  // Add a public method to set the active animation by name
   public setActiveAnimationByName(name: string) {
@@ -151,7 +160,7 @@ export class GLTFGameObject {
       console.warn("Cannot set animation: No animations available for this model");
       return;
     }
-    const animPlayer = this.animationPlayer;
+    const animPlayer = this._animationPlayer;
     if (!animPlayer) {
       console.warn("Cannot set animation: No animation player available for this model");
       return;
@@ -169,8 +178,8 @@ export class GLTFGameObject {
    * @param speed Animation speed multiplier (0.0 to 1.0)
    */
   public setAnimationSpeed(speed: number) {
-    if (this.animationPlayer) {
-      this.animationPlayer.speed = Math.max(0, Math.min(1, speed));
+    if (this._animationPlayer) {
+      this._animationPlayer.speed = Math.max(0, Math.min(1, speed));
     } else {
       console.warn("Cannot set animation speed: No animation player available for this model");
     }

@@ -12,6 +12,7 @@ import { Ball } from "./Ball";
 import { Cube } from "./Cube";
 import { Arrow } from "./Arrow";
 import { Quaternion } from "../math/Quaternion";
+import { GLTFAnimationPlayer } from "../gltf/GLTFAnimationPlayer";
 // import { Floor } from "./Floor";
 // import { Paddle } from "./Paddle";
 
@@ -98,6 +99,7 @@ export interface GameObject {
     draw: Function;
     update: Function;
     drawShadows: Function;
+    animationPlayer?: GLTFAnimationPlayer;
     
     orbit?: boolean; // TODO: Decouple orbiting from the game object. this was POC
     orbitDistance?: number;

@@ -20,7 +20,7 @@ import { Quaternion } from "../math/Quaternion";
 export class Cube{
     public pipeline: RenderPipeline;
     public scale = new Vec3(1,1,1);
-    public position = new Vec3(0,0,0);
+    public position = new Vec3(0,-1,0);
     public color = new Color(1,0,0,1);
     public rotation = new Quaternion();
 
@@ -49,8 +49,12 @@ export class Cube{
 
     public update(){
         const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
+        const rotation = this.rotation.toMatrix();
         const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
-        this.transform = Mat4x4.multiply(translate, scale);
+        
+        // Apply transformations in order: Scale -> Rotate -> Translate
+        let transform = Mat4x4.multiply(rotation, scale);
+        this.transform = Mat4x4.multiply(translate, transform);
         this.transformBuffer.update(this.transform);
 
         let normalMatrix = Mat3x3.fromMat4x4(this.transform);

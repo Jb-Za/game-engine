@@ -54,7 +54,6 @@ export class Camera {
     }
 
     public update() {
-        this.targetObject = null;
         if (this.inputmanager != null) {
             if (this.targetObject != null) {
                 const targetPosition = this.targetObject.position;
@@ -91,14 +90,14 @@ export class Camera {
                     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                 }
-                // if (this.inputmanager.isKeyDown('a')) {
-                //     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-                //     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-                // }
-                // if (this.inputmanager.isKeyDown('d')) {
-                //     this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-                //     this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-                // }
+                if (this.inputmanager.isKeyDown('a')) {
+                    this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                    this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                }
+                if (this.inputmanager.isKeyDown('d')) {
+                    this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                    this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                }
             }
 
             this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
