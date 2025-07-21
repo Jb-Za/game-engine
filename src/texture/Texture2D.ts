@@ -86,7 +86,7 @@ export class Texture2D {
         return texture;
     }
 
-    public initializeFromData(data: ArrayBuffer, width: number, height: number, format: GPUTextureFormat = "rgba8unorm") {
+    public initializeFromDataSync(data: ArrayBuffer, width: number, height: number, format: GPUTextureFormat = "rgba8unorm") {
         this.createTextureAndSampler(width, height, format);
 
         this.device.queue.writeTexture(
