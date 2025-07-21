@@ -11,11 +11,22 @@ export class InputManager {
 
   constructor(private canvas?: HTMLCanvasElement) {
     window.addEventListener("keydown", (e) => {
-      this.keys.set(e.key, true);
+      this.keys.set(e.code, true);
+      if (e.key.length === 1) {
+        this.keys.set(e.key.toLowerCase(), true);
+      } else {
+        this.keys.set(e.key, true);
+      }
     });
 
     window.addEventListener("keyup", (e) => {
-      this.keys.set(e.key, false);
+      this.keys.set(e.code, false);
+      if (e.key.length === 1) {
+        this.keys.set(e.key.toLowerCase(), false);
+        this.keys.set(e.key.toUpperCase(), false);
+      } else {
+        this.keys.set(e.key, false);
+      }
     });
 
     window.addEventListener("mouseup", (e: MouseEvent) => {
@@ -57,6 +68,16 @@ export class InputManager {
 
   public isKeyDown(e: string): boolean {
     return this.keys.get(e) ?? false;
+  }
+
+  // Method to manually clear a stuck key
+  public clearKey(key: string): void {
+    this.keys.set(key, false);
+  }
+
+  // Method to clear all keys (useful for debugging)
+  public clearAllKeys(): void {
+    this.keys.clear();
   }
 
   public isMouseDown(button: number): boolean {

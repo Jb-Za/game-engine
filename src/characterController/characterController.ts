@@ -22,11 +22,14 @@ export class CharacterController {
     public update() {
         let forwardInput = 0;
         let rotateX = 0, rotateY = 0, rotateZ = 0;
-        if (this.input.isKeyDown('w')) forwardInput -= 1;
-        if (this.input.isKeyDown('s')) forwardInput += 1;
-        if (this.input.isKeyDown('d')) rotateY -= 1;
-        if (this.input.isKeyDown('a')) rotateY += 1;
 
+        if (this.input.isKeyDown('w') || this.input.isKeyDown('W')) forwardInput -= 1;
+        if (this.input.isKeyDown('s') || this.input.isKeyDown('S')) forwardInput += 1;
+        if (this.input.isKeyDown('d') || this.input.isKeyDown('D')) rotateY -= 1;
+        if (this.input.isKeyDown('a') || this.input.isKeyDown('A')) rotateY += 1;
+
+        // Handle jump input
+        const isJumping = false; //this.input.isKeyDown(' '); // Space key
 
         if (this.input.isKeyDown('i')) rotateX += 1;
         if (this.input.isKeyDown('k')) rotateX -= 1;
@@ -44,19 +47,33 @@ export class CharacterController {
 
         // Only move if input
         if (forwardInput !== 0) {
-            // Test the corrected quaternion forward vector method
-            if (this.object.animationPlayer != null && this.object.animationPlayer.activeAnimation !== 3) {
-                this.object.animationPlayer.activeAnimation = 3; // Running animation
+            const isRunning = this.input.isKeyDown('Shift');
+            
+            if (this.object.animationPlayer != null) {
+                if (isJumping && this.object.animationPlayer.activeAnimation !== 2) {
+                    this.object.animationPlayer.activeAnimation = 2; // Jump animation
+                } else if (!isJumping && isRunning && this.object.animationPlayer.activeAnimation !== 3) {
+                    this.object.animationPlayer.activeAnimation = 3; // Running animation
+                } else if (!isJumping && !isRunning && this.object.animationPlayer.activeAnimation !== 4) {
+                    this.object.animationPlayer.activeAnimation = 4; // Walking animation
+                }
             }
+            
             const forward = this.object.rotation.getForwardVector();
 
-            // Calculate movement direction
+            // Calculate movement direction with speed based on running/walking
+            const currentSpeed = isRunning ? this.moveSpeed * 2 : this.moveSpeed;
             let moveDir = Vec3.multiplyScalar(forward, forwardInput)
             // Normalize and apply speed
             moveDir = Vec3.normalize(moveDir);
-            moveDir = Vec3.multiplyScalar(moveDir, this.moveSpeed);
+            moveDir = Vec3.multiplyScalar(moveDir, currentSpeed);
             // Update object's position
             this.object.position = Vec3.add(this.object.position, moveDir);
+        }
+        else if (isJumping) {
+            if (this.object.animationPlayer != null && this.object.animationPlayer.activeAnimation !== 2) {
+                this.object.animationPlayer.activeAnimation = 2; // Jump animation
+            }
         }
         else {
             if (this.object.animationPlayer != null && this.object.animationPlayer.activeAnimation !== 1) {
