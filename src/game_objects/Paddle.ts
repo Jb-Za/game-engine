@@ -14,12 +14,15 @@ import { InputManager } from "../input/InputManager";
 import { ShadowRenderPipeline } from "../render_pipelines/ShadowRenderPipeline";
 import { ShadowCamera } from "../camera/ShadowCamera";
 import { RectCollider } from "../collider/RectCollider";
+import { Quaternion } from "../math/Quaternion";
 
 export class Paddle{
     public pipeline: RenderPipeline;
     private shadowPipeline: ShadowRenderPipeline;
     private transformBuffer: UniformBuffer;
     private normalMatrixBuffer: UniformBuffer;
+    public rotation = new Quaternion();
+    
 
     private transform =  Mat4x4.identity();
 

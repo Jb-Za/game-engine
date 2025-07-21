@@ -159,11 +159,20 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   };
 
   let then = performance.now() * 0.001;
+  const targetFPS = 60;
+  const minFrameTime = 1 / targetFPS;
+  let lastDrawTime = performance.now() * 0.001;
 
   const draw = () => {
     let now = performance.now();
     now *= 0.001; // convert to seconds
     const deltaTime = now - then;
+    // Only proceed if enough time has passed for the target FPS
+    if (now - lastDrawTime < minFrameTime) {
+      animationFrameId = requestAnimationFrame(draw);
+      return;
+    }
+    lastDrawTime = now;
     then = now;
     const startTime = performance.now();
     update(deltaTime);

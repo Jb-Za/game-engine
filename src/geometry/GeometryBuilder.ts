@@ -249,4 +249,196 @@ export class GeometryBuilder
         );
     }
 
+    public createCylinderGeometry(radius: number = 0.5, height: number = 1.0, segments: number = 16): Geometry {
+        const vertices: number[] = [];
+        const indices: number[] = [];
+        const colors: number[] = [];
+        const texCoords: number[] = [];
+        const normals: number[] = [];
+
+        const halfHeight = height / 2;
+
+        // Create vertices for top and bottom circles
+        for (let i = 0; i <= segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+
+            // Bottom circle
+            vertices.push(x, -halfHeight, z);
+            normals.push(x / radius, 0, z / radius); // Side normal
+            texCoords.push(i / segments, 0);
+            colors.push(1, 1, 1, 1);
+
+            // Top circle
+            vertices.push(x, halfHeight, z);
+            normals.push(x / radius, 0, z / radius); // Side normal
+            texCoords.push(i / segments, 1);
+            colors.push(1, 1, 1, 1);
+        }
+
+        // Create side faces (quads made of triangles)
+        for (let i = 0; i < segments; i++) {
+            const bottomLeft = i * 2;
+            const bottomRight = ((i + 1) % (segments + 1)) * 2;
+            const topLeft = bottomLeft + 1;
+            const topRight = bottomRight + 1;
+
+            // First triangle
+            indices.push(bottomLeft, topLeft, bottomRight);
+            // Second triangle
+            indices.push(bottomRight, topLeft, topRight);
+        }
+
+        // Add center vertices for caps
+        const bottomCenterIndex = vertices.length / 3;
+        vertices.push(0, -halfHeight, 0);
+        normals.push(0, -1, 0);
+        texCoords.push(0.5, 0.5);
+        colors.push(1, 1, 1, 1);
+
+        const topCenterIndex = bottomCenterIndex + 1;
+        vertices.push(0, halfHeight, 0);
+        normals.push(0, 1, 0);
+        texCoords.push(0.5, 0.5);
+        colors.push(1, 1, 1, 1);
+
+        // Create bottom cap triangles
+        for (let i = 0; i < segments; i++) {
+            const current = i * 2;
+            const next = ((i + 1) % (segments + 1)) * 2;
+            indices.push(bottomCenterIndex, next, current);
+        }
+
+        // Create top cap triangles
+        for (let i = 0; i < segments; i++) {
+            const current = i * 2 + 1;
+            const next = ((i + 1) % (segments + 1)) * 2 + 1;
+            indices.push(topCenterIndex, current, next);
+        }
+
+        return new Geometry(
+            new Float32Array(vertices),
+            new Uint16Array(indices),
+            new Float32Array(colors),
+            new Float32Array(texCoords),
+            new Float32Array(normals)
+        );
+    }
+
+    public createArrowGeometry(shaftRadius: number = 0.05, shaftLength: number = 0.8, headRadius: number = 0.15, headLength: number = 0.2, segments: number = 16): Geometry {
+        const vertices: number[] = [];
+        const indices: number[] = [];
+        const colors: number[] = [];
+        const texCoords: number[] = [];
+        const normals: number[] = [];
+
+        const totalLength = shaftLength + headLength;
+        const shaftEnd = shaftLength - totalLength / 2;
+        const headStart = shaftEnd;
+        const headEnd = totalLength / 2;
+
+        // Create shaft vertices (cylinder)
+        for (let i = 0; i <= segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            const x = Math.cos(angle) * shaftRadius;
+            const z = Math.sin(angle) * shaftRadius;
+
+            // Shaft bottom
+            vertices.push(x, -totalLength / 2, z);
+            normals.push(x / shaftRadius, 0, z / shaftRadius);
+            texCoords.push(i / segments, 0);
+            colors.push(1, 1, 1, 1);
+
+            // Shaft top (where head begins)
+            vertices.push(x, shaftEnd, z);
+            normals.push(x / shaftRadius, 0, z / shaftRadius);
+            texCoords.push(i / segments, 0.8);
+            colors.push(1, 1, 1, 1);
+        }
+
+        // Create shaft side faces
+        for (let i = 0; i < segments; i++) {
+            const bottomLeft = i * 2;
+            const bottomRight = ((i + 1) % (segments + 1)) * 2;
+            const topLeft = bottomLeft + 1;
+            const topRight = bottomRight + 1;
+
+            // First triangle
+            indices.push(bottomLeft, topLeft, bottomRight);
+            // Second triangle
+            indices.push(bottomRight, topLeft, topRight);
+        }
+
+        // Create arrowhead vertices (cone)
+        const headBaseStart = vertices.length / 3;
+        for (let i = 0; i <= segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            const x = Math.cos(angle) * headRadius;
+            const z = Math.sin(angle) * headRadius;
+
+            // Head base (larger circle)
+            vertices.push(x, headStart, z);
+            // Calculate cone normal (pointing outward from cone surface)
+            const sideLength = Math.sqrt(headRadius * headRadius + headLength * headLength);
+            const normalY = headRadius / sideLength;
+            const normalXZ = headLength / sideLength;
+            normals.push((x / headRadius) * normalXZ, normalY, (z / headRadius) * normalXZ);
+            texCoords.push(i / segments, 0.8);
+            colors.push(1, 1, 1, 1);
+        }
+
+        // Arrow tip (point)
+        const tipIndex = vertices.length / 3;
+        vertices.push(0, headEnd, 0);
+        normals.push(0, 1, 0);
+        texCoords.push(0.5, 1);
+        colors.push(1, 1, 1, 1);
+
+        // Create arrowhead side faces (triangles from base to tip)
+        for (let i = 0; i < segments; i++) {
+            const current = headBaseStart + i;
+            const next = headBaseStart + ((i + 1) % (segments + 1));
+            
+            // Triangle from base edge to tip
+            indices.push(current, tipIndex, next);
+        }
+
+        // Add shaft bottom cap center
+        const shaftBottomCenter = vertices.length / 3;
+        vertices.push(0, -totalLength / 2, 0);
+        normals.push(0, -1, 0);
+        texCoords.push(0.5, 0);
+        colors.push(1, 1, 1, 1);
+
+        // Create shaft bottom cap
+        for (let i = 0; i < segments; i++) {
+            const current = i * 2;
+            const next = ((i + 1) % (segments + 1)) * 2;
+            indices.push(shaftBottomCenter, next, current);
+        }
+
+        // Add arrowhead base cap center
+        const headBaseCenter = vertices.length / 3;
+        vertices.push(0, headStart, 0);
+        normals.push(0, -1, 0);
+        texCoords.push(0.5, 0.8);
+        colors.push(1, 1, 1, 1);
+
+        // Create arrowhead base cap
+        for (let i = 0; i < segments; i++) {
+            const current = headBaseStart + i;
+            const next = headBaseStart + ((i + 1) % (segments + 1));
+            indices.push(headBaseCenter, current, next);
+        }
+
+        return new Geometry(
+            new Float32Array(vertices),
+            new Uint16Array(indices),
+            new Float32Array(colors),
+            new Float32Array(texCoords),
+            new Float32Array(normals)
+        );
+    }
+
 }

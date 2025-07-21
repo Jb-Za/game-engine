@@ -1,4 +1,5 @@
 import { Mat4x4 } from "./Mat4x4";
+import { Quaternion } from "./Quaternion";
 
 export class Vec3 extends Float32Array
 {
@@ -126,4 +127,47 @@ export class Vec3 extends Float32Array
         return new Vec3(tx, ty, tz);
       }
     
+    /**
+     * Returns a Vec3 representing the direction of the Y axis rotated by the given quaternion.
+     * @param q Quaternion
+     * @returns Vec3
+     */
+    public static fromQuaternion(q: Quaternion): Vec3 {
+        // Accept both object and array forms
+        let x: number, y: number, z: number, w: number;
+        if (Array.isArray(q)) {
+            [x, y, z, w] = q;
+        } else {
+            x = q.x; y = q.y; z = q.z; w = q.w;
+        }
+        // Rotate the Y axis (0,1,0) by the quaternion
+        // Formula: v' = q * v * q^-1
+        // Optimized for (0,1,0):
+        const vx = 2 * (x * y - w * z);
+        const vy = 1 - 2 * (x * x + z * z);
+        const vz = 2 * (y * z + w * x);
+        return new Vec3(vx, vy, vz);
+    }
+
+    /**
+     * Returns a Vec3 representing the forward direction (Z-axis) rotated by the given quaternion.
+     * @param q Quaternion
+     * @returns Vec3
+     */
+    public static vectorFromQuaternion(q: Quaternion): Vec3 {
+        // Accept both object and array forms
+        let x: number, y: number, z: number, w: number;
+        if (Array.isArray(q)) {
+            [x, y, z, w] = q;
+        } else {
+            x = q.x; y = q.y; z = q.z; w = q.w;
+        }
+        // Rotate the Z axis (0,0,1) by the quaternion to get forward direction
+        // Formula: v' = q * v * q^-1
+        // Optimized for (0,0,1):
+        const vx = 2 * (x * z + w * y);
+        const vy = 2 * (y * z - w * x);
+        const vz = 1 - 2 * (x * x + y * y);
+        return new Vec3(vx, vy, vz);
+    }
 }

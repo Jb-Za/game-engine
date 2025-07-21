@@ -16,6 +16,7 @@ import { Vec2 } from "../math/Vec2";
 import { RectCollider } from "../collider/RectCollider";
 import { Paddle } from "./Paddle";
 import { GameObject } from "./ObjectMap";
+import { Quaternion } from "../math/Quaternion";
 ////import { Vec4 } from "../math/Vec4";
 
 export class Ball implements GameObject{
@@ -24,6 +25,7 @@ export class Ball implements GameObject{
     public pipeline: RenderPipeline;
     public color = new Color(1,1,1,1);
     public collider = new RectCollider();
+    public rotation = new Quaternion();
 
     private shadowPipeline: ShadowRenderPipeline;
     private transformBuffer: UniformBuffer;

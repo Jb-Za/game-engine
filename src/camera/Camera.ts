@@ -24,6 +24,19 @@ export class Camera {
     private sensitivity = 0.005;
     private yaw = 0;
     private pitch = 0;
+    private _targetObject: any | null = null; // todo: fix type
+
+    public get targetObject() {
+        return this._targetObject;
+    }
+
+    public set targetObject(value: any | null) { // todo: fix type
+        this._targetObject = value;
+        if (value != null) {
+            this.eye = Vec3.add(value.position, new Vec3(0, 0.5, 0));
+            this.target = value.position;
+        }
+    }
 
     // MATRICES
     private perspective = Mat4x4.identity();
@@ -32,43 +45,64 @@ export class Camera {
 
     private rotation = Mat4x4.identity();
 
-    constructor(device: GPUDevice, private aspectRatio: number, private inputmanager?: InputManager) {
+    constructor(device: GPUDevice, private aspectRatio: number, private inputmanager?: InputManager) { // todo: fix type
         this.buffer = new UniformBuffer(device, this.projectionView, "Camera Buffer");
         this.eyeBuffer = new UniformBuffer(device, 16, "Camera Eye Buffer");
-        if(this.inputmanager != null){
+        if (this.inputmanager != null) {
             this.inputmanager.onMouseMove.addListener(this.onMouseMove.bind(this));
         }
     }
 
     public update() {
-        if(this.inputmanager != null){
-            const movementSpeed = 0.02;
-            const forward = new Vec3(0, 0, -1);
-            const right = new Vec3(-1, 0, 0);
-            //const up = new Vec3(0, 1, 0);
+        if (this.inputmanager != null) {
+            if (this.targetObject != null) {
+                const targetPosition = this.targetObject.position;
+                const targetRotation = this.targetObject.rotation; 
+                //this.target = Vec3.add(targetPosition, new Vec3(0, 1, 0)); // Look at head height
 
-            const rotatedForward = Mat4x4.multiplyVec(this.rotation, forward);
-            const rotatedRight = Mat4x4.multiplyVec(this.rotation, right);
-            
-            if (this.inputmanager.isKeyDown('w')) {
-                this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
-                this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
+                // // Get the forward direction from the rotation (assuming rotation is a matrix)
+                const rotMat = Mat4x4.rotationFromQuaternion(targetRotation);
+                const forward = Mat4x4.multiplyVec(rotMat, new Vec3(0, 0, -1));
+                // // Calculate the camera position 3 units behind the target, and 1 unit above
+                const cameraOffset = Vec3.multiplyScalar(forward, 3);
+                const cameraHeight = new Vec3(0, 1.5, 0); // 1 unit above
+                this.eye = Vec3.add(Vec3.add(targetPosition, cameraOffset), cameraHeight);
+                //this.eye = Vec3.add(Vec3.add(targetPosition, new Vec3(1,0,0)), new Vec3(0, 1, 0));
+
+                this.target = Vec3.add(targetPosition, new Vec3(0, 1, 0));
+
+                this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
             }
-            if (this.inputmanager.isKeyDown('s')) {
-                this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
-                this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
+            else {
+                const movementSpeed = 0.02;
+                const forward = new Vec3(0, 0, -1);
+                const right = new Vec3(-1, 0, 0);
+                //const up = new Vec3(0, 1, 0);
+
+                const rotatedForward = Mat4x4.multiplyVec(this.rotation, forward);
+                const rotatedRight = Mat4x4.multiplyVec(this.rotation, right);
+
+                if (this.inputmanager.isKeyDown('w')) {
+                    this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
+                    this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
+                }
+                if (this.inputmanager.isKeyDown('s')) {
+                    this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
+                    this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
+                }
+                if (this.inputmanager.isKeyDown('a')) {
+                    this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                    this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                }
+                if (this.inputmanager.isKeyDown('d')) {
+                    this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                    this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
+                }
             }
-            if (this.inputmanager.isKeyDown('a')) {
-                this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-                this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-            }
-            if (this.inputmanager.isKeyDown('d')) {
-                this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-                this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
-            }
+
+            this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
         }
 
-        this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
         this.perspective = Mat4x4.perspective(this.fov, this.aspectRatio, this.near, this.far);
         this.projectionView = Mat4x4.multiply(this.perspective, this.view);
 
@@ -76,7 +110,7 @@ export class Camera {
         this.eyeBuffer.update(this.eye);
     }
 
-    public onMouseMove(mouseMovement: Coordinates){
+    public onMouseMove(mouseMovement: Coordinates) {
         // Update yaw and pitch based on mouse movement
         this.yaw += -mouseMovement.x * this.sensitivity;
         this.pitch += mouseMovement.y * this.sensitivity;
