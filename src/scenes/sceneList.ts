@@ -32,7 +32,7 @@ export const scenes: SceneInfo[] = [  {
    {
     id: "characterController",
     name: "Character Controller Scene",
-    description: "(A WIP)A Scene to showcase a character controller with a GLTF model.",
+    description: "(A WIP) A Scene to showcase a character controller with a GLTF model.",
     thumbnail: "/thumbnails/shadow.svg",
     importPath: "../scenes/characterControllerScene/characterControllerScene.ts", 
     components: ['backButton']
