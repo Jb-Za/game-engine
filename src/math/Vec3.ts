@@ -154,7 +154,7 @@ export class Vec3 extends Float32Array
      * @param q Quaternion
      * @returns Vec3
      */
-    public static vectorFromQuartonian(q: Quaternion): Vec3 {
+    public static vectorFromQuaternion(q: Quaternion): Vec3 {
         // Accept both object and array forms
         let x: number, y: number, z: number, w: number;
         if (Array.isArray(q)) {
