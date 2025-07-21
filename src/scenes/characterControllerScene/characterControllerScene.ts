@@ -93,7 +93,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
   const characterController = new CharacterController(_gltfGameObject, inputManager);
 
-  const arrow = objectMap.createArrow({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, false)
+  const arrow = objectMap.createArrow({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, false);
 
 
   const update = (deltaTime: number) => {
