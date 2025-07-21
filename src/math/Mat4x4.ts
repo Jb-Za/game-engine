@@ -448,7 +448,7 @@ export class Mat4x4 extends Float32Array{
         return [qx, qy, qz, qw];
     }
 
-    public static fromQuartonian(q: Quaternion): Mat4x4 {
+    public static fromQuaternion(q: Quaternion): Mat4x4 {
         const x = q.x, y = q.y, z = q.z, w = q.w;
         const x2 = x + x, y2 = y + y, z2 = z + z;
         const xx = x * x2, xy = x * y2, xz = x * z2;
