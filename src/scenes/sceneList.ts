@@ -22,6 +22,20 @@ export const scenes: SceneInfo[] = [  {
     importPath: "../scenes/shadowDemoScene.ts",
     components: ['backButton']
   },  {
+    id: "physics",
+    name: "Physics Demo",
+    description: "A demonstration of rigid body physics with colliders, gravity, and forces.",
+    thumbnail: "/thumbnails/shadow.svg", // Using shadow thumbnail for now
+    importPath: "../scenes/physicsTestScene/physicsTestScene.ts",
+    components: ['backButton']
+  },  {
+    id: "plinko",
+    name: "Plinko Physics",
+    description: "Classic Plinko game demonstrating sphere-sphere and sphere-box collisions with bouncing physics.",
+    thumbnail: "/thumbnails/plinko.svg",
+    importPath: "../scenes/plinkoScene/plinkoScene.ts",
+    components: ['backButton']
+  },  {
     id: "pong",
     name: "Pong Game",
     description: "A simple Pong game implementation (Currently Broken).",

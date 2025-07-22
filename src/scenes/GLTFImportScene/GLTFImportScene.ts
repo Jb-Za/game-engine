@@ -12,6 +12,7 @@ import { ShadowCamera } from "../../camera/ShadowCamera";
 import { ObjectMap } from "../../game_objects/ObjectMap";
 import { GLTFGameObject } from "../../gltf/GLTFGameObject";
 import LayoutConfig from "./LayoutConfig.json";
+import { Quaternion } from "../../math/Quaternion";
 
 let animationFrameId: number | null = null;
 
@@ -90,7 +91,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   _gltfGameObject.position = new Vec3(objectConfig.static.position[0], objectConfig.static.position[1], objectConfig.static.position[2]); // Place at origin
   const scale = objectConfig.static.scale;
   _gltfGameObject.scale = new Vec3(scale, scale, scale);
-  _gltfGameObject.rotation = objectConfig.static.rotation; // TODO: turn this into Vec4
+  _gltfGameObject.rotation = new Quaternion(objectConfig.static.rotation[0], objectConfig.static.rotation[1], objectConfig.static.rotation[2], objectConfig.static.rotation[3]);
 
   // Add key controls to move the model
   window.addEventListener("keydown", (e: KeyboardEvent) => {
