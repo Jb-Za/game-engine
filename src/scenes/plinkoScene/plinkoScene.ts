@@ -51,8 +51,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
     // CAMERA
     const camera = new Camera(device, canvas.width / canvas.height, inputManager);
-    camera.eye = new Vec3(0, 8, 12);
-    camera.target = new Vec3(0, 0, 0);
+    camera.eye = new Vec3(0, 8, 14);
+    camera.target = new Vec3(0, 3.5, 0);
 
     const shadowCamera = new ShadowCamera(device);
     shadowCamera.eye = new Vec3(-5, 10, 5);
@@ -200,7 +200,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         
         // INCREASED random spawn position for more variation
         const spawnX = (Math.random() - 0.5) * 0.1; // from -0.05 to 0.05
-        const spawnY = boardHeight ; // Add some Y variation
+        const spawnY = boardHeight - 0.5; // Add some Y variation
         
         poolBall.ball.position = new Vec3(spawnX, spawnY, 0);
         poolBall.physics.setPosition(new Vec3(spawnX, spawnY, 0));
