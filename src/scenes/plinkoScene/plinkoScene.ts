@@ -247,6 +247,17 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
             bucketCounts.fill(0);
             totalBallsDropped = 0;
         }
+
+        if( inputManager.isKeyDown('i') || inputManager.isKeyDown('I') ) {
+            physicsDebugRenderer.toggleDynamic();
+        }
+
+        if( inputManager.isKeyDown('o') || inputManager.isKeyDown('O') ) {
+            physicsDebugRenderer.toggleStatic();
+        }
+        if( inputManager.isKeyDown('p') || inputManager.isKeyDown('P') ) {
+            physicsDebugRenderer.toggleKinematic();
+        }
     }
 
     // === RENDER LOOP ===
@@ -346,7 +357,9 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         const viewMatrix = Mat4x4.lookAt(camera.eye, camera.target, new Vec3(0, 1, 0));
         const projectionMatrix = Mat4x4.perspective(camera.fov, canvas.width / canvas.height, camera.near, camera.far);
         physicsDebugRenderer.render(renderPass, physicsWorld, viewMatrix, projectionMatrix);
-        
+        physicsDebugRenderer.showStatic = false;
+
+
         renderPass.end();
         device.queue.submit([commandEncoder.finish()]);
         
@@ -371,7 +384,9 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
                 `\nControls:\n` +
                 `SPACEBAR - Spawn Ball\n` +
                 `R - Reset Scene\n` +
-                `Mouse - Look Around`;
+                `Mouse - Look Around\n` +
+                `O - Toggle Physics Debug Static\n` +
+                `I - Toggle Physics Debug Dynamic\n`;
         }
 
         animationFrameId = requestAnimationFrame(renderLoop);

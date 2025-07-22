@@ -177,7 +177,7 @@ export class RigidBody {
         return Mat4x4.compose(
             [this.position.x, this.position.y, this.position.z],
             this.rotation,
-            [1, 1, 1] // Scale is handled separately in your engine
+            [1, 1, 1]
         );
     }
     

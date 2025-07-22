@@ -14,7 +14,7 @@ export class PhysicsWorld {
     private objectIdCounter: number = 0;
     
     // Physics settings
-    public gravity: Vec3 = new Vec3(0, -3, 0); // should be -9.81 for y
+    public gravity: Vec3 = new Vec3(0, -9.81, 0);
     public timeStep: number = 1/60; // Fixed timestep for physics
     private accumulator: number = 0;
     public maxSubSteps: number = 10;

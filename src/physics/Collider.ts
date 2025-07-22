@@ -26,8 +26,8 @@ export abstract class Collider {
     public isTrigger: boolean = false;
     
     // Physics material properties
-    public friction: number = 0.5;
-    public restitution: number = 0.1;
+    public friction: number = 0.5; // surface friction (0-1)
+    public restitution: number = 0.1; // bounciness (0-1)
     
     // AABB caching
     protected cachedAABB: AABB | null = null;
@@ -64,7 +64,14 @@ export abstract class Collider {
         }
         return false;
     }
-    
+
+    /**
+     * Call this to update the collider's position and rotation
+     *
+     * Mark this collider as dirty to force AABB recalculation
+     * 
+     * Call this when position or rotation changes outside of physics updates
+     */
     public markDirty(): void {
         this.isDirty = true;
         this.cachedAABB = null;
@@ -75,6 +82,7 @@ export abstract class Collider {
     public abstract getAABB(): AABB; // Axis-Aligned Bounding Box for broad phase
 }
 
+// Axis-Aligned Bounding Box
 export class AABB {
     public min: Vec3;
     public max: Vec3;
@@ -119,11 +127,10 @@ export class BoxCollider extends Collider {
     }
     
     public getTransformMatrix(): Mat4x4 {
-        // Don't apply scale here since 'size' already contains the scaled half-extents
         return Mat4x4.compose(
             [this.position.x, this.position.y, this.position.z],
             this.rotation,
-            [1, 1, 1] // Use unit scale since size is already scaled
+            [this.size.x, this.size.y, this.size.z]
         );
     }
     
@@ -206,7 +213,7 @@ export class BoxCollider extends Collider {
         if (aabb1.intersects(aabb2)) {
             result.isColliding = true;
             
-            // Calculate overlap on each axis - CORRECTED FORMULA
+            // Calculate overlap on each axis
             const overlapX = Math.min(aabb1.max.x, aabb2.max.x) - Math.max(aabb1.min.x, aabb2.min.x);
             const overlapY = Math.min(aabb1.max.y, aabb2.max.y) - Math.max(aabb1.min.y, aabb2.min.y);
             const overlapZ = Math.min(aabb1.max.z, aabb2.max.z) - Math.max(aabb1.min.z, aabb2.min.z);
@@ -264,7 +271,6 @@ export class BoxCollider extends Collider {
             if (distance > 0) {
                 result.normal = Vec3.normalize(Vec3.subtract(sphere.position, closestPoint));
             } else {
-                // Sphere center is inside box, need to find best separation direction
                 const centerToBox = Vec3.subtract(this.position, sphere.position);
                 result.normal = Vec3.normalize(centerToBox);
             }
@@ -291,7 +297,7 @@ export class SphereCollider extends Collider {
         return Mat4x4.compose(
             [this.position.x, this.position.y, this.position.z],
             this.rotation,
-            [1, 1, 1] // Use unit scale since radius is already scaled
+            [this.radius, this.radius, this.radius]
         );
     }
     
@@ -356,7 +362,6 @@ export class SphereCollider extends Collider {
                 result.normal = Vec3.normalize(Vec3.subtract(other.position, this.position));
                 result.contactPoint = Vec3.add(this.position, Vec3.multiplyScalar(result.normal, this.radius));
             } else {
-                // Spheres are at the exact same position
                 result.normal = new Vec3(1, 0, 0); // Arbitrary direction
                 result.contactPoint = this.position;
             }

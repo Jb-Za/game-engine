@@ -38,11 +38,9 @@ export class PhysicsComponent {
         
         // Create collider based on type
         if (colliderType === 'sphere') {
-            // Make sphere collider 10% larger than the visual object for visibility and safety margin
             const radius = Math.max(gameObject.scale.x, gameObject.scale.y, gameObject.scale.z) * 1.05;
             this.collider = new SphereCollider(gameObject.position, radius);
         } else {
-            // Make box collider 10% larger than the visual object for visibility and safety margin
             const size = Vec3.multiplyScalar(gameObject.scale, 0.5 * 1.05);
             this.collider = new BoxCollider(gameObject.position, gameObject.rotation, size);
         }
