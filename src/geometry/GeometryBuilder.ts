@@ -1,7 +1,135 @@
+import { Vec3 } from "../math/Vec3";
 import { Geometry } from "./Geometry";
+
+interface TerrainParameters {
+    seed: number;
+    size: number;
+    scale: number;
+    offset: { x: number, y: number };
+    heightMultiplier: number;
+    octaves: number;
+    persistence: number;
+    lacunarity: number;
+    position: Vec3;
+}
 
 export class GeometryBuilder 
 {
+    private seededRandom(seed: number): () => number {
+        let s = seed;
+        return () => {
+            s = Math.sin(s) * 10000;
+            return s - Math.floor(s);
+        };
+    }
+
+    private generateNoise(params: TerrainParameters): number[][] {
+        const { size, scale, offset, octaves, persistence, lacunarity, seed } = params;
+        const random = this.seededRandom(seed);
+        
+        // Generate random offsets for each octave
+        const offsets: { x: number, y: number }[] = [];
+        for (let i = 0; i < octaves; i++) {
+            const offsetX = (random() - 0.5) * 200000 + offset.x;
+            const offsetY = (random() - 0.5) * 200000 + offset.y;
+            offsets.push({ x: offsetX, y: offsetY });
+        }
+        
+        const noise: number[][] = Array(size).fill(0).map(() => Array(size).fill(0));
+        
+        // Generate noise
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                let amplitude = 1;
+                let frequency = 1;
+                let noiseValue = 0;
+                
+                for (let i = 0; i < octaves; i++) {
+                    // Adding randomly generated offsets is important
+                    const sampleX = x / scale * frequency + offsets[i].x;
+                    const sampleY = y / scale * frequency + offsets[i].y;
+                    const rawNoise = this.perlinNoise(sampleX, sampleY);
+                    noiseValue += rawNoise * amplitude;
+                    amplitude *= persistence;
+                    frequency *= lacunarity;
+                }
+                noise[x][y] = noiseValue;
+            }
+        }
+        
+        // Normalize noise to [0, 1] range
+        const flatNoise = noise.flat();
+        const max = Math.max(...flatNoise);
+        const min = Math.min(...flatNoise);
+        
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                noise[x][y] = this.inverseLerp(min, max, noise[x][y]);
+            }
+        }
+        
+        return noise;
+    }
+    
+    private inverseLerp(a: number, b: number, value: number): number {
+        return (value - a) / (b - a);
+    }
+    
+    private perlinNoise(x: number, y: number): number {
+        // Simple Perlin-like noise implementation
+        // For production, use a proper Perlin noise library
+        const xi = Math.floor(x) & 255;
+        const yi = Math.floor(y) & 255;
+        const xf = x - Math.floor(x);
+        const yf = y - Math.floor(y);
+        
+        const fade = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
+        
+        const lerp = (a: number, b: number, t: number) => a + t * (b - a);
+        
+        const grad = (hash: number, x: number, y: number) => {
+            const h = hash & 15;
+            const u = h < 8 ? x : y;
+            const v = h < 4 ? y : h === 12 || h === 14 ? x : 0;
+            return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+        };
+        
+        const hash = (x: number) => {
+            x = ((x >> 16) ^ x) * 0x45d9f3b;
+            x = ((x >> 16) ^ x) * 0x45d9f3b;
+            x = (x >> 16) ^ x;
+            return x & 255;
+        };
+        
+        const aa = hash(xi) + yi;
+        const ab = hash(xi) + yi + 1;
+        const ba = hash(xi + 1) + yi;
+        const bb = hash(xi + 1) + yi + 1;
+        
+        const u = fade(xf);
+        const v = fade(yf);
+        
+        const x1 = lerp(grad(hash(aa), xf, yf), grad(hash(ba), xf - 1, yf), u);
+        const x2 = lerp(grad(hash(ab), xf, yf - 1), grad(hash(bb), xf - 1, yf - 1), u);
+        
+        return (lerp(x1, x2, v) + 1) / 2; // Normalize to [0, 1]
+    }
+    
+    private generateTerrainHeight(x: number, z: number, noiseMap: number[][], params: TerrainParameters): number {
+        const size = params.size;
+        const heightMultiplier = params.heightMultiplier;
+        
+        // Convert world coordinates to noise map coordinates
+        const noiseX = Math.floor((x + size / 2) / size * (size - 1));
+        const noiseZ = Math.floor((z + size / 2) / size * (size - 1));
+        
+        // Clamp to valid range
+        const clampedX = Math.max(0, Math.min(size - 1, noiseX));
+        const clampedZ = Math.max(0, Math.min(size - 1, noiseZ));
+        
+        return noiseMap[clampedX][clampedZ] * heightMultiplier;
+    }
+
     public createQuadGeometry(): Geometry   
     {
         let vertices = new Float32Array([
@@ -441,20 +569,22 @@ export class GeometryBuilder
         );
     }
 
-    public createGridPlane(resolution: number = 64, size: number = 1): Geometry {
+    public createGridPlane(resolution: number = 32, size: number = 1): Geometry {
         const vertices: number[] = [];
         const indices: number[] = [];
         const colors: number[] = [];
         const texCoords: number[] = [];
         const normals: number[] = [];
 
-        // Generate vertices
+        // Generate vertices for a flat grid
         for (let z = 0; z <= resolution; z++) {
             for (let x = 0; x <= resolution; x++) {
-                // Position (normalized to -size/2)
+                // Position (normalized to -size/2 to size/2)
                 const xPos = (x / resolution - 0.5) * size;
                 const zPos = (z / resolution - 0.5) * size;
-                vertices.push(xPos, 0, zPos);
+                const yPos = 0; // Flat plane at y = 0
+                
+                vertices.push(xPos, yPos, zPos);
 
                 // Color (white)
                 colors.push(1, 1, 1, 1);
@@ -463,6 +593,79 @@ export class GeometryBuilder
                 texCoords.push(x / resolution, z / resolution);
 
                 // Normal (pointing up)
+                normals.push(0, 1, 0);
+            }
+        }
+
+        // Generate indices for triangles
+        for (let z = 0; z < resolution; z++) {
+            for (let x = 0; x < resolution; x++) {
+                const topLeft = z * (resolution + 1) + x;
+                const topRight = topLeft + 1;
+                const bottomLeft = (z + 1) * (resolution + 1) + x;
+                const bottomRight = bottomLeft + 1;
+
+                // First triangle (top-left, bottom-left, top-right)
+                indices.push(topLeft, bottomLeft, topRight);
+                
+                // Second triangle (top-right, bottom-left, bottom-right)
+                indices.push(topRight, bottomLeft, bottomRight);
+            }
+        }
+
+        return new Geometry(
+            new Float32Array(vertices),
+            new Uint16Array(indices),
+            new Float32Array(colors),
+            new Float32Array(texCoords),
+            new Float32Array(normals)
+        );
+    }
+
+    public createTerrainGeometry(resolution: number = 512, size: number = 1, terrainParams?: Partial<TerrainParameters>): Geometry {
+        const vertices: number[] = [];
+        const indices: number[] = [];
+        const colors: number[] = [];
+        const texCoords: number[] = [];
+        const normals: number[] = [];
+
+        // Default terrain parameters (can be overridden)
+        const defaultParams: TerrainParameters = {
+            seed: 128,
+            size: resolution,
+            scale: 50.0,
+            offset: { x: 0, y: 0 },
+            heightMultiplier: 30.0,
+            octaves: 16,
+            persistence: 0.5,
+            lacunarity: 1.6,
+            position: terrainParams?.position || new Vec3(0, 0, 0)
+        };
+
+        const finalParams = { ...defaultParams, ...terrainParams };
+
+        // Generate noise map
+        const noiseMap = this.generateNoise(finalParams);
+
+        // Generate vertices
+        for (let z = 0; z <= resolution; z++) {
+            for (let x = 0; x <= resolution; x++) {
+                const position = terrainParams?.position || new Vec3(0, 0, 0);
+                // Position (normalized to -size/2 to size/2)
+                const xPos = position.x + (x / resolution - 0.5) * size;
+                const zPos = position.z + (z / resolution - 0.5) * size;
+
+                // Generate height using noise map
+                const yPos = this.generateTerrainHeight(xPos, zPos, noiseMap, finalParams);
+                vertices.push(xPos, yPos, zPos);
+
+                // Color (white)
+                colors.push(1, 1, 1, 1);
+
+                // Texture coordinates
+                texCoords.push(x / resolution, z / resolution);
+
+                // Normal (pointing up - could be improved with proper terrain normals)
                 normals.push(0, 1, 0);
             }
         }

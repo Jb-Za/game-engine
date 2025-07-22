@@ -290,7 +290,6 @@ export class PhysicsDebugRenderer {
 
         const viewProjectionMatrix = Mat4x4.multiply(projectionMatrix, viewMatrix);
         const objects = physicsWorld.getAllObjects();
-        console.log(objects)
         for (const obj of objects) {
             if (!obj.isActive) continue;
 

@@ -43,5 +43,13 @@ export const scenes: SceneInfo[] = [{
   thumbnail: "/thumbnails/shadow.svg",
   importPath: "../scenes/characterControllerScene/characterControllerScene.ts",
   components: ['backButton']
+},
+{
+  id: "gridPlane",
+  name: "Grid Plane Scene",
+  description: "A scene with a grid plane and basic lighting setup.",
+  thumbnail: "/thumbnails/shadow.svg",
+  importPath: "../scenes/TerrainGeneratorScene/TerrainGeneratorScene.ts",
+  components: ['backButton']
 }
 ];

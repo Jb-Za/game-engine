@@ -12,6 +12,7 @@ import { UniformBuffer } from "../uniform_buffers/UniformBuffer";
 
 export class RenderPipeline {
   private renderPipeline: GPURenderPipeline;
+  private wireframeRenderPipeline: GPURenderPipeline;
   private materialBindGroupLayout: GPUBindGroupLayout;
 
   private materialBindGroup!: GPUBindGroup;
@@ -21,6 +22,15 @@ export class RenderPipeline {
 
   private _diffuseTexture!: Texture2D;
   private _shadowTexture!: Texture2D;
+  private _wireframeMode: boolean = false;
+
+  public set wireframeMode(value: boolean) {
+    this._wireframeMode = value;
+  }
+
+  public get wireframeMode(): boolean {
+    return this._wireframeMode;
+  }
 
   public set diffuseTexture(texture: Texture2D) {
     this._diffuseTexture = texture;
@@ -266,6 +276,35 @@ export class RenderPipeline {
       }
     });
 
+        // Create wireframe pipeline
+    this.wireframeRenderPipeline = device.createRenderPipeline({
+      layout: layout,
+      label: "Wireframe Render Pipeline",
+      vertex: {
+        buffers: bufferLayout,
+        module: shaderModule,
+        entryPoint: "materialVS",
+      },
+      fragment: {
+        module: shaderModule,
+        entryPoint: "materialFS",
+        targets: [
+          {
+            format: "bgra8unorm",
+          },
+        ],
+      },
+      primitive: {
+        topology: "line-list",
+      },
+      // CONFIGURE DEPTH
+      depthStencil: {
+        depthWriteEnabled: true,
+        depthCompare: "less",
+        format: "depth32float"
+      }
+    });
+
     this._diffuseTexture = Texture2D.createEmpty(device, true); // Use sRGB format for color textures
     // this._shadowTexture = Texture2D.createShadowTexture(device, 1024, 1024);
     // this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);
@@ -385,7 +424,9 @@ export class RenderPipeline {
     buffers: GeometryBuffers,
     instanceCount: number = 1
   ) {
-    renderPassEncoder.setPipeline(this.renderPipeline);
+    const pipeline = this._wireframeMode ? this.wireframeRenderPipeline : this.renderPipeline;
+    renderPassEncoder.setPipeline(pipeline);
+
     renderPassEncoder.setVertexBuffer(0, buffers.positionsBuffer);
     renderPassEncoder.setVertexBuffer(1, buffers.colorsBuffer);
     renderPassEncoder.setVertexBuffer(2, buffers.texCoordsBuffer);

@@ -1,0 +1,227 @@
+import { Camera } from "../../camera/Camera";
+import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffersCollection";
+import { AmbientLight } from "../../lights/AmbientLight";
+import { Color } from "../../math/Color";
+import { Vec3 } from "../../math/Vec3";
+import { Mat4x4 } from "../../math/Mat4x4";
+import { Texture2D } from "../../texture/Texture2D";
+import { DirectionalLight } from "../../lights/DirectionalLight";
+import { PointLightsCollection } from "../../lights/PointLight";
+import { InputManager } from "../../input/InputManager";
+import { ShadowCamera } from "../../camera/ShadowCamera";
+import { ObjectMap } from "../../game_objects/ObjectMap";
+import { PhysicsWorld } from "../../physics/PhysicsWorld";
+import { PhysicsComponent } from "../../physics/PhysicsComponent";
+import { PhysicsDebugRenderer } from "../../physics/PhysicsDebugRenderer";
+import { RigidBodyType } from "../../physics/RigidBody";
+import { GridPlane } from "../../game_objects/GridPlane";
+import { GridPlaneTerrain } from "../../game_objects/GridPlaneTerrain";
+// import { GridPlane } from "../../game_objects/GridPlane";
+
+let animationFrameId: number | null = null;
+
+async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement) {
+    canvas!.addEventListener("click", async () => {
+        await canvas!.requestPointerLock();
+    });
+
+    if (presentationFormat) { } // lazy linting
+
+    // Input Manager
+    const inputManager = new InputManager(canvas);
+    GeometryBuffersCollection.initialize(device);
+    const objectMap = new ObjectMap();
+
+    // DEPTH TEXTURE
+    const depthTexture = Texture2D.createDepthTexture(device, canvas.width, canvas.height);
+    const shadowTexture = Texture2D.createShadowTexture(device, 2048, 2048);
+
+    // LIGHTS
+    const ambientLight = new AmbientLight(device);
+    ambientLight.color = new Color(1, 1, 1, 1);
+    ambientLight.intensity = 0.7;
+
+    const directionalLight = new DirectionalLight(device);
+    directionalLight.color = new Color(1, 1, 1, 1);
+    directionalLight.intensity = 0.3;
+    directionalLight.direction = new Vec3(-1, -1, 0);
+
+    const pointLights = new PointLightsCollection(device, 3);
+    pointLights.lights[0].intensity = 0;
+    pointLights.lights[1].intensity = 0;
+    pointLights.lights[2].intensity = 0;
+
+    // CAMERA
+    const camera = new Camera(device, canvas.width / canvas.height, inputManager);
+    camera.eye = new Vec3(0, 8, 12);
+    camera.target = new Vec3(0, 0, 0);
+
+    const shadowCamera = new ShadowCamera(device);
+    shadowCamera.eye = new Vec3(-5, 10, 5);
+    shadowCamera.target = new Vec3(0, 0, 0);
+
+
+    // Arrays to store game objects and physics components
+    const gameObjects: any[] = [];
+
+    // === CREATE GRID PLANE SCENE OBJECTS ===
+
+    const gridPlanes: GridPlaneTerrain[] = [];
+
+    for (let i = 0; i < 9; i++) {
+        // Create unique terrain parameters for each chunk
+        const position = new Vec3(64 * ((i % 3) - 1), 0, 64 * (Math.floor(i / 3) - 1))
+        const terrainParams = {
+            seed: 1928371289,
+            offset: {
+                x: 0,
+                y: 0
+            },
+            octaves: 16,
+            heightMultiplier: 30.0,
+            persistence: 0.5,
+            lacunarity: 1.6,
+            scale: 50.0,
+            position: position
+        };
+
+        const gridPlane = objectMap.createGridPlaneTerrain({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, false, terrainParams);
+        gridPlane.scale = new Vec3(1, 1, 1);
+        // Position terrain chunks in a 3x3 grid
+        //gridPlane.position = position;
+        gridPlane.color = new Color(0.8, 0.8, 0.8, 1);
+        gameObjects.push(gridPlane);
+        gridPlanes.push(gridPlane);
+    }
+
+    // === CREATE WATER PLANE ===
+    const waterPlane = objectMap.createPlaneWater({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, {
+        waveSpeed: 0.5,
+        waveHeight: 0.2,
+        waveFrequency: 2.0,
+        transparency: 0.7,
+        reflectivity: 0.6,
+        waterLevel: 8.0
+    });
+    waterPlane.scale = new Vec3(1.5, 1, 1.5); // Large water plane
+    waterPlane.color = new Color(0.2, 0.5, 0.8, 0.8); // Water blue with transparency
+    gameObjects.push(waterPlane);
+
+    // === GAME FUNCTIONS ===
+    let pKeyPressed = false;
+    let oKeyPressed = false;
+    
+    function handleInput(): void {
+        // TODO: Add input handling logic
+        // Example: Reset scene with R key
+        if (inputManager.isKeyDown('r') || inputManager.isKeyDown('R')) {
+            // Reset logic here
+        }
+        
+        // Toggle terrain wireframe with debouncing
+        const pKeyDown = inputManager.isKeyDown('p') || inputManager.isKeyDown('P');
+        if (pKeyDown && !pKeyPressed) {
+            gridPlanes.forEach(gridPlane => {
+                gridPlane.wireframeMode = !gridPlane.wireframeMode;
+            });
+        }
+        pKeyPressed = pKeyDown;
+        
+        // Toggle water wireframe with debouncing
+        const oKeyDown = inputManager.isKeyDown('o') || inputManager.isKeyDown('O');
+        if (oKeyDown && !oKeyPressed) {
+            waterPlane.wireframeMode = !waterPlane.wireframeMode;
+        }
+        oKeyPressed = oKeyDown;
+    }
+
+    // === RENDER LOOP ===
+    let lastTime = performance.now();
+    const jsTime = performance.now() - lastTime;
+    function renderLoop(currentTime: number) {
+        const deltaTime = (currentTime - lastTime) / 1000;
+        lastTime = currentTime;
+        if (infoElem != null) {
+            infoElem.textContent = `fps: ${(1 / deltaTime).toFixed(1)}\njs: ${jsTime.toFixed(1)}ms\n` +
+                `Mouse - Look Around\n` +
+                `O - Toggle Wireframe for Water Plane\n` +
+                `P - Toggle Wireframe for Terrain Planes`;
+        }
+
+        handleInput();
+
+        // Update game objects
+        gameObjects.forEach(obj => {
+            if (obj && typeof obj.update === 'function') {
+                // Pass deltaTime to objects that can use it (like water)
+                obj.update(deltaTime);
+            }
+        });
+
+        // Update lights
+        ambientLight.update();
+        directionalLight.update();
+        pointLights.update();
+
+        // Update cameras
+        camera.update();
+        shadowCamera.update();
+
+        // === SHADOW PASS ===
+        const shadowCommandEncoder = device.createCommandEncoder();
+        const shadowRenderPass = shadowCommandEncoder.beginRenderPass({
+            colorAttachments: [],
+            depthStencilAttachment: {
+                view: shadowTexture.texture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'store'
+            }
+        });
+        gameObjects.forEach(obj => {
+            if (obj && typeof obj.drawShadows === 'function') {
+                obj.drawShadows(shadowRenderPass);
+            }
+        });
+        shadowRenderPass.end();
+        device.queue.submit([shadowCommandEncoder.finish()]);
+
+        // === MAIN RENDER PASS ===
+        const commandEncoder = device.createCommandEncoder();
+        const textureView = gpuContext.getCurrentTexture().createView();
+        const renderPass = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: textureView,
+                clearValue: { r: 0.4, g: 0.9, b: 0.9, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            }],
+            depthStencilAttachment: {
+                view: depthTexture.texture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'store'
+            }
+        });
+        // Render game objects
+        gameObjects.forEach(obj => {
+            if (obj && typeof obj.draw === 'function') {
+                obj.draw(renderPass);
+            }
+        });
+        renderPass.end();
+        device.queue.submit([commandEncoder.finish()]);
+        animationFrameId = requestAnimationFrame(renderLoop);
+    }
+
+    renderLoop(performance.now());
+}
+
+export function dispose() {
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+}
+
+export { init };

@@ -57,7 +57,7 @@ export class Camera {
         if (this.inputmanager != null) {
             if (this.targetObject != null) {
                 const targetPosition = this.targetObject.position;
-                const targetRotation = this.targetObject.rotation; 
+                const targetRotation = this.targetObject.rotation;
                 //this.target = Vec3.add(targetPosition, new Vec3(0, 1, 0)); // Look at head height
 
                 // // Get the forward direction from the rotation (assuming rotation is a matrix)
@@ -74,7 +74,10 @@ export class Camera {
                 this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
             }
             else {
-                const movementSpeed = 0.02;
+                let movementSpeed = 0.02;
+                if (this.inputmanager.isKeyDown('Shift')) {
+                    movementSpeed = 0.02 * 5;
+                }
                 const forward = new Vec3(0, 0, -1);
                 const right = new Vec3(-1, 0, 0);
                 //const up = new Vec3(0, 1, 0);
@@ -82,22 +85,23 @@ export class Camera {
                 const rotatedForward = Mat4x4.multiplyVec(this.rotation, forward);
                 const rotatedRight = Mat4x4.multiplyVec(this.rotation, right);
 
-                if (this.inputmanager.isKeyDown('w')) {
+                if (this.inputmanager.isKeyDown('w') || this.inputmanager.isKeyDown('W')) {
                     this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                     this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                 }
-                if (this.inputmanager.isKeyDown('s')) {
+                if (this.inputmanager.isKeyDown('s') || this.inputmanager.isKeyDown('S')) {
                     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                 }
-                if (this.inputmanager.isKeyDown('a')) {
+                if (this.inputmanager.isKeyDown('a') || this.inputmanager.isKeyDown('A ')) {
                     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                 }
-                if (this.inputmanager.isKeyDown('d')) {
+                if (this.inputmanager.isKeyDown('d') || this.inputmanager.isKeyDown('D')) {
                     this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                     this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                 }
+
             }
 
             this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
