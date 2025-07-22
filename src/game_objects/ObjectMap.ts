@@ -13,6 +13,11 @@ import { Cube } from "./Cube";
 import { Arrow } from "./Arrow";
 import { Quaternion } from "../math/Quaternion";
 import { GLTFAnimationPlayer } from "../gltf/GLTFAnimationPlayer";
+import { GridPlane } from "./GridPlane";
+import { GridPlaneTerrain, TerrainParameters } from "./GridPlaneTerrain";
+import { PlaneWater, WaterParameters } from "./PlaneWater";
+import { TerrainRenderPipeline } from "../render_pipelines/TerrainRenderPipeline";
+import { WaterRenderPipeline } from "../render_pipelines/WaterRenderPipeline";
 // import { Floor } from "./Floor";
 // import { Paddle } from "./Paddle";
 
@@ -42,6 +47,45 @@ export class ObjectMap {
     const id = this.objectIdCounter++;
     this._objects.set(id, cube);
     return cube;
+  }
+
+  public createGridPlane(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean) {
+    const gridPlane = new GridPlane(
+      objectParameters.device,
+      objectParameters.camera,
+      objectParameters.shadowCamera,
+      objectParameters.ambientLight,
+      objectParameters.directionalLight,
+      objectParameters.pointLights
+    );
+    gridPlane.pipeline.shadowTexture = shadowTexture;
+    if(randomColor === true){
+        gridPlane.color = this.generateRandomColor();
+    }
+    // Assign a unique ID to the object
+    const id = this.objectIdCounter++;
+    this._objects.set(id, gridPlane);
+    return gridPlane;
+  }
+
+    public createGridPlaneTerrain(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, terrainParams?: TerrainParameters) {
+    const gridPlane = new GridPlaneTerrain(
+      objectParameters.device,
+      objectParameters.camera,
+      objectParameters.shadowCamera,
+      objectParameters.ambientLight,
+      objectParameters.directionalLight,
+      objectParameters.pointLights,
+      terrainParams
+    );
+    gridPlane.pipeline.shadowTexture = shadowTexture;
+    if(randomColor === true){
+        gridPlane.color = this.generateRandomColor();
+    }
+    // Assign a unique ID to the object
+    const id = this.objectIdCounter++;
+    this._objects.set(id, gridPlane);
+    return gridPlane;
   }
 
   public createSphere(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean) {
@@ -85,13 +129,30 @@ export class ObjectMap {
     return arrow;
   }
 
+  public createPlaneWater(objectParameters: ObjectParameters, shadowTexture: Texture2D, waterParams?: WaterParameters) {
+    const planeWater = new PlaneWater(
+      objectParameters.device,
+      objectParameters.camera,
+      objectParameters.shadowCamera,
+      objectParameters.ambientLight,
+      objectParameters.directionalLight,
+      objectParameters.pointLights,
+      waterParams
+    );
+    planeWater.pipeline.shadowTexture = shadowTexture;
+    // Assign a unique ID to the object
+    const id = this.objectIdCounter++;
+    this._objects.set(id, planeWater);
+    return planeWater;
+  }
+
   private generateRandomColor() : Color {
     return new Color(Math.random(), Math.random(), Math.random(), Math.random());
   }
 }
 
 export interface GameObject {
-    pipeline: RenderPipeline;
+    pipeline: RenderPipeline | TerrainRenderPipeline | WaterRenderPipeline;
     scale: Vec3;
     position: Vec3;
     rotation: Quaternion;

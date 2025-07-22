@@ -43,5 +43,13 @@ export const scenes: SceneInfo[] = [{
   thumbnail: "/thumbnails/shadow.svg",
   importPath: "../scenes/characterControllerScene/characterControllerScene.ts",
   components: ['backButton']
+},
+{
+  id: "gridPlane",
+  name: "Terrain & Water Scene",
+  description: "Procedural terrain generation with animated water simulation and real-time parameter controls.",
+  thumbnail: "/thumbnails/terrain.svg",
+  importPath: "../scenes/TerrainGeneratorScene/TerrainGeneratorScene.ts",
+  components: ['backButton', 'terrainControls']
 }
 ];
