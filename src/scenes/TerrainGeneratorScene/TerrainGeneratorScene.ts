@@ -11,7 +11,7 @@ import { ShadowCamera } from "../../camera/ShadowCamera";
 import { ObjectMap } from "../../game_objects/ObjectMap";
 import { GridPlaneTerrain } from "../../game_objects/GridPlaneTerrain";
 import type { TerrainParams, WaterParams } from "../../components/TerrainWaterControls";
-// import { GridPlane } from "../../game_objects/GridPlane";
+// (Line removed)
 
 let animationFrameId: number | null = null;
 
