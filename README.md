@@ -1,7 +1,7 @@
 # Game Engine
 
 A WebGPU-based renderer (and hopefully one day, game engine) built with TypeScript, React, and Vite.
-
+Interactive Link here: game-engine-two.vercel.app
 ## Features
 
 - **WebGPU Rendering**: GPU-accelerated rendering pipeline
@@ -57,12 +57,6 @@ Build the application for production:
 
 ```bash
 npm run build
-```
-
-Preview the production build:
-
-```bash
-npm run preview
 ```
 
 ### Enabling WebGPU in Firefox
