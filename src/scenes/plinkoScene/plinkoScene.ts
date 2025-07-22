@@ -23,6 +23,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         await canvas!.requestPointerLock();
     });
 
+    if (presentationFormat) {} // lazy linting
+
     // Input Manager
     const inputManager = new InputManager(canvas);
     GeometryBuffersCollection.initialize(device);

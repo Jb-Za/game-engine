@@ -158,18 +158,18 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     objectMap.objects.forEach((object) => {
       if (object.orbit) {
         const angle = performance.now() * 0.001;
-        const rotationMatrix = Mat4x4.rotationAxis(object.orbitAxis, angle);
+        const rotationMatrix = Mat4x4.rotationAxis(object.orbitAxis!, angle);
     
         // Step 1: Translate object to origin (relative position)
-        const relativePosition = new Vec4(object.orbitInitialPosition.x, object.orbitInitialPosition.y, object.orbitInitialPosition.z, 1);
-    
+        const relativePosition = new Vec4(object.orbitInitialPosition!.x, object.orbitInitialPosition!.y, object.orbitInitialPosition!.z, 1);
+
         // Step 2: Rotate the relative position
         const rotatedPosition = Mat4x4.transformVec4(rotationMatrix, relativePosition);
     
         // Step 3: Translate back to orbitPoint
-        object.position.x = object.orbitPoint.x + rotatedPosition.x;
-        object.position.y = object.orbitPoint.y + rotatedPosition.y;
-        object.position.z = object.orbitPoint.z + rotatedPosition.z;
+        object.position.x = object.orbitPoint!.x + rotatedPosition.x;
+        object.position.y = object.orbitPoint!.y + rotatedPosition.y;
+        object.position.z = object.orbitPoint!.z + rotatedPosition.z;
       }
       object.update();
     });

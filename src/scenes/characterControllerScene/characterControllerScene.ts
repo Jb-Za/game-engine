@@ -12,7 +12,6 @@ import { ShadowCamera } from "../../camera/ShadowCamera";
 import { ObjectMap } from "../../game_objects/ObjectMap";
 import { GLTFGameObject } from "../../gltf/GLTFGameObject";
 import { CharacterController } from "../../characterController/characterController";
-import { Arrow } from "../../game_objects/Arrow";
 import { Quaternion } from "../../math/Quaternion";
 
 let animationFrameId: number | null = null;
