@@ -93,7 +93,7 @@ export class Camera {
                     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                 }
-                if (this.inputmanager.isKeyDown('a') || this.inputmanager.isKeyDown('A ')) {
+                if (this.inputmanager.isKeyDown('a') || this.inputmanager.isKeyDown('A')) {
                     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                 }
