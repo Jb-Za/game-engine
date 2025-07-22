@@ -98,6 +98,21 @@ var<uniform> directionalLight: DirectionalLight;
 @group(3) @binding(2)
 var<uniform> positionalLight: array<PointLight, 3>;
 
+// Blending data structure for smooth terrain transitions
+struct BlendingData {
+    result: vec4f,
+    height: f32
+}
+
+// Blend layer function for smooth height-based transitions
+fn blendLayer(layer: vec4f, layerHeight: f32, bd: BlendingData, blendSharpness: f32) -> BlendingData {
+    var result = bd;
+    result.height = max(0.0, bd.height - layerHeight);
+    let t = min(1.0, result.height * blendSharpness);
+    result.result = mix(bd.result, layer, t);
+    return result;
+}
+
 
 @fragment
 fn materialFS(in : VSOutput) -> @location(0) vec4f
@@ -154,39 +169,27 @@ fn materialFS(in : VSOutput) -> @location(0) vec4f
 
     }
 
-    // Height-based terrain coloring
-    var height = in.fragPos.y;
-    var terrainColor = vec3f(1.0, 1.0, 1.0); // Default white
+    // Height-based smooth terrain blending
+    let height = in.fragPos.y;
+    let blendSharpness = 0.5; // Controls transition sharpness (lower = softer)
     
-    // Define height thresholds and colors
-    if (height < 0.0) {
-        // Deep water - dark blue
-        terrainColor = vec3f(0.0, 0.1, 0.4);
-    } else if (height < 7.0) {
-        // Shallow water - blue
-        terrainColor = vec3f(0.2, 0.4, 0.8);
-    } else if (height < 8.4) {
-        // Beach/sand - tan
-        terrainColor = vec3f(0.9, 0.8, 0.6);
-    } else if (height < 16.5) {
-        // Grass - green
-        terrainColor = vec3f(0.2, 0.7, 0.2);
-    } else if (height < 20.0) {
-        // Forest - dark green
-        terrainColor = vec3f(0.1, 0.5, 0.1);
-    } else if (height < 28.0) {
-        // Rock - gray
-        terrainColor = vec3f(0.5, 0.5, 0.5);
-    } else {
-        // Snow - white
-        terrainColor = vec3f(0.9, 0.9, 1.0);
-    }
-
-    var color = textureSample(diffuseTexture, diffuseTexSampler, in.texCoord) * in.color * diffuseColor;
+    // Sample base texture
+    let baseTexture = textureSample(diffuseTexture, diffuseTexSampler, in.texCoord) * in.color * diffuseColor;
     
-    // Mix terrain color with texture
-    color = vec4f(terrainColor, 1.0) * color;
-    color = color * vec4f(lightAmount, 1.0);
+    // Initialize blending data with deepest layer (deep water)
+    var bd = BlendingData(vec4f(0.0, 0.1, 0.4, 1.0) * baseTexture, height);
+    
+    // Layer blend progression from bottom to top
+    // Each layer blends smoothly based on height difference
+    bd = blendLayer(vec4f(0.2, 0.4, 0.8, 1.0) * baseTexture, -1.0, bd, blendSharpness);   // Shallow water
+    bd = blendLayer(vec4f(0.9, 0.8, 0.6, 1.0) * baseTexture, 5.0, bd, blendSharpness);   // Beach/sand
+    bd = blendLayer(vec4f(0.2, 0.7, 0.2, 1.0) * baseTexture, 6.0, bd, blendSharpness);  // Grass
+    bd = blendLayer(vec4f(0.1, 0.5, 0.1, 1.0) * baseTexture, 8.0, bd, blendSharpness);  // Forest
+    bd = blendLayer(vec4f(0.5, 0.5, 0.5, 1.0) * baseTexture, 10.0, bd, blendSharpness);  // Rock
+    bd = blendLayer(vec4f(0.9, 0.9, 1.0, 1.0) * baseTexture, 12.0, bd, blendSharpness);  // Snow
+    
+    // Apply lighting to final blended color
+    var color = bd.result * vec4f(lightAmount, 1.0);
 
     return color;
 }

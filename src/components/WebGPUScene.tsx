@@ -3,6 +3,8 @@ import { SceneInfo } from "../scenes/sceneList";
 import { checkWebGPUSupport } from "../utils/WebGPUCheck";
 import "./WebGPUScene.css";
 import GLTFControls from "./GLTFControls";
+import TerrainWaterControls from "./TerrainWaterControls";
+import { updateTerrainParams, updateWaterParams } from "../scenes/TerrainGeneratorScene/TerrainGeneratorScene";
 
 interface WebGPUSceneProps {
   scene: SceneInfo;
@@ -173,6 +175,12 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
       </button>
       {scene.components.includes('animationMenu') && (
         <GLTFControls onGLTFOptionsChange={setGLTFOptions} />
+      )}
+      {scene.components.includes('terrainControls') && (
+        <TerrainWaterControls 
+          onTerrainChange={updateTerrainParams}
+          onWaterChange={updateWaterParams}
+        />
       )}
       {isLoading && (
         <div className="loading-indicator">

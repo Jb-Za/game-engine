@@ -3,22 +3,91 @@ import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffe
 import { AmbientLight } from "../../lights/AmbientLight";
 import { Color } from "../../math/Color";
 import { Vec3 } from "../../math/Vec3";
-import { Mat4x4 } from "../../math/Mat4x4";
 import { Texture2D } from "../../texture/Texture2D";
 import { DirectionalLight } from "../../lights/DirectionalLight";
 import { PointLightsCollection } from "../../lights/PointLight";
 import { InputManager } from "../../input/InputManager";
 import { ShadowCamera } from "../../camera/ShadowCamera";
 import { ObjectMap } from "../../game_objects/ObjectMap";
-import { PhysicsWorld } from "../../physics/PhysicsWorld";
-import { PhysicsComponent } from "../../physics/PhysicsComponent";
-import { PhysicsDebugRenderer } from "../../physics/PhysicsDebugRenderer";
-import { RigidBodyType } from "../../physics/RigidBody";
-import { GridPlane } from "../../game_objects/GridPlane";
 import { GridPlaneTerrain } from "../../game_objects/GridPlaneTerrain";
+import type { TerrainParams, WaterParams } from "../../components/TerrainWaterControls";
 // import { GridPlane } from "../../game_objects/GridPlane";
 
 let animationFrameId: number | null = null;
+
+// Global references for scene objects that need to be updated
+let sceneObjects: {
+    gridPlanes: GridPlaneTerrain[];
+    waterPlane: any;
+    objectMap: ObjectMap;
+    device: GPUDevice;
+    camera: Camera;
+    shadowCamera: ShadowCamera;
+    ambientLight: AmbientLight;
+    directionalLight: DirectionalLight;
+    pointLights: PointLightsCollection;
+    shadowTexture: Texture2D;
+    gameObjects: any[];
+} | null = null;
+
+// Functions to update terrain and water from React controls
+export function updateTerrainParams(params: TerrainParams) {
+    if (!sceneObjects) return;
+
+    // Remove old terrain
+    sceneObjects.gridPlanes.forEach(gridPlane => {
+        const index = sceneObjects!.gameObjects.indexOf(gridPlane);
+        if (index > -1) {
+            sceneObjects!.gameObjects.splice(index, 1);
+        }
+    });
+    sceneObjects.gridPlanes = [];
+
+    // Create new terrain with updated parameters
+    for (let i = 0; i < 9; i++) {
+        const position = new Vec3(64 * ((i % 3) - 1), 0, 64 * (Math.floor(i / 3) - 1));
+        const terrainParams = {
+            seed: params.seed,
+            offset: params.offset,
+            octaves: params.octaves,
+            heightMultiplier: params.heightMultiplier,
+            persistence: params.persistence,
+            lacunarity: params.lacunarity,
+            scale: params.scale,
+            position: position
+        };
+
+        const gridPlane = sceneObjects.objectMap.createGridPlaneTerrain(
+            {
+                device: sceneObjects.device,
+                camera: sceneObjects.camera,
+                shadowCamera: sceneObjects.shadowCamera,
+                ambientLight: sceneObjects.ambientLight,
+                directionalLight: sceneObjects.directionalLight,
+                pointLights: sceneObjects.pointLights
+            },
+            sceneObjects.shadowTexture,
+            false,
+            terrainParams
+        );
+        gridPlane.scale = new Vec3(1, 1, 1);
+        gridPlane.color = new Color(0.8, 0.8, 0.8, 1);
+        sceneObjects.gameObjects.push(gridPlane);
+        sceneObjects.gridPlanes.push(gridPlane);
+    }
+}
+
+export function updateWaterParams(params: WaterParams) {
+    if (!sceneObjects || !sceneObjects.waterPlane) return;
+
+    // Update water properties
+    sceneObjects.waterPlane.setWaveParameters(params.waveSpeed, params.waveHeight, params.waveFrequency);
+    sceneObjects.waterPlane.setTransparency(params.transparency);
+    sceneObjects.waterPlane.setWaterLevel(params.waterLevel);
+    sceneObjects.waterPlane.reflectivity = params.reflectivity;
+    sceneObjects.waterPlane.color = new Color(params.color.r, params.color.g, params.color.b, params.color.a);
+    sceneObjects.waterPlane.scale = new Vec3(params.scale.x, params.scale.y, params.scale.z);
+}
 
 async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement) {
     canvas!.addEventListener("click", async () => {
@@ -53,7 +122,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
     // CAMERA
     const camera = new Camera(device, canvas.width / canvas.height, inputManager);
-    camera.eye = new Vec3(0, 8, 12);
+    camera.eye = new Vec3(0, 60, 180);
     camera.target = new Vec3(0, 0, 0);
 
     const shadowCamera = new ShadowCamera(device);
@@ -78,10 +147,10 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
                 y: 0
             },
             octaves: 16,
-            heightMultiplier: 30.0,
+            heightMultiplier: 32.0,
             persistence: 0.5,
             lacunarity: 1.6,
-            scale: 50.0,
+            scale: 90.0,
             position: position
         };
 
@@ -107,30 +176,49 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     waterPlane.color = new Color(0.2, 0.5, 0.8, 0.8); // Water blue with transparency
     gameObjects.push(waterPlane);
 
+    // Store scene objects globally for React controls
+    sceneObjects = {
+        gridPlanes,
+        waterPlane,
+        objectMap,
+        device,
+        camera,
+        shadowCamera,
+        ambientLight,
+        directionalLight,
+        pointLights,
+        shadowTexture,
+        gameObjects
+    };
+
     // === GAME FUNCTIONS ===
     let pKeyPressed = false;
     let oKeyPressed = false;
-    
+
     function handleInput(): void {
         // TODO: Add input handling logic
         // Example: Reset scene with R key
         if (inputManager.isKeyDown('r') || inputManager.isKeyDown('R')) {
             // Reset logic here
         }
-        
+
         // Toggle terrain wireframe with debouncing
         const pKeyDown = inputManager.isKeyDown('p') || inputManager.isKeyDown('P');
         if (pKeyDown && !pKeyPressed) {
-            gridPlanes.forEach(gridPlane => {
-                gridPlane.wireframeMode = !gridPlane.wireframeMode;
-            });
+            if (sceneObjects && sceneObjects.gridPlanes) {
+                sceneObjects.gridPlanes.forEach(gridPlane => {
+                    gridPlane.wireframeMode = !gridPlane.wireframeMode;
+                });
+            }
         }
         pKeyPressed = pKeyDown;
-        
+
         // Toggle water wireframe with debouncing
         const oKeyDown = inputManager.isKeyDown('o') || inputManager.isKeyDown('O');
         if (oKeyDown && !oKeyPressed) {
-            waterPlane.wireframeMode = !waterPlane.wireframeMode;
+            if (sceneObjects && sceneObjects.waterPlane) {
+                sceneObjects.waterPlane.wireframeMode = !sceneObjects.waterPlane.wireframeMode;
+            }
         }
         oKeyPressed = oKeyDown;
     }
