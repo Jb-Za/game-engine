@@ -66,11 +66,11 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     const physicsDebugRenderer = new PhysicsDebugRenderer(device);
 
     // Plinko board dimensions - UPDATED for better distribution
-    const boardWidth = 16;
-    const boardHeight = 18; // Increased height
-    const pegRadius = 0.12; // Slightly smaller pegs
-    const ballRadius = 0.1;  // Smaller balls for more chaos
-    const pegSpacing = 0.9;  // Tighter spacing for more collisions
+    const boardWidth = 10;
+    const boardHeight = 11;
+    const pegRadius = 0.12;
+    const ballRadius = 0.1;
+    const pegSpacing = 0.6;
 
     // Arrays to store game objects and physics components
     const gameObjects: any[] = [];
@@ -79,8 +79,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
     // Ball spawning variables
     let ballSpawnTimer = 0;
-    const ballSpawnInterval = 0.1; // Spawn ball every 1.5 seconds
-    const maxActiveBalls = 100; // Reduced for better performance
+    const ballSpawnInterval = 0.33;
+    const maxActiveBalls = 100;
     let currentActiveBalls = 0;
 
     // Add distribution tracking
@@ -120,45 +120,41 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     physicsComponents.push(floorPhysics);
 
     // 3. Create peg grid in triangular Plinko pattern - IMPROVED
-    const pegRows = 15; // Increased from 10 to 15 rows
+    const pegRows = 15;
     for (let row = 0; row < pegRows; row++) {
         const y = boardHeight - 2 - (row * pegSpacing);
-        const pegsInRow = row + 4; // Start with 4 pegs, increase each row
+        const pegsInRow = row + 2; // Start with 2 pegs, increase each row
         const rowWidth = (pegsInRow - 1) * pegSpacing;
         const startX = -rowWidth / 2;
 
         for (let col = 0; col < pegsInRow; col++) {
             const x = startX + (col * pegSpacing);
             
-            // Add small random offset to peg positions for more chaos
-            const offsetX = (Math.random() - 0.5) * 0.1;
-            const offsetY = (Math.random() - 0.5) * 0.1;
-            
             // Create sphere peg
             const peg = objectMap.createSphere({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, false);
             peg.scale = new Vec3(pegRadius, pegRadius, pegRadius);
-            peg.position = new Vec3(x + offsetX, y + offsetY, 0);
+            peg.position = new Vec3(x, y, 0);
             peg.color = new Color(0.8, 0.6, 0.2, 1); // Golden pegs
             
             const pegPhysics = new PhysicsComponent(peg, physicsWorld, 'sphere', 0);
             pegPhysics.setType(RigidBodyType.STATIC);
-            pegPhysics.setRestitution(0.1);
-            pegPhysics.setFriction(0.15); // Keep low friction
+            pegPhysics.setRestitution(0.1); // bounciness
+            pegPhysics.setFriction(0.1); // Keep low friction
             
             gameObjects.push(peg);
             physicsComponents.push(pegPhysics);
         }
     }
 
-    // 4. Create collection buckets at the bottom - MORE BUCKETS
+    // 4. Create collection buckets at the bottom
     const bucketWidth = boardWidth / bucketCount;
     
-    for (let i = 0; i <= bucketCount; i++) { // Note: <= to create walls between all buckets
+    for (let i = 0; i <= bucketCount; i++) {
         const x = -boardWidth/2 + (i * bucketWidth);
         
         // Create bucket walls
         const bucketWall = objectMap.createCube({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, false);
-        bucketWall.scale = new Vec3(0.05, 1.5, 1); // Thinner walls
+        bucketWall.scale = new Vec3(0.05, 1.5, 1);
         bucketWall.position = new Vec3(x, -1, 0);
         bucketWall.color = new Color(0.1, 0.5, 0.8, 1);
         
@@ -169,7 +165,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         physicsComponents.push(bucketPhysics);
     }
 
-    // 5. Create ball pool for reuse - IMPROVED PHYSICS
+    // 5. Create ball pool for reuse
     for (let i = 0; i < maxActiveBalls + 2; i++) {
         const ball = objectMap.createSphere({ device, camera, shadowCamera, ambientLight, directionalLight, pointLights }, shadowTexture, false);
         ball.scale = new Vec3(ballRadius, ballRadius, ballRadius);
@@ -178,8 +174,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
         const ballPhysics = new PhysicsComponent(ball, physicsWorld, 'sphere', 1);
         ballPhysics.setType(RigidBodyType.DYNAMIC);
-        ballPhysics.setRestitution(0.7); // bounciness
-        ballPhysics.setFriction(0.2);    // friction
+        ballPhysics.setRestitution(0.25); // bounciness
+        ballPhysics.setFriction(0.1);    // friction
         ballPhysics.setActive(false); // Start inactive
         
         ballPool.push({ ball, physics: ballPhysics, isActive: false });
@@ -201,16 +197,11 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         currentActiveBalls++;
         
         // INCREASED random spawn position for more variation
-        const spawnX = (Math.random() - 0.5) * 0.8;
-        const spawnY = boardHeight + 1 + Math.random() * 0.5; // Add some Y variation
+        const spawnX = (Math.random() - 0.5) * 0.1; // from -0.05 to 0.05
+        const spawnY = boardHeight ; // Add some Y variation
         
         poolBall.ball.position = new Vec3(spawnX, spawnY, 0);
         poolBall.physics.setPosition(new Vec3(spawnX, spawnY, 0));
-        
-        // Add small random initial velocity for more chaos
-        const randomVelX = (Math.random() - 0.5) * 0.5;
-        const randomVelY = -Math.random() * 0.5;
-        poolBall.physics.setVelocity(new Vec3(randomVelX, randomVelY, 0));
         
         poolBall.physics.setActive(true);
         poolBall.ball.color = new Color(1, 0.8, 0.8, 1); // pink
@@ -231,8 +222,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
                 poolBall.isActive = false;
                 currentActiveBalls--;
                 poolBall.physics.setActive(false);
-                poolBall.ball.position = new Vec3(0, -20, 0);
-                poolBall.physics.setPosition(new Vec3(0, -20, 0));
+                poolBall.ball.position = new Vec3(0, -50, 0);
+                poolBall.physics.setPosition(new Vec3(0, -50, 0));
             }
         });
     }
@@ -367,7 +358,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
             const distributionDisplay = bucketCounts.map((count, i) => {
                 const percentage = totalBallsDropped > 0 ? (count / totalBallsDropped * 100).toFixed(1) : '0.0';
                 const bar = '█'.repeat(Math.floor(count / maxCount * 10));
-                return `${i.toString().padStart(2)}: ${count.toString().padStart(3)} (${percentage}%) ${bar}`;
+                return `${i.toString().padStart(2)}: ${count.toString().padStart(3)} (${percentage}%)\t${bar}`;
             }).join('\n');
             
             infoElem.textContent = 

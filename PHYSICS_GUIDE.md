@@ -14,7 +14,7 @@
 ### 1. Basic Physics Setup
 
 ```typescript
-import { PhysicsWorld, PhysicsComponent } from "../physics";
+import { PhysicsWorld, PhysicsComponent, RigidBodyType } from "../physics";
 
 // Create physics world
 const physicsWorld = new PhysicsWorld();
@@ -33,11 +33,19 @@ function update(deltaTime: number) {
     // 1. Physics simulation
     physicsWorld.step(deltaTime);
     
-    // 2. Sync physics with game objects
-    cubePhysics.updateGameObjectTransform();
+    // 2. Sync physics with game objects (for each physics component)
+    physicsComponents.forEach(physics => {
+        if (physics.isActive()) {
+            physics.updateGameObjectTransform();
+        }
+    });
     
     // 3. Update game objects
-    cube.update();
+    gameObjects.forEach(obj => {
+        if (obj && typeof obj.update === 'function') {
+            obj.update();
+        }
+    });
 }
 ```
 
@@ -52,6 +60,9 @@ cubePhysics.addImpulse(new Vec3(5, 0, 0)); // Instant velocity change
 cubePhysics.setRestitution(0.8); // Bounciness (0-1)
 cubePhysics.setFriction(0.5);    // Surface friction (0-1)
 cubePhysics.setMass(2.0);        // Object mass
+
+// Control physics behavior
+cubePhysics.setUseGravity(true); // Enable/disable gravity for this object
 ```
 
 ## Advanced Usage
@@ -96,50 +107,78 @@ cubePhysics.setRotation(new Quaternion());
 
 // Set velocity directly
 cubePhysics.setVelocity(new Vec3(5, 0, 0));
+
+// Get current velocity
+const currentVelocity = cubePhysics.getVelocity();
+
+// Control angular velocity
+cubePhysics.setAngularVelocity(new Vec3(0, 1, 0));
+const angularVel = cubePhysics.getAngularVelocity();
 ```
 
 ## Integration with Existing Code
 
-### Modifying Existing GameObjects
+### Creating Physics-Enabled Objects
 
-To add physics to your existing game objects (Cube, Ball, etc.), you can:
+The current system uses **PhysicsComponent** to bridge GameObjects with physics. Here's the recommended pattern:
 
-1. **Add PhysicsComponent as optional property:**
+```typescript
+// Create a physics-enabled cube
+const cube = objectMap.createCube(objectParams, shadowTexture, false);
+const cubePhysics = new PhysicsComponent(cube, physicsWorld, 'box', 1.0);
+
+// Store both for easy management
+const gameObjects = [cube];
+const physicsComponents = [cubePhysics];
+
+// In your update loop
+physicsWorld.step(deltaTime);
+physicsComponents.forEach(physics => {
+    if (physics.isActive()) {
+        physics.updateGameObjectTransform();
+    }
+});
+```
+
+### Advanced GameObject Integration (Optional)
+
+If you want to extend your existing GameObject classes, you can add optional physics support:
+
 ```typescript
 export class Cube {
     // ...existing properties...
     public physics?: PhysicsComponent;
     
-    public enablePhysics(physicsWorld: PhysicsWorld, mass: number = 1.0) {
+    public addPhysics(physicsWorld: PhysicsWorld, mass: number = 1.0): PhysicsComponent {
         this.physics = new PhysicsComponent(this, physicsWorld, 'box', mass);
-    }
-}
-```
-
-2. **Update the object's update method:**
-```typescript
-public update() {
-    // Sync physics if enabled
-    if (this.physics) {
-        this.physics.updateGameObjectTransform();
+        return this.physics;
     }
     
-    // ...existing update code...
+    public update() {
+        // Sync physics if enabled (usually handled externally)
+        // if (this.physics) {
+        //     this.physics.updateGameObjectTransform();
+        // }
+        
+        // ...existing update code...
+    }
 }
 ```
 
 ### Character Controller Integration
 
-For your existing character controller, you can replace manual movement with physics:
+For a character controller you could add physics like this:
 
 ```typescript
 export class CharacterController {
     private physics?: PhysicsComponent;
     
-    public enablePhysics(physicsWorld: PhysicsWorld) {
+    public addPhysics(physicsWorld: PhysicsWorld) {
         this.physics = new PhysicsComponent(this.object, physicsWorld, 'box', 1.0);
         this.physics.setType(RigidBodyType.DYNAMIC);
         this.physics.setUseGravity(true);
+        // Reduce friction for smoother movement
+        this.physics.setFriction(0.1);
     }
     
     public update() {
@@ -147,11 +186,26 @@ export class CharacterController {
             // Apply movement forces instead of direct position changes
             const force = this.calculateMovementForce();
             this.physics.addForce(force);
-            this.physics.updateGameObjectTransform();
+            
+            // Handle jumping
+            if (this.jumpPressed && this.isGrounded()) {
+                this.physics.addImpulse(new Vec3(0, 5, 0));
+            }
+            
+            // Physics sync is handled externally in main loop
         } else {
             // Fallback to existing movement system
             // ...existing movement code...
         }
+    }
+    
+    private isGrounded(): boolean {
+        // Check if character is on ground using collision detection
+        const collisions = this.physics?.getCollisions() || [];
+        return collisions.some(collision => {
+            // Check if collision normal points upward (ground)
+            return collision.normal && collision.normal.y > 0.7;
+        });
     }
 }
 ```
@@ -169,21 +223,27 @@ console.log(`Collision checks: ${stats.collisionChecks}`);
 ```
 
 ### 3. Fixed Timestep
-Physics runs at a fixed 60 FPS timestep for consistency, regardless of frame rate.
+Physics runs at a fixed 120 FPS timestep (1/120 second) for consistency, with up to 5 sub-steps per frame to maintain stability regardless of frame rate.
 
-## Scene Example
+this can be configured
 
-I've created a complete physics demo scene at:
-`src/scenes/physicsTestScene/physicsTestScene.ts`
+## Scene Examples
 
-The scene demonstrates:
+**Physics Test Scene:** `src/scenes/physicsTestScene/physicsTestScene.ts`
 - Falling cubes and spheres
 - Static floor and walls
 - Force application
 - Real-time physics stats
 - Interactive spawning
 
-## Next Steps for Production
+**Plinko Physics Scene:** `src/scenes/plinkoScene/plinkoScene.ts`
+- Demonstrates binomial distribution through physics
+- Sphere-sphere and sphere-box collisions
+- Ball pooling system for performance
+- Real-time distribution tracking
+- Interactive ball spawning
+
+## TODO
 
 ### 1. Enhanced Colliders
 - Capsule colliders for characters
@@ -204,5 +264,3 @@ The scene demonstrates:
 - Multiple physics materials
 - Trigger volumes
 - Raycasting improvements
-
-The current system provides a solid foundation for most game physics needs while being easily extensible for more advanced features.
