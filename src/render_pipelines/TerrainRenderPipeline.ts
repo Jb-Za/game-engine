@@ -75,7 +75,7 @@ export class TerrainRenderPipeline {
     this.textureTilingBuffer = new UniformBuffer(
       device,
       this._textureTiling,
-      "Texture Tilling Buffer"
+      "Texture Tiling Buffer"
     );
 
     this.diffuseColorBuffer = new UniformBuffer(
