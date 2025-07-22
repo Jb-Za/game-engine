@@ -39,7 +39,7 @@ export class Arrow implements GameObject {
     public update(): void {
         // Create transformation matrix with rotation based on quaternion
         const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
-        const rotationMatrix = Mat4x4.fromQuartonian(this.rotation);
+        const rotationMatrix = Mat4x4.fromQuaternion(this.rotation);
         const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
         // Apply transformations: translate * rotate * scale
         this.transform = Mat4x4.multiply(Mat4x4.multiply(translate, rotationMatrix), scale);

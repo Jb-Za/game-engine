@@ -19,7 +19,7 @@ export class Texture2D {
         const texture = new Texture2D(device);
         // Use sRGB format for color textures, linear format for non-color data
         const format = isColorTexture ? "rgba8unorm-srgb" : "rgba8unorm";
-        texture.initializeFromData(new Uint8Array([255, 255, 255, 255]), 1, 1, format);
+        texture.initializeFromDataSync(new Uint8Array([255, 255, 255, 255]), 1, 1, format);
         return texture;
     }
 
