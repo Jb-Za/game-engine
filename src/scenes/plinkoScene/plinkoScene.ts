@@ -334,7 +334,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
                 view: textureView,
-                clearValue: { r: 0.1, g: 0.1, b: 0.2, a: 1.0 },
+                clearValue:  { r: 0.4, g: 0.9, b: 0.9, a: 1.0 },
                 loadOp: 'clear',
                 storeOp: 'store'
             }],

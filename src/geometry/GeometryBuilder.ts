@@ -441,4 +441,55 @@ export class GeometryBuilder
         );
     }
 
+    public createGridPlane(resolution: number = 64, size: number = 1): Geometry {
+        const vertices: number[] = [];
+        const indices: number[] = [];
+        const colors: number[] = [];
+        const texCoords: number[] = [];
+        const normals: number[] = [];
+
+        // Generate vertices
+        for (let z = 0; z <= resolution; z++) {
+            for (let x = 0; x <= resolution; x++) {
+                // Position (normalized to -size/2)
+                const xPos = (x / resolution - 0.5) * size;
+                const zPos = (z / resolution - 0.5) * size;
+                vertices.push(xPos, 0, zPos);
+
+                // Color (white)
+                colors.push(1, 1, 1, 1);
+
+                // Texture coordinates
+                texCoords.push(x / resolution, z / resolution);
+
+                // Normal (pointing up)
+                normals.push(0, 1, 0);
+            }
+        }
+
+        // Generate indices for triangles
+        for (let z = 0; z < resolution; z++) {
+            for (let x = 0; x < resolution; x++) {
+                const topLeft = z * (resolution + 1) + x;
+                const topRight = topLeft + 1;
+                const bottomLeft = (z + 1) * (resolution + 1) + x;
+                const bottomRight = bottomLeft + 1;
+
+                // First triangle (top-left, bottom-left, top-right)
+                indices.push(topLeft, bottomLeft, topRight);
+                
+                // Second triangle (top-right, bottom-left, bottom-right)
+                indices.push(topRight, bottomLeft, bottomRight);
+            }
+        }
+
+        return new Geometry(
+            new Float32Array(vertices),
+            new Uint16Array(indices),
+            new Float32Array(colors),
+            new Float32Array(texCoords),
+            new Float32Array(normals)
+        );
+    }
+
 }
