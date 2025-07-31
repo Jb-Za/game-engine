@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.6.0",
-    "@webgpu/types": "^0.1.38",
+    "@webgpu/types": "^0.1.64",
     "typescript": "^5.0.2",
     "vite": "^4.4.5"
   },

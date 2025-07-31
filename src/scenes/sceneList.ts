@@ -51,5 +51,13 @@ export const scenes: SceneInfo[] = [{
   thumbnail: "/thumbnails/terrain.svg",
   importPath: "../scenes/TerrainGeneratorScene/TerrainGeneratorScene.ts",
   components: ['backButton', 'terrainControls']
+},
+{
+  id: "raytracer",
+  name: "Ray Tracing Demo",
+  description: "A scene demonstrating compute shader-based ray tracing with spheres and planes.",
+  thumbnail: "/thumbnails/raytracing.svg",
+  importPath: "../scenes/raytracerScene/rayTracerScene.ts",
+  components: ['backButton', 'rayTracingControls']
 }
 ];
