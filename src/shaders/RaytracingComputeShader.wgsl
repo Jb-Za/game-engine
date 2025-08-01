@@ -60,6 +60,12 @@ var<uniform> camera: CameraData;
 @group(0) @binding(1)
 var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
+@group(0) @binding(2) 
+var<uniform> frame: u32;
+
+@group(0) @binding(3)
+var previousFrame: texture_2d<f32>; // Need to add this binding
+
 // Scene objects
 struct SceneCounts {
     numSpheres: u32,
@@ -124,20 +130,23 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
 
     let rayDir = normalize(imagePoint - camera.eye);
     let ray = Ray(camera.eye, rayDir);
-    let seed = id.x + id.y * 719393; // Todo: rngState = pixelIndex + Frame * 719393;
+    let seed = pixelCoords.x * 48271u + pixelCoords.y * 719393u + frame * 16807u;
 
+    // Cast multiple rays per pixel for this frame
+    var currentFrameColor: vec3f = vec3f(0.0, 0.0, 0.0);
     let raysPerPixel = 20u; // Number of rays to trace per pixel
-    var brightness_score: vec3f = vec3f(0.0, 0.0, 0.0);
-    for (var i: u32 = 0; i < raysPerPixel; i = i + 1) { // For now, just one sample per pixel
-        // Trace the ray and accumulate color
+    for (var i: u32 = 0u; i < raysPerPixel; i = i + 1u) {
         let sample_seed = seed + i * 7919u;
-        brightness_score += trace_ray(ray, sample_seed);
+        currentFrameColor += trace_ray(ray, sample_seed);
     }
+    currentFrameColor = currentFrameColor / f32(raysPerPixel);
+    
+    // Blend with previous frames for temporal accumulation
+    let previous = textureLoad(previousFrame, vec2i(pixelCoords), 0).rgb;
+    let blendFactor = 1.0 / f32(frame + 1); // TODO: mess with this factor
+    let finalColor = mix(previous, currentFrameColor, blendFactor);
 
-    let color = brightness_score / f32(raysPerPixel); // Average color over samples
-    //color = trace_ray(ray, seed); // Pass pixel ID as RNG state
-
-    textureStore(outputTexture, vec2i(pixelCoords), vec4f(color, 1.0));
+    textureStore(outputTexture, vec2i(pixelCoords), vec4f(finalColor, 1.0));
 }
 
 fn check_ray_collision(ray: Ray) -> HitInfo {
@@ -157,18 +166,6 @@ fn check_ray_collision(ray: Ray) -> HitInfo {
 
     // todo: add plane collision checks. and triangles later
     return closest;
-}
-
-fn random_direction_in_hemisphere(normal: vec3f, state: u32) -> vec3f {
-    // Generate a random vector in the hemisphere defined by the normal
-    // This is a placeholder
-    let random_angle = f32(state % 360u) * (3.14159265359 / 180.0); // Convert to radians
-    let random_radius = sqrt(f32(state % 100u)) * 0.1; // Scale radius
-    let x = random_radius * cos(random_angle);
-    let y = random_radius * sin(random_angle);
-    let z = sqrt(1.0 - x * x - y * y); // Ensure it's in the hemisphere
-
-    return normalize(vec3f(x, y, z) + normal);
 }
 
 fn trace_ray(ray: Ray, state: u32) -> vec3<f32> {
@@ -192,6 +189,9 @@ fn trace_ray(ray: Ray, state: u32) -> vec3<f32> {
             brightness_score = brightness_score + emitted_light * ray_color;
             ray_color = ray_color * current_collision.materialcolor;
         } else {
+            let t = 0.5 * (local_ray.dir.y + 1.0);
+            let sky = mix(vec3<f32>(0.3, 0.3, 0.4), vec3<f32>(0.05, 0.05, 0.1), t);
+            brightness_score = brightness_score + sky * ray_color;
             break;
         }
     }

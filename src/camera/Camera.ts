@@ -15,6 +15,11 @@ export class Camera {
     public target = new Vec3(0, 0, 0);
     private up = new Vec3(0, 1, 0);
 
+    // Calculate and return the forward vector (from eye to target)
+    public get forward(): Vec3 {
+        return Vec3.normalize(Vec3.subtract(this.target, this.eye));
+    }
+
     // PERSPECTIVE PROPERTIES
     public fov = 45;
     public near = 0.01;

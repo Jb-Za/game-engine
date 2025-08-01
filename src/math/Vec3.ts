@@ -170,4 +170,8 @@ export class Vec3 extends Float32Array
         const vz = 1 - 2 * (x * x + y * y);
         return new Vec3(vx, vy, vz);
     }
+
+    public static equals(a: Vec3, b: Vec3): boolean {
+        return a.x === b.x && a.y === b.y && a.z === b.z;
+    }
 }

@@ -701,3 +701,76 @@ export type TempReturn = {
   bindGroupLayouts: BindGroupLayouts;
   selectedBindGroup: any[]; //TODO: Define a proper type for selectedBindGroup
 };
+
+
+// 
+// 
+
+// import { Vec3 } from "../math/Vec3.ts";
+
+// 
+// type RaytracedTriangle = {
+//   v0: Vec3;
+//   v1: Vec3;
+//   v2: Vec3;
+//   materialIndex: number; // or any material info you want to store
+// };
+
+// function extractTrianglesFromGLTFMesh(mesh: GLTFMesh): RaytracedTriangle[] {
+//   const triangles: RaytracedTriangle[] = [];
+
+//   for (const primitive of mesh.primitives) {
+//     // Get position accessor (usually "POSITION")
+//     const posAccessor = primitive.attributeMap["POSITION"];
+//     if (!posAccessor) continue;
+
+//     const positions = posAccessor.getFloat32Array(); // Flat array [x0, y0, z0, x1, y1, z1, ...]
+//     const indicesAccessor = primitive.attributeMap["INDICES"];
+//     let indices: Uint32Array | null = null;
+//     if (indicesAccessor) {
+//       indices = indicesAccessor.getUint32Array(); // Indices into the positions array
+//     }
+
+//     // Each triangle is 3 indices
+//     const triangleCount = indices ? indices.length / 3 : positions.length / 9;
+//     for (let i = 0; i < triangleCount; i++) {
+//       let idx0, idx1, idx2;
+//       if (indices) {
+//         idx0 = indices[i * 3 + 0];
+//         idx1 = indices[i * 3 + 1];
+//         idx2 = indices[i * 3 + 2];
+//       } else {
+//         idx0 = i * 3 + 0;
+//         idx1 = i * 3 + 1;
+//         idx2 = i * 3 + 2;
+//       }
+//       const v0 = new Vec3(
+//         positions[idx0 * 3 + 0],
+//         positions[idx0 * 3 + 1],
+//         positions[idx0 * 3 + 2]
+//       );
+//       const v1 = new Vec3(
+//         positions[idx1 * 3 + 0],
+//         positions[idx1 * 3 + 1],
+//         positions[idx1 * 3 + 2]
+//       );
+//       const v2 = new Vec3(
+//         positions[idx2 * 3 + 0],
+//         positions[idx2 * 3 + 1],
+//         positions[idx2 * 3 + 2]
+//       );
+//       triangles.push({
+//         v0,
+//         v1,
+//         v2,
+//         materialIndex: primitive.materialIndex ?? 0,
+//       });
+//     }
+//   }
+//   return triangles;
+// }
+
+// // Usage example after loading a GLTF file:
+// const { meshes } = await convertGLBToJSONAndBinary(buffer, device, camera, depthTexture, presentationFormat);
+// const triangles = extractTrianglesFromGLTFMesh(meshes[0]);
+// console.log(triangles);

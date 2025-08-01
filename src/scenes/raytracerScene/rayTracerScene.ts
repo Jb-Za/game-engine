@@ -22,7 +22,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
     // CAMERA
     const camera = new Camera(device, canvas.width / canvas.height, inputManager);
-    camera.eye = (new Vec3(0, 2, 5));
+    camera.eye = (new Vec3(-0.2, 1.36, 2.59));
+    camera.target = (new Vec3(-0.59, 1.0, 1.73 ));
 
     const rayTracingPipeline = new RayTracingRenderPipeline(
         device,
@@ -34,11 +35,11 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     const spheres: RayTracedSphere[] = [];
     const planes: RayTracedPlane[] = [];
 
-    addSphere(new Vec3(-3, 1, 0.5), 1.0, { color: new Vec3(1, 1, 1), roughness: 0, emissionStrength: 1.5, emissionColor: new Vec3(1, 1, 1) }); // white sphere - far back
+    addSphere(new Vec3(-5, -2, 0.5), 1.0, { color: new Vec3(1, 1, 1), roughness: 0, emissionStrength: 20, emissionColor: new Vec3(1, 1, 1) }); // white sphere - far back
     //addSphere(new Vec3(-100, -100, -100), 20.0, { color: new Vec3(1, 1, 1), roughness: 0, emissionStrength: 20, emissionColor: new Vec3(1, 1, 1) }); // white sphere - far back
 
     addSphere(new Vec3(-1, 0.5, 0), 0.5, { color: new Vec3(0.2, 1, 0.2), roughness: 0, emissionStrength: 0 }); // green sphere - left
-    addSphere(new Vec3(2, -2, -2), 0.5, { color: new Vec3(1.0, 0.0, 1.0), roughness: 0 , emissionStrength: 1, emissionColor: new Vec3(1, 0, 1) }); // pink sphere - right
+    //addSphere(new Vec3(2, -2, -2), 0.5, { color: new Vec3(1.0, 0.0, 1.0), roughness: 0 , emissionStrength: 1, emissionColor: new Vec3(1, 0, 1) }); // pink sphere - right
     addSphere(new Vec3(0, 6, -3), 6, { color: new Vec3(0.8, 0.5, 0.5), roughness: 1, emissionStrength: 0 }); //  sphere - center
     
     
@@ -70,6 +71,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         const deltaTime = (currentTime - lastTime) / 1000;
         lastTime = currentTime;
         time += deltaTime;
+        const jsStart = performance.now();
 
         handleInput();
 
@@ -77,7 +79,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         camera.update();
         rayTracingPipeline.updateSpheres(spheres);
         rayTracingPipeline.updatePlanes(planes);
-
+        
         // === RAY TRACING RENDER ===
         const commandEncoder = device.createCommandEncoder();
 
@@ -100,12 +102,15 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         renderPass.end();
         device.queue.submit([commandEncoder.finish()]);
 
+        const jsTime = performance.now() - jsStart;
         // Update info display
         if (infoElem) {
             const pos = camera.eye;
             const forward = camera.target;
             infoElem.textContent =
                 `Ray Tracing Demo\n` +
+                `FPS: ${(1 / deltaTime).toFixed(1)}\n` +
+                `JS: ${jsTime.toFixed(1)}ms\n` +
                 `\nControls:\n` +
                 `Mouse - Look Around\n` +
                 `WASD - Move Camera\n` +
