@@ -3,10 +3,11 @@ import { Vec2 } from "../math/Vec2";
 
 export interface RaytracerMaterial {
     color: Vec3;
-    roughness: number; // 0 = mirror, 1 = diffuse
-    // metallic: number; // 0 = non-metallic, 1 = metallic
+    roughness: number; // 0 = perfect, >0 = blurry
     emissionStrength: number; // Optional emission strength for light-emitting materials
     emissionColor?: Vec3; // Optional emission color
+    reflectivity?: number; // (0 to 1) 1 = mirror, 0 = diffuse
+    indexOfRefraction?: number; 
 }
 
 export interface RayTracedSphere {

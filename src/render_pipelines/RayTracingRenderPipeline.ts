@@ -373,8 +373,8 @@ export class RayTracingRenderPipeline {
         sphereData[offset + 11] = sphere.material.emissionStrength ?? 0.0;
         sphereData[offset + 12] = 0.0; // extra padding
         sphereData[offset + 13] = 0.0; // extra struct padding
-        sphereData[offset + 14] = 0.0; // extra struct padding
-        sphereData[offset + 15] = 0.0; // extra struct padding
+        sphereData[offset + 14] = sphere.material.reflectivity ?? 0.0;// extra struct padding
+        sphereData[offset + 15] = sphere.material.indexOfRefraction ?? 0.0;// extra struct padding
 
         console.log(`Sphere ${i} buffer data:`, Array.from(sphereData.slice(offset, offset + 16)));
       }

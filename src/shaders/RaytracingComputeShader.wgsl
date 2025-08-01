@@ -5,7 +5,9 @@ struct Sphere {
     roughness: f32,  
     emissioncolor: vec3f, // Optional emission color    
     emissionstrength: f32,  
-    padding2: vec4f, 
+    padding222: vec2f, 
+    reflectivity: f32,
+    ior: f32, // Index of refraction for refraction calculations
 };
 
 struct Plane {
@@ -134,7 +136,7 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
 
     // Cast multiple rays per pixel for this frame
     var currentFrameColor: vec3f = vec3f(0.0, 0.0, 0.0);
-    let raysPerPixel = 20u; // Number of rays to trace per pixel
+    let raysPerPixel = 40u; // Number of rays to trace per pixel (sample count)
     for (var i: u32 = 0u; i < raysPerPixel; i = i + 1u) {
         let sample_seed = seed + i * 7919u;
         currentFrameColor += trace_ray(ray, sample_seed);
@@ -179,10 +181,85 @@ fn trace_ray(ray: Ray, state: u32) -> vec3<f32> {
     for (var i: i32 = 0; i <= max_bounce_limit; i = i + 1) {
         let current_collision: HitInfo = check_ray_collision(local_ray);
         if (current_collision.didHit) {
-            local_ray.origin = current_collision.hitPoint;
+
+            //supposed to resolve shadow acne
+            let epsilon = 1e-4;
+            local_ray.origin = current_collision.hitPoint + current_collision.normal * epsilon;
+            //local_ray.origin = current_collision.hitPoint;
+            //material 
+            let reflectivity = spheres[current_collision.index].reflectivity;
+            let roughness = spheres[current_collision.index].roughness; // 0.0 = perfect, >0 = blurry
+            let ior = spheres[current_collision.index].ior;
             let rand = random_direction(local_state);
-            local_ray.dir = normalize(current_collision.normal + rand.xyz);
             local_state = u32(rand.w);
+
+            //Air: 1.0
+            //Glass: ~1.5
+            //Water: ~1.33
+            //Diamond: ~2.4
+
+            //from: https://raytracing.github.io/books/RayTracingInOneWeekend.html
+            if (ior > 0.5) {
+                local_ray.origin = current_collision.hitPoint - current_collision.normal * epsilon;
+                // Determine if we're entering or exiting the material
+                let front_face = dot(local_ray.dir, current_collision.normal) < 0.0;
+
+                // Handle normal direction based on front face
+                var normal: vec3f;
+                if (front_face) {
+                    normal = current_collision.normal;
+                } else {
+                    normal = -current_collision.normal;
+                }
+
+                // Handle refraction ratio based on front face
+                var refraction_ratio: f32;
+                if (front_face) {
+                    refraction_ratio = 1.0 / ior;
+                } else {
+                    refraction_ratio = ior;
+                }
+                                
+                let unit_direction = normalize(local_ray.dir);
+                let cos_theta = min(dot(-unit_direction, normal), 1.0);
+                let sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+                
+                // Check for total internal reflection
+                let cannot_refract = refraction_ratio * sin_theta > 1.0;
+                
+                let rand_val = random_value(local_state);
+                local_state = u32(rand_val.y);
+                
+                // Helper function for reflectance
+                let r0 = (1.0 - refraction_ratio) / (1.0 + refraction_ratio);
+                let r0_squared = r0 * r0;
+                let reflectance = r0_squared + (1.0 - r0_squared) * pow((1.0 - cos_theta), 5.0);
+                
+                if (cannot_refract || reflectance > rand_val.x) {
+                    // Reflect
+                    local_ray.dir = reflect(unit_direction, normal);
+                } else {
+                    // Refract
+                    local_ray.dir = refract(unit_direction, normal, refraction_ratio);
+                }
+                
+                // Glass doesn't attenuate light
+                // ray_color remains unchanged
+            }
+            else if (reflectivity > 0.0 && i < max_bounce_limit) {
+                // Calculate both diffuse and reflective directions
+                let reflected = reflect(local_ray.dir, current_collision.normal);
+                let reflected_dir = normalize(reflected + roughness * rand.xyz);
+                
+                let diffuse_dir = normalize(current_collision.normal + rand.xyz);
+                
+                // Blend between diffuse and reflective based on reflectivity
+                local_ray.dir = normalize(mix(diffuse_dir, reflected_dir, reflectivity));
+            } else {
+                // Pure diffuse
+                local_ray.dir = normalize(current_collision.normal + rand.xyz);
+            }
+            
             let emitted_light: vec3<f32> = current_collision.emissioncolor *
                                            current_collision.emissionstrength;
 
@@ -252,5 +329,18 @@ fn random_direction(state: u32) -> vec4<f32> {
 
     let direction = normalize(vec3<f32>(x, y, z));
     return vec4<f32>(direction, f32(u32(z_pair.y))); // xyz = direction, w = new state
+}
+
+//from: https://raytracing.github.io/books/RayTracingInOneWeekend.html
+fn reflect(v: vec3f, n: vec3f) -> vec3f {
+    return v - 2.0 * dot(v, n) * n;
+}
+
+//from: https://raytracing.github.io/books/RayTracingInOneWeekend.html
+fn refract(uv: vec3f, n: vec3f, etai_over_etat: f32) -> vec3f {
+    let cos_theta = min(dot(-uv, n), 1.0);
+    let r_out_perp = etai_over_etat * (uv + cos_theta * n);
+    let r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * n;
+    return r_out_perp + r_out_parallel;
 }
 

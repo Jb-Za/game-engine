@@ -38,7 +38,9 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     addSphere(new Vec3(-5, -2, 0.5), 1.0, { color: new Vec3(1, 1, 1), roughness: 0, emissionStrength: 20, emissionColor: new Vec3(1, 1, 1) }); // white sphere - far back
     //addSphere(new Vec3(-100, -100, -100), 20.0, { color: new Vec3(1, 1, 1), roughness: 0, emissionStrength: 20, emissionColor: new Vec3(1, 1, 1) }); // white sphere - far back
 
-    addSphere(new Vec3(-1, 0.5, 0), 0.5, { color: new Vec3(0.2, 1, 0.2), roughness: 0, emissionStrength: 0 }); // green sphere - left
+    addSphere(new Vec3(-1, 0.5, 0), 0.5, { color: new Vec3(0.2, 1, 0.2), reflectivity: 1, roughness: 0, emissionStrength: 0, indexOfRefraction: 0}); // green sphere - left
+    addSphere(new Vec3(-1, 0.1, -1), 0.5, { color: new Vec3(1, 1, 1), reflectivity: 0, roughness: 1, emissionStrength: 0, indexOfRefraction: 1.5}); // blue sphere - left
+    //addSphere(new Vec3(-1, 0.1, -1), 0.2, { color: new Vec3(1, 1, 1), reflectivity: 0, roughness: 1, emissionStrength: 0, indexOfRefraction: 0.6}); // blue sphere - left
     //addSphere(new Vec3(2, -2, -2), 0.5, { color: new Vec3(1.0, 0.0, 1.0), roughness: 0 , emissionStrength: 1, emissionColor: new Vec3(1, 0, 1) }); // pink sphere - right
     addSphere(new Vec3(0, 6, -3), 6, { color: new Vec3(0.8, 0.5, 0.5), roughness: 1, emissionStrength: 0 }); //  sphere - center
     
