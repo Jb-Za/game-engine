@@ -324,23 +324,52 @@ export class RayTracingRenderPipeline {
     // Check if the camera has moved or rotated
     const previousForward = this.previousCameraForward;
     if (!Vec3.equals(previousEye, this.camera.eye) || !Vec3.equals(previousForward, this.camera.forward)) {
-      this.frame = 0;
       this.previousCameraEye = this.camera.eye;
       this.previousCameraForward = this.camera.forward;
 
-      // Clear previous frame texture
-      this.device.queue.writeTexture({ texture: this.previousFrameTexture }, new Uint8Array(this.width * this.height * 4), { bytesPerRow: this.width * 4, rowsPerImage: this.height }, [this.width, this.height]);
+      this.clearPreviousFrame();
+    
     }
     this.device.queue.writeBuffer(this.cameraBuffer, 0, cameraData);
   }
 
+  private clearPreviousFrame() {
+     this.frame = 0;
+     // Clear previous frame texture
+      this.device.queue.writeTexture({ texture: this.previousFrameTexture }, new Uint8Array(this.width * this.height * 4), { bytesPerRow: this.width * 4, rowsPerImage: this.height }, [this.width, this.height]);
+  }
+
+  private spheresAreEqual = (a: RayTracedSphere[], b: RayTracedSphere[]): boolean => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const s = a[i], o = b[i];
+    if (
+      s.center.x !== o.center.x ||
+      s.center.y !== o.center.y ||
+      s.center.z !== o.center.z ||
+      s.radius !== o.radius ||
+      s.material.color.x !== o.material.color.x ||
+      s.material.color.y !== o.material.color.y ||
+      s.material.color.z !== o.material.color.z ||
+      s.material.roughness !== o.material.roughness ||
+      (s.material.emissionColor?.x ?? 0) !== (o.material.emissionColor?.x ?? 0) ||
+      (s.material.emissionColor?.y ?? 0) !== (o.material.emissionColor?.y ?? 0) ||
+      (s.material.emissionColor?.z ?? 0) !== (o.material.emissionColor?.z ?? 0) ||
+      (s.material.emissionStrength ?? 0) !== (o.material.emissionStrength ?? 0) ||
+      (s.material.reflectivity ?? 0) !== (o.material.reflectivity ?? 0) ||
+      (s.material.indexOfRefraction ?? 0) !== (o.material.indexOfRefraction ?? 0)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
   public updateSpheres(spheres: RayTracedSphere[]) {
-    if (this.spheres != spheres) {
+    if (!this.spheresAreEqual(this.spheres, spheres)) {
       this.spheres = spheres;
-      console.log(
-        `Updating ${spheres.length} spheres:`,
-        spheres.map((s, i) => `Sphere ${i}: pos(${s.center.x}, ${s.center.y}, ${s.center.z}), radius=${s.radius}, color(${s.material.color.x}, ${s.material.color.y}, ${s.material.color.z})`)
-      );
+
+      this.clearPreviousFrame();
 
       const spheresInBuffer = spheres.length;
       const floatsPerSphere = 16;
@@ -348,8 +377,6 @@ export class RayTracingRenderPipeline {
       // This prevents a zero-sized buffer which would cause binding errors
       const totalFloats = Math.max(spheresInBuffer * floatsPerSphere, floatsPerSphere);
       const sphereData = new Float32Array(totalFloats);
-
-      console.log(`Buffer: ${Math.max(spheresInBuffer, 1)} sphere slots × ${floatsPerSphere} floats = ${totalFloats} floats (${totalFloats * 4} bytes)`);
 
       for (let i = 0; i < spheres.length; i++) {
         const offset = i * floatsPerSphere;
@@ -367,16 +394,14 @@ export class RayTracingRenderPipeline {
         sphereData[offset + 7] = sphere.material.roughness;
 
         // Material emission (vec3) + padding
-        sphereData[offset + 8] = sphere.material.emissionColor?.x ?? 0.0;
-        sphereData[offset + 9] = sphere.material.emissionColor?.y ?? 0.0;
-        sphereData[offset + 10] = sphere.material.emissionColor?.z ?? 0.0;
+        sphereData[offset + 8] = sphere.material.emissionColor?.x ?? 1.0;
+        sphereData[offset + 9] = sphere.material.emissionColor?.y ?? 1.0;
+        sphereData[offset + 10] = sphere.material.emissionColor?.z ?? 1.0;
         sphereData[offset + 11] = sphere.material.emissionStrength ?? 0.0;
         sphereData[offset + 12] = 0.0; // extra padding
         sphereData[offset + 13] = 0.0; // extra struct padding
         sphereData[offset + 14] = sphere.material.reflectivity ?? 0.0;// extra struct padding
         sphereData[offset + 15] = sphere.material.indexOfRefraction ?? 0.0;// extra struct padding
-
-        console.log(`Sphere ${i} buffer data:`, Array.from(sphereData.slice(offset, offset + 16)));
       }
 
       if (this.spheresBuffer) {
