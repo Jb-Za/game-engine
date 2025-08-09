@@ -3,7 +3,6 @@ import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffe
 import { Color } from "../../math/Color";
 import { Vec3 } from "../../math/Vec3";
 import { Vec2 } from "../../math/Vec2";
-import { Quaternion } from "../../math/Quaternion";
 import { Texture2D } from "../../texture/Texture2D";
 import { InputManager } from "../../input/InputManager";
 import { UnlitObject } from "../../game_objects/UnlitObject";
