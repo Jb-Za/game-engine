@@ -147,6 +147,8 @@ export class Scene {
         this._pointLights = this.setupPointLights(device, SceneData.PointLights ?? null);
         this._shadowTexture = shadowTexture;
 
+        this._directionalLight.direction = new Vec3(this._shadowCamera.target.x - this._shadowCamera.eye.x, this._shadowCamera.target.y - this._shadowCamera.eye.y, this._shadowCamera.target.z - this._shadowCamera.eye.z);
+
         this._objectParameters = {
             device: device,
             camera: this._camera,

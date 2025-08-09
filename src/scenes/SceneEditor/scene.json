@@ -17,7 +17,7 @@
         "fov": 75
     },
     "shadowCamera": {
-        "position": [5.7, 2.5, -3.0],
+        "position": [20, 10, 10],
         "target": [0, 0, 0]
     },
     "PointLights": [
