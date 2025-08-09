@@ -29,7 +29,8 @@ export class RayTracingRenderPipeline {
   // Scene data
   private spheres: RayTracedSphere[] = [];
   private planes: RayTracedPlane[] = [];
-  private previousFrameTexture!: GPUTexture;  private previousCameraEye: Vec3 = new Vec3(0, 0, 0);
+  private previousFrameTexture!: GPUTexture;  
+  private previousCameraEye: Vec3 = new Vec3(0, 0, 0);
   private previousCameraForward: Vec3 = new Vec3(0, 0, -1);
 
   constructor(private device: GPUDevice, private camera: Camera, private width: number, private height: number) {
