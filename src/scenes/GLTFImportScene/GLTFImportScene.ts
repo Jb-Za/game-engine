@@ -37,7 +37,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     format: "depth32float",
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
-  const shadowTexture = Texture2D.createShadowTexture(device, 3072, 3072);
+  const shadowTexture = Texture2D.createShadowTexture(device, 2048, 2048);
   // LIGHTS
   const ambientLight = new AmbientLight(device);
   ambientLight.color = new Color(1, 1, 1, 1);

@@ -29,6 +29,7 @@ export class GLTFGameObject implements GameObject {
   public pipeline: any;
   public color: Color = new Color(1, 1, 1, 1); // Default color
   public drawShadows: any;
+  public visible: boolean = true;
 
   public get animationPlayer(): GLTFAnimationPlayer | undefined {
     return this._animationPlayer;
@@ -98,6 +99,7 @@ export class GLTFGameObject implements GameObject {
   }
 
   public draw(renderPassEncoder: GPURenderPassEncoder) {
+    if (!this.visible) return;
     for (const scene of this._gltfScene.scenes) {
       scene.root.renderDrawables(renderPassEncoder, [this._gltfScene.bindGroupLayouts.cameraBindGroup, this._gltfScene.bindGroupLayouts.generalUniformsBindGroup, this._gltfScene.selectedBindGroup]);
     }

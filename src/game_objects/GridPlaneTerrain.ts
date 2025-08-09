@@ -32,6 +32,7 @@ export class GridPlaneTerrain {
     public position = new Vec3(0,0,0);
     public color = new Color(1,1,1,1);
     public rotation = new Quaternion();
+    public visible: boolean = true;
     
     private geometryBuffers: GeometryBuffers;
 
@@ -76,12 +77,14 @@ export class GridPlaneTerrain {
     }
 
     public draw(renderPassEncoder: GPURenderPassEncoder) {
+        if (!this.visible) return;
         // Draw using this instance's unique geometry buffers
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPassEncoder, this.geometryBuffers);
     }
 
     public drawShadows(renderPassEncoder: GPURenderPassEncoder) {
+        if(!this.visible) return;
         // Draw shadows using this instance's unique geometry buffers
         this.shadowPipeline.draw(renderPassEncoder, this.geometryBuffers);
     }

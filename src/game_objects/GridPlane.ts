@@ -19,6 +19,7 @@ export class GridPlane {
     public position = new Vec3(0,0,0);
     public color = new Color(1,1,1,1);
     public rotation = new Quaternion();
+    public visible: boolean = true;
 
     public set wireframeMode(value: boolean) {
         this.pipeline.wireframeMode = value;
@@ -57,12 +58,14 @@ export class GridPlane {
     }
 
     public draw(renderPassEncoder: GPURenderPassEncoder) {
+        if (!this.visible) return;
         // TODO: Draw GridPlane using appropriate geometry buffers
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPassEncoder, GeometryBuffersCollection.gridPlaneBuffers);
     }
 
     public drawShadows(renderPassEncoder: GPURenderPassEncoder) {
+        if(!this.visible) return;
         // TODO: Draw GridPlane shadows
         this.shadowPipeline.draw(renderPassEncoder, GeometryBuffersCollection.gridPlaneBuffers);
     }
