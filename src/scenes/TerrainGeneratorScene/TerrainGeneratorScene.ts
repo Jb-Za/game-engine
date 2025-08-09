@@ -11,31 +11,19 @@ import { ShadowCamera } from "../../camera/ShadowCamera";
 import { ObjectMap } from "../../game_objects/ObjectMap";
 import { GridPlaneTerrain } from "../../game_objects/GridPlaneTerrain";
 import type { TerrainParams, WaterParams } from "../../components/TerrainWaterControls";
+import { SceneObjects } from "../../sceneEditor/Interfaces";
 // (Line removed)
 
 let animationFrameId: number | null = null;
 
-// Global references for scene objects that need to be updated
-let sceneObjects: {
-    gridPlanes: GridPlaneTerrain[];
-    waterPlane: any;
-    objectMap: ObjectMap;
-    device: GPUDevice;
-    camera: Camera;
-    shadowCamera: ShadowCamera;
-    ambientLight: AmbientLight;
-    directionalLight: DirectionalLight;
-    pointLights: PointLightsCollection;
-    shadowTexture: Texture2D;
-    gameObjects: any[];
-} | null = null;
+let sceneObjects: SceneObjects | null = null;
 
 // Functions to update terrain and water from React controls
 export function updateTerrainParams(params: TerrainParams) {
     if (!sceneObjects) return;
 
     // Remove old terrain
-    sceneObjects.gridPlanes.forEach(gridPlane => {
+    sceneObjects.gridPlanes!.forEach(gridPlane => {
         const index = sceneObjects!.gameObjects.indexOf(gridPlane);
         if (index > -1) {
             sceneObjects!.gameObjects.splice(index, 1);
@@ -112,8 +100,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
     const directionalLight = new DirectionalLight(device);
     directionalLight.color = new Color(1, 1, 1, 1);
-    directionalLight.intensity = 0.3;
-    directionalLight.direction = new Vec3(-1, -1, 0);
+    directionalLight.intensity = 0.5;
+   
 
     const pointLights = new PointLightsCollection(device, 3);
     pointLights.lights[0].intensity = 0;
@@ -126,8 +114,11 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     camera.target = new Vec3(0, 0, 0);
 
     const shadowCamera = new ShadowCamera(device);
-    shadowCamera.eye = new Vec3(-5, 10, 5);
+    shadowCamera.eye = new Vec3(166, 30, 0);
     shadowCamera.target = new Vec3(0, 0, 0);
+    shadowCamera.far = 300; // Increased far plane for larger terrain
+
+    directionalLight.direction = Vec3.normalize(new Vec3(shadowCamera.target.x - shadowCamera.eye.x , shadowCamera.target.y - shadowCamera.eye.y , shadowCamera.target.z - shadowCamera.eye.z));
 
 
     // Arrays to store game objects and physics components
@@ -233,7 +224,9 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
             infoElem.textContent = `fps: ${(1 / deltaTime).toFixed(1)}\njs: ${jsTime.toFixed(1)}ms\n` +
                 `Mouse - Look Around\n` +
                 `O - Toggle Wireframe for Water Plane\n` +
-                `P - Toggle Wireframe for Terrain Planes`;
+                `P - Toggle Wireframe for Terrain Planes\n` +
+                `camera.eye: ${sceneObjects?.camera.eye.toString()}\n` +
+                `camera.target: ${sceneObjects?.camera.target.toString()}\n`;
         }
 
         handleInput();

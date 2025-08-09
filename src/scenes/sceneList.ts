@@ -51,5 +51,13 @@ export const scenes: SceneInfo[] = [{
   thumbnail: "/thumbnails/terrain.svg",
   importPath: "../scenes/TerrainGeneratorScene/TerrainGeneratorScene.ts",
   components: ['backButton', 'terrainControls']
+},
+{
+  id: "reactSceneEditor",
+  name: "React Scene Editor",
+  description: "Modern React-based scene editor with real-time controls similar to terrain generator",
+  thumbnail: "/thumbnails/shadow.svg",
+  importPath: "../scenes/ReactSceneEditor/ReactSceneEditor.ts",
+  components: ['backButton', 'sceneEditorControls']
 }
 ];

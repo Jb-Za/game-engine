@@ -22,6 +22,7 @@ export class Paddle{
     private transformBuffer: UniformBuffer;
     private normalMatrixBuffer: UniformBuffer;
     public rotation = new Quaternion();
+    public visible: boolean = true;
     
 
     private transform =  Mat4x4.identity();
@@ -93,11 +94,13 @@ export class Paddle{
     }
 
     public draw(renderPassEncoder: GPURenderPassEncoder){
+        if(!this.visible) return;
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPassEncoder, GeometryBuffersCollection.cubeBuffers);
     }
 
     public drawShadows(renderPassEncoder: GPURenderPassEncoder){
+        if(!this.visible) return;
         this.shadowPipeline.draw(renderPassEncoder, GeometryBuffersCollection.cubeBuffers);
     }
 }

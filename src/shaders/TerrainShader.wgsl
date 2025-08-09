@@ -145,30 +145,6 @@ fn materialFS(in : VSOutput) -> @location(0) vec4f
     dotSpecular = pow(dotSpecular, shininess);
     lightAmount += directionalLight.color * dotSpecular * directionalLight.intensity * shadow;
 
-    // Point lights
-    for(var i = 0; i < 3; i++)
-    {
-        var lightDir = normalize(positionalLight[i].position - in.fragPos);
-        var dotLight = max(dot(normal, lightDir), 0.0);
-        
-
-        var distance = length(positionalLight[i].position - in.fragPos);
-        var attenuation = positionalLight[i].attenConst + 
-        positionalLight[i].attenLin * distance + 
-        positionalLight[i].attenQuad * distance * distance;
-
-        attenuation = 1.0 / attenuation;
-
-        lightAmount += positionalLight[i].color * positionalLight[i].intensity * dotLight * attenuation * shadow;
-
-        //specular Light
-        halfVector = normalize(lightDir + toEye);
-        dotSpecular = max(dot(normal, halfVector), 0.0);
-        dotSpecular = pow(dotSpecular, shininess);
-        lightAmount += positionalLight[i].specularIntensity * dotSpecular * positionalLight[i].specularIntensity * shadow;
-
-    }
-
     // Height-based smooth terrain blending
     let height = in.fragPos.y;
     let blendSharpness = 0.5; // Controls transition sharpness (lower = softer)
@@ -190,6 +166,7 @@ fn materialFS(in : VSOutput) -> @location(0) vec4f
     
     // Apply lighting to final blended color
     var color = bd.result * vec4f(lightAmount, 1.0);
+    //var color =  baseTexture * vec4f(lightAmount, 1.0);
 
     return color;
 }

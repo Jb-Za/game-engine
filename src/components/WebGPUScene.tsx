@@ -4,6 +4,8 @@ import { checkWebGPUSupport } from "../utils/WebGPUCheck";
 import "./WebGPUScene.css";
 import GLTFControls from "./GLTFControls";
 import TerrainWaterControls from "./TerrainWaterControls";
+import SceneEditorControls from "../sceneEditor/SceneEditorControls";
+import { SceneEditorState, SceneEditorControlsRef } from "../sceneEditor/Interfaces";
 import { updateTerrainParams, updateWaterParams } from "../scenes/TerrainGeneratorScene/TerrainGeneratorScene";
 
 interface WebGPUSceneProps {
@@ -20,14 +22,57 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
   const deviceRef = useRef<GPUDevice | null>(null);
   const gpuContextRef = useRef<GPUCanvasContext | null>(null);
   const presentationFormatRef = useRef<GPUTextureFormat | null>(null);
-
   // Store GLTF options if needed
-  const [gltfOptions, setGLTFOptions] = useState<any>(null);
-
-  // Track the current scene module for disposal
+  const [gltfOptions, setGLTFOptions] = useState<any>(null);  // Track the current scene module for disposal
   const sceneModuleRef = useRef<any>(null);
+  const sceneEditorControlsRef = useRef<SceneEditorControlsRef>(null);
+
+  // Scene editor handlers
+  const handleSceneEditorChange = async (state: SceneEditorState) => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.updateSceneState === 'function') {
+      sceneModuleRef.current.updateSceneState(state);
+    }
+  };
+
+  const handleAddObject = async (type: 'cube' | 'sphere' | 'light' | 'camera') => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.addObject === 'function') {
+      const newObject = sceneModuleRef.current.addObject(type);
+      if (newObject && sceneEditorControlsRef.current) {
+        console.log('Added object:', newObject);
+        // Add the new object to the React component's state
+        sceneEditorControlsRef.current.addNewObject(newObject);
+      }
+    }
+  };
+
+  const handleRemoveObject = async (id: string) => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.removeObject === 'function') {
+      sceneModuleRef.current.removeObject(id);
+    }
+  };
+
+  const handleSelectObject = async (id: string | null) => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.selectObject === 'function') {
+      sceneModuleRef.current.selectObject(id);
+    }
+  };
+
+  const handleSaveScene = async () => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.saveScene === 'function') {
+      sceneModuleRef.current.saveScene();
+    }
+  };
+
+  const handleLoadScene = async () => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.loadScene === 'function') {
+      sceneModuleRef.current.loadScene();
+    }
+  };
   // Preload all scene modules for dynamic imports
-  const sceneModules = import.meta.glob<any>('../scenes/**/*.ts');
+  const sceneModules = {
+    ...import.meta.glob<any>('../scenes/**/*.ts'),
+    ...import.meta.glob<any>('../sceneEditor/**/*.ts'),
+  };
 
   useEffect(() => {
     let isActive = true;
@@ -85,11 +130,7 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
       try {
         if (!deviceRef.current || !gpuContextRef.current || !presentationFormatRef.current) {
           return;
-        }
-        
-        // Convert importPath to match the format used by import.meta.glob
-        // Remove leading '../' to match the relative path from src directory
-        const normalizedPath = scene.importPath.replace(/^\.\.\//, '');
+        }        const normalizedPath = scene.importPath.replace(/^\.\.\//, '');
         
         // Find the matching module in our preloaded scene modules
         const moduleKey = Object.keys(sceneModules).find(key => 
@@ -100,9 +141,8 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
           console.error(`Could not find module for path: ${scene.importPath}`);
           return;
         }
-        
-        // Load the module
         const SceneModule = await sceneModules[moduleKey]();
+        
         sceneModuleRef.current = SceneModule;
         if (scene.components.includes('animationMenu') && gltfOptions) {
           await SceneModule.init(
@@ -169,17 +209,32 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
   };
 
   return (
-    <div className="webgl-container">
-      <button className="back-button" onClick={handleBack}>
-        &larr; Back to Scenes
-      </button>
-      {scene.components.includes('animationMenu') && (
+    <div className="webgpu-container">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', height: '50px' }}>
+        <button className="back-button" onClick={(e) => {
+        console.log('Back button clicked');
+        e.stopPropagation();
+        handleBack();
+    }}>
+          &larr; Back to Scenes
+        </button>
+      </div>      {scene.components.includes('animationMenu') && (
         <GLTFControls onGLTFOptionsChange={setGLTFOptions} />
       )}
       {scene.components.includes('terrainControls') && (
         <TerrainWaterControls 
           onTerrainChange={updateTerrainParams}
           onWaterChange={updateWaterParams}
+        />
+      )}      {scene.components.includes('sceneEditorControls') && (
+        <SceneEditorControls
+          ref={sceneEditorControlsRef}
+          onSceneChange={handleSceneEditorChange}
+          onAddObject={handleAddObject}
+          onRemoveObject={handleRemoveObject}
+          onSelectObject={handleSelectObject}
+          onSaveScene={handleSaveScene}
+          onLoadScene={handleLoadScene}
         />
       )}
       {isLoading && (

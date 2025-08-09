@@ -23,6 +23,7 @@ export class Arrow implements GameObject {
     public color = new Color(1, 0.2, 0.2, 1); // Red arrow color
     public collider = new RectCollider();
     public direction = new Vec3(0, 0, 1); // Default direction along Z axis
+    public visible: boolean = true;
 
     private shadowPipeline: ShadowRenderPipeline;
     private transformBuffer: UniformBuffer;
@@ -52,11 +53,13 @@ export class Arrow implements GameObject {
     }
 
     public draw(renderPassEncoder: GPURenderPassEncoder): void {
+        if (!this.visible) return;
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPassEncoder, GeometryBuffersCollection.arrowBuffers);
     }
 
     public drawShadows(renderPassEncoder: GPURenderPassEncoder): void {
+        if (!this.visible) return;
         this.shadowPipeline.draw(renderPassEncoder, GeometryBuffersCollection.arrowBuffers);
     }
 
