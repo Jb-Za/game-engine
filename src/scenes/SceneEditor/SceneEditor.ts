@@ -2,6 +2,7 @@ import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffe
 import { Texture2D } from "../../texture/Texture2D";
 import { InputManager } from "../../input/InputManager";
 import { Scene } from "../../sceneEditor/Scene";
+import sceneDataJson from "./scene.json";
 
 let scene: Scene;
 let animationFrameId: number | null = null;
@@ -19,10 +20,7 @@ async function init(
 
     if (presentationFormat) { } // lazy linting
 
-    const SceneFile = await fetch("src/scenes/SceneEditor/scene.json");
-    const sceneData = await SceneFile.json();
-
-   
+    const sceneData = sceneDataJson as any;
 
     // Input Manager
     const inputManager = new InputManager(canvas);
