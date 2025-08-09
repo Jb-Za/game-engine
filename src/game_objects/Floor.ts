@@ -17,6 +17,7 @@ export class Floor{
     private transformBuffer: UniformBuffer;
     private normalMatrixBuffer: UniformBuffer;
     public rotation : Vec3 = new Vec3(0.5,0.5,0.5);
+    public visible: boolean = true;
 
     private transform =  Mat4x4.identity();
 
@@ -53,6 +54,7 @@ export class Floor{
     }
 
     public draw(renderPassEncoder: GPURenderPassEncoder){
+        if(!this.visible) return;
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPassEncoder, GeometryBuffersCollection.cubeBuffers);
     }

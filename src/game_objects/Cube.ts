@@ -32,6 +32,7 @@ export class Cube{
     public orbitAxis: Vec3 = new Vec3(0,0,0);
     public orbitDirection: number = 1;
     public orbitInitialPosition: Vec3 = new Vec3(0,0,0);
+    public visible: boolean = true;
 
     private shadowPipeline: ShadowRenderPipeline;
     private transformBuffer: UniformBuffer;
@@ -64,11 +65,13 @@ export class Cube{
     }
 
     public draw(renderPassEncoder: GPURenderPassEncoder){
+        if(!this.visible) return;
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPassEncoder, GeometryBuffersCollection.cubeBuffers);
     }
 
     public drawShadows(renderPassEncoder: GPURenderPassEncoder){
+        if(!this.visible) return;
         this.shadowPipeline.draw(renderPassEncoder, GeometryBuffersCollection.cubeBuffers);
     }
 

@@ -31,6 +31,7 @@ export class PlaneWater implements GameObject {
     public position = new Vec3(0, 0, 0);
     public color = new Color(0.2, 0.6, 1.0, 0.7); // Default water blue with transparency
     public rotation = new Quaternion();
+    public visible: boolean = true;
 
     // Water-specific properties
     public waveSpeed: number;
@@ -124,12 +125,14 @@ export class PlaneWater implements GameObject {
     }
 
     public draw(renderPass: GPURenderPassEncoder) {
+        if (!this.visible) return;
         // Use the same grid plane geometry as other grid-based objects
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPass, GeometryBuffersCollection.gridPlaneBuffers);
     }
 
     public drawShadows(renderPass: GPURenderPassEncoder) {
+        if (!this.visible) return;
         // Water typically doesn't cast strong shadows, but we'll support it
         this.shadowPipeline.draw(renderPass, GeometryBuffersCollection.gridPlaneBuffers);
     }

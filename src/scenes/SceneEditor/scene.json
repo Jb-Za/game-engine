@@ -1,0 +1,62 @@
+{
+    "AmbientLight":{
+        "color": [1, 1, 1, 1],
+        "intensity": 0.6
+    },
+    "DirectionalLight": {
+        "color": [1, 1, 1, 1],
+        "intensity": 0.5,
+        "direction": [-1, -1, 0],
+        "specularIntensity": 0,
+        "specularColor": [1, 1, 1, 1]
+    },
+    "Camera": {
+        "position": [10, 4, 10],
+        "target": [0, 0, 0],
+        "up": [0, 1, 0],
+        "fov": 75
+    },
+    "shadowCamera": {
+        "position": [20, 10, 10],
+        "target": [0, 0, 0]
+    },
+    "PointLights": [
+        {
+            "color": [1, 1, 1, 1],
+            "intensity": 0,
+            "position": [0, 0, 0],
+            "specularIntensity": 0,
+            "specularColor": [1, 1, 1, 1]
+        },
+        {
+            "color": [1, 1, 1, 1],
+            "intensity": 0,
+            "position": [0, 0, 0],
+            "specularIntensity": 0,
+            "specularColor": [1, 1, 1, 1]
+        },
+        {
+            "color": [1, 1, 1, 1],
+            "intensity": 0,
+            "position": [0, 0, 0],
+            "specularIntensity": 0,
+            "specularColor": [1, 1, 1, 1]
+        }
+    ],
+    "sceneObjects" : [
+        {
+            "id": "Cube",
+            "position": [0, 0, 0],
+            "rotation": [0, 0, 0],
+            "color": [1, 0, 0, 1],
+            "scale": [1, 1, 1]
+        },
+        {
+            "id": "Cube",
+            "position": [0, -1, 0],
+            "rotation": [0, 0, 0],
+            "color": [0.8, 0.8, 0.8, 1],
+            "scale": [10, 0.1, 10]
+        }
+    ]
+}

@@ -53,6 +53,14 @@ export const scenes: SceneInfo[] = [{
   components: ['backButton', 'terrainControls']
 },
 {
+  id: "sceneEditor",
+  name: "Scene Editor",
+  description: "React-based scene editor with real-time controls",
+  thumbnail: "/thumbnails/shadow.svg",
+  importPath: "../scenes/SceneEditor/SceneEditor.ts",
+  components: ['backButton', 'sceneEditorControls']
+},
+{
   id: "raytracer",
   name: "Ray Tracing Demo",
   description: "A scene demonstrating compute shader-based ray tracing with spheres and planes.",

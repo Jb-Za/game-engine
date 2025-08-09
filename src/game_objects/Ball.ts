@@ -26,6 +26,7 @@ export class Ball implements GameObject{
     public color = new Color(1,1,1,1);
     public collider = new RectCollider();
     public rotation = new Quaternion();
+    public visible: boolean = true;
 
     private shadowPipeline: ShadowRenderPipeline;
     private transformBuffer: UniformBuffer;
@@ -69,11 +70,13 @@ export class Ball implements GameObject{
     }
 
     public draw(renderPassEncoder: GPURenderPassEncoder){
+        if(!this.visible) return;
         this.pipeline.diffuseColor = this.color;
         this.pipeline.draw(renderPassEncoder, GeometryBuffersCollection.sphereBuffers);
     }
 
     public drawShadows(renderPassEncoder: GPURenderPassEncoder){
+        if(!this.visible) return;
         this.shadowPipeline.draw(renderPassEncoder, GeometryBuffersCollection.sphereBuffers);
     }
 

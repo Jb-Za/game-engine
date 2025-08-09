@@ -50,7 +50,16 @@ export class Camera {
 
     private rotation = Mat4x4.identity();
 
-    constructor(device: GPUDevice, private aspectRatio: number, private inputmanager?: InputManager) { // todo: fix type
+    // Aspect ratio getter and setter
+    public get aspectRatio(): number {
+        return this._aspectRatio;
+    }
+
+    public set aspectRatio(value: number) {
+        this._aspectRatio = value;
+    }    
+    
+    constructor(device: GPUDevice, private _aspectRatio: number, private inputmanager?: InputManager) { // todo: fix type
         this.buffer = new UniformBuffer(device, this.projectionView, "Camera Buffer");
         this.eyeBuffer = new UniformBuffer(device, 16, "Camera Eye Buffer");
         if (this.inputmanager != null) {
@@ -112,7 +121,7 @@ export class Camera {
             this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
         }
 
-        this.perspective = Mat4x4.perspective(this.fov, this.aspectRatio, this.near, this.far);
+        this.perspective = Mat4x4.perspective(this.fov, this._aspectRatio, this.near, this.far);
         this.projectionView = Mat4x4.multiply(this.perspective, this.view);
 
         this.buffer.update(this.projectionView);

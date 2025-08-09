@@ -22,12 +22,20 @@ import { WaterRenderPipeline } from "../render_pipelines/WaterRenderPipeline";
 // import { Paddle } from "./Paddle";
 
 export class ObjectMap {
-  public _objects = new Map<number, GameObject>();
+  public _objects = new Map<string, GameObject>();
 
-  public get objects(): Map<number, GameObject> {
+  public get objects(): Map<string, GameObject> {
     return this._objects;
   }
   private objectIdCounter: number = 0;
+
+  public get objectCount(): number {
+    return this.objectIdCounter;
+  }
+
+  public createObjectId(string: string): string {
+    return `${string}_${this.objectIdCounter}`;
+  }
 
   // Function to spawn a game object. TODO, Create optional light/shadow passing in
   public createCube(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean) {
@@ -44,8 +52,8 @@ export class ObjectMap {
         cube.color = this.generateRandomColor();
     }
     // Assign a unique ID to the object
-    const id = this.objectIdCounter++;
-    this._objects.set(id, cube);
+    this.objectIdCounter++;
+    this._objects.set(this.createObjectId('Cube'), cube);
     return cube;
   }
 
@@ -63,8 +71,8 @@ export class ObjectMap {
         gridPlane.color = this.generateRandomColor();
     }
     // Assign a unique ID to the object
-    const id = this.objectIdCounter++;
-    this._objects.set(id, gridPlane);
+    this.objectIdCounter++;
+    this._objects.set(this.createObjectId('GridPlane'), gridPlane);
     return gridPlane;
   }
 
@@ -83,8 +91,8 @@ export class ObjectMap {
         gridPlane.color = this.generateRandomColor();
     }
     // Assign a unique ID to the object
-    const id = this.objectIdCounter++;
-    this._objects.set(id, gridPlane);
+    this.objectIdCounter++;
+    this._objects.set(this.createObjectId('GridPlaneTerrain'), gridPlane);
     return gridPlane;
   }
 
@@ -102,8 +110,8 @@ export class ObjectMap {
       sphere.color = this.generateRandomColor();
     }
     // Assign a unique ID to the object
-    const id = this.objectIdCounter++;
-    this._objects.set(id, sphere);
+    this.objectIdCounter++;
+    this._objects.set(this.createObjectId('Sphere'), sphere);
     return sphere;
   }
 
@@ -124,8 +132,8 @@ export class ObjectMap {
       arrow.color = color || new Color(1, 0, 0, 1); // Default to red if no color is provided
     }
     // Assign a unique ID to the object
-    const id = this.objectIdCounter++;
-    this._objects.set(id, arrow);
+    this.objectIdCounter++;
+    this._objects.set(this.createObjectId('Arrow'), arrow);
     return arrow;
   }
 
@@ -141,8 +149,8 @@ export class ObjectMap {
     );
     planeWater.pipeline.shadowTexture = shadowTexture;
     // Assign a unique ID to the object
-    const id = this.objectIdCounter++;
-    this._objects.set(id, planeWater);
+    this.objectIdCounter++;
+    this._objects.set(this.createObjectId('PlaneWater'), planeWater);
     return planeWater;
   }
 
@@ -161,6 +169,7 @@ export interface GameObject {
     update: Function;
     drawShadows: Function;
     animationPlayer?: GLTFAnimationPlayer;
+    visible: boolean;
     
     orbit?: boolean; // TODO: Decouple orbiting from the game object. this was POC
     orbitDistance?: number;
@@ -173,7 +182,7 @@ export interface GameObject {
     // Add any other common properties and methods here
 }
 
-interface ObjectParameters {
+export interface ObjectParameters {
   device: GPUDevice;
   camera: Camera;
   shadowCamera: ShadowCamera;

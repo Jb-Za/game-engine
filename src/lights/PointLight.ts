@@ -10,7 +10,7 @@ export class PointLight{
     public attenLinear = 0.1;
     public attenQuadratic = 0.032;
     public specularColor: Color = Color.white();
-    public specularIntensity: number = 1;
+    public specularIntensity: number = 0;
 }
 
 export class PointLightsCollection{
