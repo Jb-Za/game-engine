@@ -37,18 +37,10 @@ export const scenes: SceneInfo[] = [{
   components: ['backButton']
 },
 {
-  id: "characterController",
-  name: "Character Controller Scene",
-  description: "(A WIP) A Scene to showcase a character controller with a GLTF model.",
-  thumbnail: "/thumbnails/shadow.svg",
-  importPath: "../scenes/characterControllerScene/characterControllerScene.ts",
-  components: ['backButton']
-},
-{
   id: "gridPlane",
   name: "Terrain & Water Scene",
   description: "Procedural terrain generation with animated water simulation and real-time parameter controls.",
-  thumbnail: "/thumbnails/terrain.svg",
+  thumbnail: "/thumbnails/shadow.svg",
   importPath: "../scenes/TerrainGeneratorScene/TerrainGeneratorScene.ts",
   components: ['backButton', 'terrainControls']
 },
@@ -64,7 +56,7 @@ export const scenes: SceneInfo[] = [{
   id: "raytracing",
   name: "Ray Tracing Scene",
   description: "ray tracing scene editor with real-time material and geometry controls.",
-  thumbnail: "/thumbnails/raytracing.svg",
+  thumbnail: "/thumbnails/shadow.svg",
   importPath: "../scenes/raytracingSceneEditor/raytracingSceneEditor.ts",
   components: ['backButton', 'rayTracingSceneEditorControls']
 }
@@ -78,4 +70,13 @@ export const scenes: SceneInfo[] = [{
 //   thumbnail: "/thumbnails/raytracing.svg",
 //   importPath: "../scenes/raytracerScene/rayTracerScene.ts",
 //   components: ['backButton', 'rayTracingControls']
+// },
+
+// {
+//   id: "characterController",
+//   name: "Character Controller Scene",
+//   description: "(A WIP) A Scene to showcase a character controller with a GLTF model.",
+//   thumbnail: "/thumbnails/shadow.svg",
+//   importPath: "../scenes/characterControllerScene/characterControllerScene.ts",
+//   components: ['backButton']
 // },
