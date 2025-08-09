@@ -11,19 +11,18 @@ import { ShadowCamera } from "../../camera/ShadowCamera";
 import { ObjectMap } from "../../game_objects/ObjectMap";
 import { GridPlaneTerrain } from "../../game_objects/GridPlaneTerrain";
 import type { TerrainParams, WaterParams } from "../../components/TerrainWaterControls";
-import { SceneObjects } from "../../sceneEditor/Interfaces";
 // (Line removed)
 
 let animationFrameId: number | null = null;
 
-let sceneObjects: SceneObjects | null = null;
+let sceneObjects: any | null = null; // TODO: Fix TYPE
 
 // Functions to update terrain and water from React controls
 export function updateTerrainParams(params: TerrainParams) {
     if (!sceneObjects) return;
 
     // Remove old terrain
-    sceneObjects.gridPlanes!.forEach(gridPlane => {
+    sceneObjects.gridPlanes!.forEach((gridPlane: any) => {
         const index = sceneObjects!.gameObjects.indexOf(gridPlane);
         if (index > -1) {
             sceneObjects!.gameObjects.splice(index, 1);
@@ -117,6 +116,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     shadowCamera.eye = new Vec3(166, 30, 0);
     shadowCamera.target = new Vec3(0, 0, 0);
     shadowCamera.far = 300; // Increased far plane for larger terrain
+    shadowCamera.scale = 200;
 
     directionalLight.direction = Vec3.normalize(new Vec3(shadowCamera.target.x - shadowCamera.eye.x , shadowCamera.target.y - shadowCamera.eye.y , shadowCamera.target.z - shadowCamera.eye.z));
 
@@ -197,7 +197,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         const pKeyDown = inputManager.isKeyDown('p') || inputManager.isKeyDown('P');
         if (pKeyDown && !pKeyPressed) {
             if (sceneObjects && sceneObjects.gridPlanes) {
-                sceneObjects.gridPlanes.forEach(gridPlane => {
+                sceneObjects.gridPlanes.forEach((gridPlane: any) => {
                     gridPlane.wireframeMode = !gridPlane.wireframeMode;
                 });
             }

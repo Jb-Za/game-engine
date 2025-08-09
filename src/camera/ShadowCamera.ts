@@ -16,6 +16,7 @@ export class ShadowCamera {
     // ORTHOGRAPHIC PROPERTIES
     public near = 0.01;
     public far = 100;
+    public scale = 20;
 
     // MATRICES
     private perspective = Mat4x4.identity();
@@ -28,7 +29,7 @@ export class ShadowCamera {
 
     public update() {
         this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
-        this.perspective = Mat4x4.orthographic(-100, 100, -100, 100, this.near, this.far);
+        this.perspective = Mat4x4.orthographic(-this.scale, this.scale, -this.scale, this.scale, this.near, this.far);
         this.projectionView = Mat4x4.multiply(this.perspective, this.view);
 
         this.buffer.update(this.projectionView);

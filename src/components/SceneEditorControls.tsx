@@ -1,13 +1,14 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
 
 // Scene Editor Control Interfaces
 export interface SceneObjectData {
   id: string;
   name: string;
-  type: 'cube' | 'sphere' | 'light' | 'camera' | 'gltf'; // | 'obj'
+  type: string;
   position: { x: number; y: number; z: number };
   scale: { x: number; y: number; z: number };
   color: { r: number; g: number; b: number; a: number };
+  rotation: { x: number; y: number; z: number };
   visible: boolean;
   properties: Record<string, any>;
 }
@@ -35,19 +36,23 @@ export interface SceneEditorControlsProps {
   onSelectObject: (id: string | null) => void;
   onSaveScene: () => void;
   onLoadScene: () => void;
+  onGetScene?: () => any; // Function to get the current scene instance
 }
 
 export interface SceneEditorControlsRef {
   addNewObject: (objectData: SceneObjectData) => void;
+  updateSceneState: (newState: SceneEditorState) => void;
+  refreshFromScene: () => void; // Method to refresh data from the scene
 }
 
-const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEditorControlsProps>(({
+export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEditorControlsProps>(({
   onSceneChange,
   onAddObject,
   onRemoveObject,
   onSelectObject,
   onSaveScene,
-  onLoadScene
+  onLoadScene,
+  onGetScene
 }, ref) => {
   const [sceneState, setSceneState] = useState<SceneEditorState>({
     objects: [],
@@ -63,8 +68,187 @@ const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEditorContro
       intensity: 0.7,
       direction: { x: -1, y: -1, z: -1 }
     }
-  });  // Update parent when scene state changes
+  });
+
+  // Flag to prevent circular updates when refreshing from scene
+  const isRefreshingFromScene = useRef(false);
+
+  // Function to update the actual scene objects from the current UI state
+  const updateSceneFromState = (state: SceneEditorState) => {
+    if (!onGetScene) return;
+    
+    const scene = onGetScene();
+    if (!scene) return;
+
+    try {
+      // Update camera
+      const camera = scene.getCamera();
+      camera.eye.x = state.cameraPosition.x;
+      camera.eye.y = state.cameraPosition.y;
+      camera.eye.z = state.cameraPosition.z;
+      camera.target.x = state.cameraTarget.x;
+      camera.target.y = state.cameraTarget.y;
+      camera.target.z = state.cameraTarget.z;
+
+      // Update ambient light
+      const ambientLight = scene.getAmbientLight();
+      ambientLight.color.r = state.ambientLight.color.r;
+      ambientLight.color.g = state.ambientLight.color.g;
+      ambientLight.color.b = state.ambientLight.color.b;
+      ambientLight.color.a = state.ambientLight.color.a;
+      ambientLight.intensity = state.ambientLight.intensity;
+
+      // Update directional light
+      const directionalLight = scene.getDirectionalLight();
+      directionalLight.color.r = state.directionalLight.color.r;
+      directionalLight.color.g = state.directionalLight.color.g;
+      directionalLight.color.b = state.directionalLight.color.b;
+      directionalLight.color.a = state.directionalLight.color.a;
+      directionalLight.intensity = state.directionalLight.intensity;
+      directionalLight.direction.x = state.directionalLight.direction.x;
+      directionalLight.direction.y = state.directionalLight.direction.y;
+      directionalLight.direction.z = state.directionalLight.direction.z;
+
+      // Update scene objects
+      const sceneObjects = scene.getSceneObjects();
+      state.objects.forEach(stateObj => {
+        const sceneObj = sceneObjects.objects.get(stateObj.id);
+        if (sceneObj) {
+          // Update position
+          sceneObj.position.x = stateObj.position.x;
+          sceneObj.position.y = stateObj.position.y;
+          sceneObj.position.z = stateObj.position.z;
+
+          // Update scale
+          sceneObj.scale.x = stateObj.scale.x;
+          sceneObj.scale.y = stateObj.scale.y;
+          sceneObj.scale.z = stateObj.scale.z;
+
+          // Update color
+          if (sceneObj.color) {
+            sceneObj.color.r = stateObj.color.r;
+            sceneObj.color.g = stateObj.color.g;
+            sceneObj.color.b = stateObj.color.b;
+            sceneObj.color.a = stateObj.color.a;
+          }
+
+          // Update rotation (assuming it's a Quaternion or has x,y,z properties)
+          if (sceneObj.rotation) {
+            sceneObj.rotation.x = stateObj.rotation.x;
+            sceneObj.rotation.y = stateObj.rotation.y;
+            sceneObj.rotation.z = stateObj.rotation.z;
+          }
+
+          // Update visibility
+          sceneObj.visible = stateObj.visible;
+        }
+      });
+
+      console.log('Scene updated from controls');
+    } catch (error) {
+      console.error('Error updating scene from state:', error);
+    }
+  };
+
+  // Function to extract scene data from the current scene
+  const extractSceneData = (scene: any): SceneEditorState => {
+    // Extract camera data
+    const camera = scene.getCamera();
+    const cameraPosition = camera.eye;
+    const cameraTarget = camera.target;
+
+    // Extract lighting data
+    const ambientLight = scene.getAmbientLight();
+    const directionalLight = scene.getDirectionalLight();
+
+    // Extract scene objects
+    const sceneObjects = scene.getSceneObjects();
+    const objects: SceneObjectData[] = [];
+
+    // Convert scene objects to SceneObjectData format
+    sceneObjects.objects.forEach((obj: any, id: string) => {
+      const type = id.split('_')[0].toLowerCase();
+
+      objects.push({
+        id: id,
+        name: id,
+        type: type,
+        position: { x: obj.position.x, y: obj.position.y, z: obj.position.z },
+        scale: { x: obj.scale.x, y: obj.scale.y, z: obj.scale.z },
+        color: { 
+          r: obj.color?.r ?? 1, 
+          g: obj.color?.g ?? 1, 
+          b: obj.color?.b ?? 1, 
+          a: obj.color?.a ?? 1 
+        },
+        rotation: { 
+          x: obj.rotation?.x ?? 0, 
+          y: obj.rotation?.y ?? 0, 
+          z: obj.rotation?.z ?? 0 
+        },
+        visible: obj.visible !== false,
+        properties: {}
+      });
+    });
+
+    return {
+      objects: objects,
+      selectedObjectId: null,
+      cameraPosition: { x: cameraPosition.x, y: cameraPosition.y, z: cameraPosition.z },
+      cameraTarget: { x: cameraTarget.x, y: cameraTarget.y, z: cameraTarget.z },
+      ambientLight: {
+        color: { 
+          r: ambientLight.color.r, 
+          g: ambientLight.color.g, 
+          b: ambientLight.color.b, 
+          a: ambientLight.color.a || 1 
+        },
+        intensity: ambientLight.intensity
+      },
+      directionalLight: {
+        color: { 
+          r: directionalLight.color.r, 
+          g: directionalLight.color.g, 
+          b: directionalLight.color.b, 
+          a: directionalLight.color.a || 1 
+        },
+        intensity: directionalLight.intensity,
+        direction: { 
+          x: directionalLight.direction.x, 
+          y: directionalLight.direction.y, 
+          z: directionalLight.direction.z 
+        }
+      }
+    };
+  };
+
+  // Function to refresh scene data from the current scene
+  const refreshFromScene = () => {
+    console.log('refreshFromScene called');
+    if (onGetScene) {
+      const scene = onGetScene();
+      console.log('Scene retrieved:', scene);
+      if (scene) {
+        isRefreshingFromScene.current = true;
+        const newSceneState = extractSceneData(scene);
+        console.log('New scene state extracted:', newSceneState);
+        setSceneState(newSceneState);
+        // Reset flag after state update
+        setTimeout(() => {
+          isRefreshingFromScene.current = false;
+        }, 0);
+      }
+    }
+  };
+
+  // Update parent when scene state changes
   useEffect(() => {
+    // Don't update scene objects if we're currently refreshing from scene (prevents circular updates)
+    if (!isRefreshingFromScene.current) {
+      updateSceneFromState(sceneState);
+    }
+    
+    // Always notify parent component of state changes
     onSceneChange(sceneState);
   }, [sceneState, onSceneChange]);
 
@@ -75,7 +259,11 @@ const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEditorContro
         ...prev,
         objects: [...prev.objects, objectData]
       }));
-    }
+    },
+    updateSceneState: (newState: SceneEditorState) => {
+      setSceneState(newState);
+    },
+    refreshFromScene: refreshFromScene
   }));
 
   // Get selected object
@@ -385,62 +573,50 @@ const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEditorContro
                   Visible
                 </label>
 
-                <label style={labelStyle}>Color (RGBA)</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '5px', marginBottom: '8px' }}>
-                  <div>
-                    <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '2px' }}>R</label>
+                <label style={labelStyle}>Color</label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
+                  <input
+                    type="color"
+                    value={`#${Math.round(selectedObject.color.r * 255).toString(16).padStart(2, '0')}${Math.round(selectedObject.color.g * 255).toString(16).padStart(2, '0')}${Math.round(selectedObject.color.b * 255).toString(16).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const hex = e.target.value;
+                      const r = parseInt(hex.slice(1, 3), 16) / 255;
+                      const g = parseInt(hex.slice(3, 5), 16) / 255;
+                      const b = parseInt(hex.slice(5, 7), 16) / 255;
+                      updateObject(selectedObject.id, {
+                        color: { ...selectedObject.color, r, g, b }
+                      });
+                    }}
+                    style={{
+                      width: '60px',
+                      height: '30px',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent'
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '4px' }}>
+                      Opacity: {selectedObject.color.a.toFixed(2)}
+                    </label>
                     <input
-                      style={inputStyle}
-                      type="number"
-                      step="0.01"
+                      type="range"
                       min="0"
                       max="1"
-                      value={selectedObject.color.r.toFixed(2)}
-                      onChange={(e) => updateObject(selectedObject.id, {
-                        color: { ...selectedObject.color, r: parseFloat(e.target.value) || 0 }
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '2px' }}>G</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
                       step="0.01"
-                      min="0"
-                      max="1"
-                      value={selectedObject.color.g.toFixed(2)}
+                      value={selectedObject.color.a}
                       onChange={(e) => updateObject(selectedObject.id, {
-                        color: { ...selectedObject.color, g: parseFloat(e.target.value) || 0 }
+                        color: { ...selectedObject.color, a: parseFloat(e.target.value) }
                       })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '2px' }}>B</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="1"
-                      value={selectedObject.color.b.toFixed(2)}
-                      onChange={(e) => updateObject(selectedObject.id, {
-                        color: { ...selectedObject.color, b: parseFloat(e.target.value) || 0 }
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...labelStyle, fontSize: '9px', marginBottom: '2px' }}>A</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="1"
-                      value={selectedObject.color.a.toFixed(2)}
-                      onChange={(e) => updateObject(selectedObject.id, {
-                        color: { ...selectedObject.color, a: parseFloat(e.target.value) || 1 }
-                      })}
+                      style={{
+                        width: '100%',
+                        height: '20px',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        borderRadius: '10px',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
                     />
                   </div>
                 </div>

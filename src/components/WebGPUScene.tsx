@@ -4,8 +4,7 @@ import { checkWebGPUSupport } from "../utils/WebGPUCheck";
 import "./WebGPUScene.css";
 import GLTFControls from "./GLTFControls";
 import TerrainWaterControls from "./TerrainWaterControls";
-import SceneEditorControls from "../sceneEditor/SceneEditorControls";
-import { SceneEditorState, SceneEditorControlsRef } from "../sceneEditor/Interfaces";
+import { SceneEditorControls, SceneEditorControlsRef, SceneEditorState } from "./SceneEditorControls";
 import { updateTerrainParams, updateWaterParams } from "../scenes/TerrainGeneratorScene/TerrainGeneratorScene";
 
 interface WebGPUSceneProps {
@@ -36,18 +35,30 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
 
   const handleAddObject = async (type: 'cube' | 'sphere' | 'light' | 'camera') => {
     if (sceneModuleRef.current && typeof sceneModuleRef.current.addObject === 'function') {
-      const newObject = sceneModuleRef.current.addObject(type);
-      if (newObject && sceneEditorControlsRef.current) {
-        console.log('Added object:', newObject);
-        // Add the new object to the React component's state
-        sceneEditorControlsRef.current.addNewObject(newObject);
+      const updatedScene = sceneModuleRef.current.addObject(type);
+      if (updatedScene && sceneEditorControlsRef.current) {
+        console.log('Object added, refreshing scene');
+        // Refresh the scene editor to show the new object
+        sceneEditorControlsRef.current.refreshFromScene();
       }
     }
+  };
+
+  // Function to get the current scene instance for SceneEditorControls
+  const getCurrentScene = () => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.getScene === 'function') {
+      return sceneModuleRef.current.getScene();
+    }
+    return null;
   };
 
   const handleRemoveObject = async (id: string) => {
     if (sceneModuleRef.current && typeof sceneModuleRef.current.removeObject === 'function') {
       sceneModuleRef.current.removeObject(id);
+      // Refresh the scene editor to reflect the removal
+      if (sceneEditorControlsRef.current) {
+        sceneEditorControlsRef.current.refreshFromScene();
+      }
     }
   };
 
@@ -153,7 +164,24 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
             infoRef.current,
             gltfOptions
           );
-        } else {
+        }
+        else if(scene.components.includes('sceneEditorControls'))
+        {
+          await SceneModule.init(
+            canvasRef.current,
+            deviceRef.current,
+            gpuContextRef.current,
+            presentationFormatRef.current,
+            infoRef.current
+          );
+          
+          // After initialization, refresh the scene editor with current scene data
+          if (sceneEditorControlsRef.current) {
+            sceneEditorControlsRef.current.refreshFromScene();
+          }
+        }
+        else
+        {
           await SceneModule.init(
             canvasRef.current,
             deviceRef.current,
@@ -235,6 +263,7 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
           onSelectObject={handleSelectObject}
           onSaveScene={handleSaveScene}
           onLoadScene={handleLoadScene}
+          onGetScene={getCurrentScene}
         />
       )}
       {isLoading && (
