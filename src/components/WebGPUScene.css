@@ -13,12 +13,12 @@ canvas {
   max-width: 100%;
   margin: 20px auto;
   border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 30px rgba(49, 41, 41, 0.3);
 }
 
 #info {
   position: absolute;
-  top: 10px;
+  bottom: -10%;
   left: 10px;
   min-width: 120px;
   min-height: 40px;

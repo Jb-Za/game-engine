@@ -5,6 +5,7 @@ import "./WebGPUScene.css";
 import GLTFControls from "./GLTFControls";
 import TerrainWaterControls from "./TerrainWaterControls";
 import { SceneEditorControls, SceneEditorControlsRef, SceneEditorState } from "./SceneEditorControls";
+import { RayTracingSceneEditorControls, RayTracingSceneEditorControlsRef, RayTracingSceneEditorState } from "./RayTracingSceneEditorControls";
 import { updateTerrainParams, updateWaterParams } from "../scenes/TerrainGeneratorScene/TerrainGeneratorScene";
 
 interface WebGPUSceneProps {
@@ -25,12 +26,19 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
   const [gltfOptions, setGLTFOptions] = useState<any>(null);  // Track the current scene module for disposal
   const sceneModuleRef = useRef<any>(null);
   const sceneEditorControlsRef = useRef<SceneEditorControlsRef>(null);
+  const rayTracingSceneEditorControlsRef = useRef<RayTracingSceneEditorControlsRef>(null);
 
   // Scene editor handlers
   const handleSceneEditorChange = async (state: SceneEditorState) => {
     if (sceneModuleRef.current && typeof sceneModuleRef.current.updateSceneState === 'function') {
       sceneModuleRef.current.updateSceneState(state);
     }
+  };
+
+  // Ray tracing scene editor handlers
+  const handleRayTracingSceneEditorChange = async (state: RayTracingSceneEditorState) => {
+    // The raytracing scene updates happen automatically through the updateSceneFromState in the controls
+    console.log('Ray tracing scene state changed:', state);
   };
 
   const handleAddObject = async (type: 'cube' | 'sphere' | 'light' | 'camera') => {
@@ -40,6 +48,17 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
         console.log('Object added, refreshing scene');
         // Refresh the scene editor to show the new object
         sceneEditorControlsRef.current.refreshFromScene();
+      }
+    }
+  };
+
+  const handleAddRayTracingObject = async (type: 'sphere' | 'plane' | 'light') => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.addObject === 'function') {
+      const updatedScene = sceneModuleRef.current.addObject(type);
+      if (updatedScene && rayTracingSceneEditorControlsRef.current) {
+        console.log('Ray tracing object added, refreshing scene');
+        // Refresh the scene editor to show the new object
+        rayTracingSceneEditorControlsRef.current.refreshFromScene();
       }
     }
   };
@@ -58,6 +77,16 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
       // Refresh the scene editor to reflect the removal
       if (sceneEditorControlsRef.current) {
         sceneEditorControlsRef.current.refreshFromScene();
+      }
+    }
+  };
+
+  const handleRemoveRayTracingObject = async (id: string) => {
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.removeObject === 'function') {
+      sceneModuleRef.current.removeObject(id);
+      // Refresh the scene editor to reflect the removal
+      if (rayTracingSceneEditorControlsRef.current) {
+        rayTracingSceneEditorControlsRef.current.refreshFromScene();
       }
     }
   };
@@ -180,6 +209,21 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
             sceneEditorControlsRef.current.refreshFromScene();
           }
         }
+        else if(scene.components.includes('rayTracingSceneEditorControls'))
+        {
+          await SceneModule.init(
+            canvasRef.current,
+            deviceRef.current,
+            gpuContextRef.current,
+            presentationFormatRef.current,
+            infoRef.current
+          );
+          
+          // After initialization, refresh the raytracing scene editor with current scene data
+          if (rayTracingSceneEditorControlsRef.current) {
+            rayTracingSceneEditorControlsRef.current.refreshFromScene();
+          }
+        }
         else
         {
           await SceneModule.init(
@@ -263,6 +307,15 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
           onSelectObject={handleSelectObject}
           onSaveScene={handleSaveScene}
           onLoadScene={handleLoadScene}
+          onGetScene={getCurrentScene}
+        />
+      )}
+      {scene.components.includes('rayTracingSceneEditorControls') && (
+        <RayTracingSceneEditorControls
+          ref={rayTracingSceneEditorControlsRef}
+          onSceneChange={handleRayTracingSceneEditorChange}
+          onAddObject={handleAddRayTracingObject}
+          onRemoveObject={handleRemoveRayTracingObject}
           onGetScene={getCurrentScene}
         />
       )}

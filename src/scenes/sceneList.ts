@@ -59,5 +59,23 @@ export const scenes: SceneInfo[] = [{
   thumbnail: "/thumbnails/shadow.svg",
   importPath: "../scenes/SceneEditor/SceneEditor.ts",
   components: ['backButton', 'sceneEditorControls']
+},
+{
+  id: "raytracing",
+  name: "Ray Tracing Scene",
+  description: "ray tracing scene editor with real-time material and geometry controls.",
+  thumbnail: "/thumbnails/raytracing.svg",
+  importPath: "../scenes/raytracingSceneEditor/raytracingSceneEditor.ts",
+  components: ['backButton', 'rayTracingSceneEditorControls']
 }
 ];
+
+
+// {
+//   id: "raytracer",
+//   name: "Ray Tracing Demo",
+//   description: "A scene demonstrating compute shader-based ray tracing with spheres and planes.",
+//   thumbnail: "/thumbnails/raytracing.svg",
+//   importPath: "../scenes/raytracerScene/rayTracerScene.ts",
+//   components: ['backButton', 'rayTracingControls']
+// },

@@ -15,6 +15,11 @@ export class Camera {
     public target = new Vec3(0, 0, 0);
     private up = new Vec3(0, 1, 0);
 
+    // Calculate and return the forward vector (from eye to target)
+    public get forward(): Vec3 {
+        return Vec3.normalize(Vec3.subtract(this.target, this.eye));
+    }
+
     // PERSPECTIVE PROPERTIES
     public fov = 45;
     public near = 0.01;
@@ -102,11 +107,11 @@ export class Camera {
                     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedForward, movementSpeed));
                 }
-                if (this.inputmanager.isKeyDown('a') || this.inputmanager.isKeyDown('A')) {
+                if (this.inputmanager.isKeyDown('d') || this.inputmanager.isKeyDown('D')) {
                     this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                     this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                 }
-                if (this.inputmanager.isKeyDown('d') || this.inputmanager.isKeyDown('D')) {
+                if (this.inputmanager.isKeyDown('a') || this.inputmanager.isKeyDown('A')) {
                     this.eye = Vec3.add(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                     this.target = Vec3.add(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
                 }
@@ -125,8 +130,8 @@ export class Camera {
 
     public onMouseMove(mouseMovement: Coordinates) {
         // Update yaw and pitch based on mouse movement
-        this.yaw += -mouseMovement.x * this.sensitivity;
-        this.pitch += mouseMovement.y * this.sensitivity;
+        this.yaw += mouseMovement.x * this.sensitivity;
+        this.pitch += -mouseMovement.y * this.sensitivity;
 
         // Clamp pitch to prevent gimbal lock
         this.pitch = Math.max(Math.min(this.pitch, Math.PI / 2 - 0.01), -Math.PI / 2 + 0.01);
