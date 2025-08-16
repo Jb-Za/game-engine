@@ -19,7 +19,7 @@ export class PointLightsCollection{
 
     constructor(device: GPUDevice, lightCount: number){
         const byteSize = 3 * 16 * Float32Array.BYTES_PER_ELEMENT;
-        this.buffer = new UniformBuffer(device, byteSize, "Directional Light");
+        this.buffer = new UniformBuffer(device, byteSize, "Point Light");
         for(let i = 0; i < lightCount; i++){
             this.lights.push(new PointLight());
         }

@@ -326,6 +326,37 @@ export class GeometryBuilder
         return new Geometry(vertices, indices, colors, texCoords, normals);
     }
 
+    public createCircleGeometry(radius: number, segments: number): Geometry {
+        const vertices: number[] = [];
+        const indices: number[] = [];
+        const colors: number[] = [];
+        const texCoords: number[] = [];
+        const normals: number[] = [];
+
+        for (let i = 0; i <= segments; i++) {
+            const angle = (i / segments) * Math.PI * 2;
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+
+            vertices.push(x, y, 0);
+            normals.push(0, 0, 1); // Normal pointing up
+            texCoords.push((x / radius + 1) / 2, (y / radius + 1) / 2); // Normalize to [0, 1]
+            colors.push(1, 1, 1, 1); // White color
+
+            if (i < segments) {
+                indices.push(0, i + 1, i + 2);
+            }
+        }
+
+        return new Geometry(
+            new Float32Array(vertices),
+            new Uint16Array(indices),
+            new Float32Array(colors),
+            new Float32Array(texCoords),
+            new Float32Array(normals)
+        );
+    }
+
     public createSphereGeometry(radius: number, segments: number): Geometry {
         const vertices: number[] = [];
         const indices: number[] = [];
