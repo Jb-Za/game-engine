@@ -16,6 +16,9 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   if (presentationFormat) {
   } // lazy linting
   // Input Manager
+  // canvas!.addEventListener("click", async () => {
+  //   await canvas!.requestPointerLock();
+  // });
   const inputManager = new InputManager(canvas);
 
   GeometryBuffersCollection.initialize(device);
@@ -47,7 +50,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   const waterParticles: WaterParticle[] = [];
   const particleSprites: Circle2D[] = [];
 
-  const NumWaterParticles = 100;
+  const NumWaterParticles = 400;
   for (let i = 0; i < NumWaterParticles; i++) {
     const circle = new Circle2D(device, camera, ambientLight, pointLights);
     circle.color = new Color(0, 0.3, 1, 1);
@@ -62,11 +65,30 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     waterParticles.push(particle);
   }
 
+  const handleInput = () => {
+    // Handle user input for controlling the simulation
+    if (inputManager.isKeyDown("ArrowUp")) {
+      waterParticles.forEach(p => {
+        p.densityRadius += 0.1;
+      });
+    }
+    if (inputManager.isKeyDown("ArrowDown")) {
+      waterParticles.forEach(p => {
+        p.densityRadius -= 0.1;
+      });
+    }
+
+  };
+
   let then = performance.now() * 0.001;
   const targetFPS = 60;
   const minFrameTime = 1 / targetFPS;
   let lastDrawTime = performance.now() * 0.001;
+
+  let nearbyRadius = 0.5;
   const update = (deltaTime: number) => {
+    handleInput();
+    
     // Update camera
     camera.update();
 
@@ -74,30 +96,32 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     ambientLight.update();
     pointLights.update();
 
-    // naive neighbor search for now; replace with spatial hash later
+    // SPH simulation with proper neighbor finding
     for (let i = 0; i < waterParticles.length; i++) {
-      const p = waterParticles[i];
-      const neighbors: WaterParticle[] = [];
+      const particle = waterParticles[i];
+      const neighbors: { particle: WaterParticle, distance: number }[] = [];
+      
+      // Find neighbors within interaction radius
       for (let j = 0; j < waterParticles.length; j++) {
-        if (i === j) continue;
-        // cheap distance check
-        const dx = p.position.x - waterParticles[j].position.x;
-        const dy = p.position.y - waterParticles[j].position.y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d <= p.radius * 2) neighbors.push(waterParticles[j]);
+        if (i === j) continue; // Skip self
+        
+        const other = waterParticles[j];
+        const dx = particle.position.x - other.position.x;
+        const dy = particle.position.y - other.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Use the particle's densityRadius as interaction range
+        if (distance <= particle.densityRadius) {
+          neighbors.push({ particle: other, distance });
+        }
       }
-      p.update(neighbors, deltaTime);
-    }
-
-    // sync sprites to physics
-    for (let i = 0; i < waterParticles.length; i++) {
-      const p = waterParticles[i];
-      const s = particleSprites[i];
-      // map Vec2 -> Vec3 (z for draw order)
-      s.position = new Vec3(p.position.x, p.position.y, 0);
-      // visual scale depends on sprite default size; here assume sprite unit size = 1
-      const size = p.radius * 2;
-      s.scale = new Vec3(size, size, 1);
+      
+      // Update particle with only nearby neighbors
+      particle.update(neighbors, deltaTime);
+      
+      // Sync sprite position
+      const sprite = particleSprites[i];
+      sprite.position = new Vec3(particle.position.x, particle.position.y, 0);
     }
 
 
@@ -136,10 +160,10 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     const deltaTime = now - then;
 
     // Only proceed if enough time has passed for the target FPS
-    if (now - lastDrawTime < minFrameTime) {
-      animationFrameId = requestAnimationFrame(draw);
-      return;
-    }
+    // if (now - lastDrawTime < minFrameTime) {
+    //   animationFrameId = requestAnimationFrame(draw);
+    //   return;
+    // }
 
     lastDrawTime = now;
     then = now;
@@ -160,6 +184,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         js: ${jsTime.toFixed(1)}ms
         `;
     }
+    //console.log('density:, ', waterParticles[50].density, ' densityRadius: ', waterParticles[50].densityRadius);
 
     animationFrameId = requestAnimationFrame(draw);
   };

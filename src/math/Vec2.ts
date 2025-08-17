@@ -37,4 +37,8 @@ export class Vec2 extends Float32Array
     public static subtract(a: Vec2, b: Vec2): Vec2{
         return new Vec2(a.x - b.x, a.y - b.y);
     }
+
+    public static add(a: Vec2, b: Vec2): Vec2 {
+        return new Vec2(a.x + b.x, a.y + b.y);
+    }
 }
