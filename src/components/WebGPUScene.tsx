@@ -334,6 +334,7 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
       <canvas 
         ref={canvasRef} 
         id="canvas" 
+        onContextMenu={(e) => e.preventDefault()}
         width={1280} 
         height={720} 
       />

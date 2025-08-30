@@ -333,6 +333,11 @@ export class GeometryBuilder
         const texCoords: number[] = [];
         const normals: number[] = [];
 
+        vertices.push(0, 0, 0);
+        normals.push(0, 0, 1);
+        texCoords.push(0.5, 0.5);
+        colors.push(1, 1, 1, 1);
+
         for (let i = 0; i <= segments; i++) {
             const angle = (i / segments) * Math.PI * 2;
             const x = Math.cos(angle) * radius;
@@ -356,6 +361,56 @@ export class GeometryBuilder
             new Float32Array(normals)
         );
     }
+
+    public createCircleOutlineGeometry(radius: number, segments: number, thickness: number = 0.1, scaleCompensation: number = 1.0): Geometry {
+    const vertices: number[] = [];
+    const indices: number[] = [];
+    const colors: number[] = [];
+    const texCoords: number[] = [];
+    const normals: number[] = [];
+
+    // Adjust thickness based on scale compensation
+    const effectiveThickness = thickness / scaleCompensation;
+
+    // Create two rings: inner and outer
+    for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+
+        // Outer ring
+        const xOuter = cos * radius;
+        const yOuter = sin * radius;
+        vertices.push(xOuter, yOuter, 0);
+        normals.push(0, 0, 1);
+        texCoords.push((xOuter / radius + 1) / 2, (yOuter / radius + 1) / 2);
+        colors.push(1, 1, 1, 1);
+
+        // Inner ring - use effective thickness
+        const innerRadius = Math.max(0.01, radius - effectiveThickness); // Prevent negative radius
+        const xInner = cos * innerRadius;
+        const yInner = sin * innerRadius;
+        vertices.push(xInner, yInner, 0);
+        normals.push(0, 0, 1);
+        texCoords.push((xInner / radius + 1) / 2, (yInner / radius + 1) / 2);
+        colors.push(1, 1, 1, 1);
+
+        if (i < segments) {
+            const idx = i * 2;
+            // Quad (two triangles) between inner and outer ring
+            indices.push(idx, idx + 1, idx + 2);
+            indices.push(idx + 1, idx + 3, idx + 2);
+        }
+    }
+
+    return new Geometry(
+        new Float32Array(vertices),
+        new Uint16Array(indices),
+        new Float32Array(colors),
+        new Float32Array(texCoords),
+        new Float32Array(normals)
+    );
+}
 
     public createSphereGeometry(radius: number, segments: number): Geometry {
         const vertices: number[] = [];

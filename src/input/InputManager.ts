@@ -37,9 +37,22 @@ export class InputManager {
       this.mouseKeys.set(e.button, true);
     });
 
-    // window.addEventListener("mousemove", (e: MouseEvent) => {
-    //   this._updateMousePosition(e.clientX, e.clientY);
-    // });
+    window.addEventListener("wheel", (e: WheelEvent) => {
+      if (e.deltaY < 0) {
+        this.keys.set("mousewheelup", true);
+        this.keys.set("mousewheeldown", false);
+      } else if (e.deltaY > 0) {
+        this.keys.set("mousewheeldown", true);
+        this.keys.set("mousewheelup", false);
+      }
+      // Optionally, reset after a short delay to avoid stuck state
+      setTimeout(() => {
+        this.keys.set("mousewheelup", false);
+        this.keys.set("mousewheeldown", false);
+      }, 50);
+    });
+
+
     
     document.addEventListener("pointerlockchange", this.canvasLock, false);
   }
@@ -60,6 +73,14 @@ export class InputManager {
 
   public get onMouseMove(): EventEmitter<Coordinates>{
     return this._mouseMoved;
+  }
+
+  public isMouseWheelUp(): boolean {
+    return this.keys.get("mousewheelup") ?? false;
+  }
+
+  public isMouseWheelDown(): boolean {
+    return this.keys.get("mousewheeldown") ?? false;
   }
 
   private _updateMousePosition(x: number, y: number): void{
