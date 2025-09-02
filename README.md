@@ -1,4 +1,4 @@
-# Game Engine
+# WebGPU Renderer
 
 A WebGPU-based renderer (and hopefully one day, game engine) built with TypeScript, React, and Vite.
 
@@ -6,9 +6,10 @@ Interactive Link here: [game-engine-two.vercel.app](https://game-engine-two.verc
 
 ## Features
 
-- **WebGPU Rendering**: GPU-accelerated rendering pipeline
-- **GLTF Model Support**: Load and display 3D models with Skeletal animations (Still a WIP)
-- **Shadow Mapping**: Real-time dynamic shadows
+- **GLTF Model Support**: Load and display 3D models, Texture mapping, with Skeletal animations (Still a WIP)
+- **Pathtracing (Compute Shader)** : Still a WIP. Just spheres for now
+- **SPH Water Simlation (Compute Shader)**: Still 2D. Planned improvement
+- **Physics (Simple Rigidbodies)** : Still a WIP.
 
 ## Prerequisites
 

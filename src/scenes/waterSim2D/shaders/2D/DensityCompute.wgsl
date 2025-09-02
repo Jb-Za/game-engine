@@ -105,8 +105,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
             let sqrDstToNeighbor = dot(offsetToNeighbor, offsetToNeighbor);
             
             if (sqrDstToNeighbor > sqrRadius) { continue; }
-            
-            if (sqrDstToNeighbor > sqrRadius) { continue; }
             let dst = sqrt(sqrDstToNeighbor);
             if (dst >= simParams.smoothingRadius) { continue; }
             density += spikyKernelPow2(dst, simParams.smoothingRadius);

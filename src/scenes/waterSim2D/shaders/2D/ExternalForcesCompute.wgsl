@@ -4,6 +4,7 @@
 @group(0) @binding(3) var<uniform> frameParams: FrameParams;
 @group(0) @binding(4) var<uniform> mouseParams: MouseParams;
 
+// https://github.com/SebLague/Fluid-Sim/blob/Episode-01/
 struct Particle {
     position: vec2f, // 2
     velocity: vec2f, // 2

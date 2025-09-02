@@ -163,9 +163,9 @@ private createRenderPipeline(camera: Camera) {
       @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
       struct VertexInput {
-        @location(0) position: vec2<f32>,
-        @location(1) instancePosition: vec2<f32>,
-        @location(2) instanceScale: vec2<f32>,
+        @location(0) position: vec3<f32>,
+        @location(1) instancePosition: vec3<f32>,
+        @location(2) instanceScale: vec3<f32>,
         @location(3) instanceColor: vec4<f32>,
       }
 
