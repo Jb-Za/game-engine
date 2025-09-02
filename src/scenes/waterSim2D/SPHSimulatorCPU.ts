@@ -8,7 +8,7 @@ import { SmoothingKernels } from "./SmoothingKernels";
 // https://github.com/SebLague/Fluid-Sim/blob/Episode-01/Assets/Scripts/Sim%202D/Compute/FluidSim2D.compute
 // https://youtu.be/rSKMYc1CQHE?si=ZIyLBBSWt8DvbO_r
 
-export class SPHSimulator {
+export class SPHSimulatorCPU {
   private particles: WaterParticle[] = [];
   private predictedPositions: Vec2[] = [];
   
@@ -16,7 +16,7 @@ export class SPHSimulator {
   private targetDensity: number = 8.0;
   public pressureMultiplier: number = 10.0;
   private nearPressureMultiplier: number = 1.2;
-  private gravity: number = -2.0;
+  private gravity: number = -10.0;
   private viscosityStrength: number = 15;
   public smoothingRadius: number = 0.6;
   private collisionDamping: number = 0.95;
@@ -25,7 +25,7 @@ export class SPHSimulator {
   private spatialOffsets: number[];
   private spatialIndices: { index: number; hash: number; key: number }[];
 
-  public showParticle: number = 100;
+  public showParticle: number = 1;
   private numParticles: number = 0;
   private neighborIndices: number[] = [];
 
@@ -240,8 +240,8 @@ export class SPHSimulator {
           const densityDerivative = SmoothingKernels.DerivativeSpikyPow2(dst, this.smoothingRadius);
           const nearDensityDerivative = SmoothingKernels.DerivativeSpikyPow3(dst, this.smoothingRadius);
 
-         const force1 = Vec2.scale(dirToNeighbor, -densityDerivative * sharedPressure);
-        const force2 = Vec2.scale(dirToNeighbor, -nearDensityDerivative * sharedNearPressure);
+          const force1 = Vec2.scale(dirToNeighbor, -densityDerivative * sharedPressure);
+          const force2 = Vec2.scale(dirToNeighbor, -nearDensityDerivative * sharedNearPressure);
           
           pressureForce = Vec2.add(pressureForce, force1);
           pressureForce = Vec2.add(pressureForce, force2);
@@ -363,6 +363,7 @@ export class SPHSimulator {
 
   // Main simulation step - now matches compute shader structure
   update(dt: number): void {
+    dt = 1/120;
     // Step 1: External Forces
     this.applyExternalForces(dt);
     

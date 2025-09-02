@@ -108,8 +108,8 @@ export class Camera {
 
     public onMouseMove(mouseMovement: Coordinates) {
         // Update yaw and pitch based on mouse movement
-        this.yaw += mouseMovement.x * this.sensitivity;
-        this.pitch += -mouseMovement.y * this.sensitivity;
+        this.yaw -= mouseMovement.x * this.sensitivity;
+        this.pitch -= -mouseMovement.y * this.sensitivity;
 
         // Clamp pitch to prevent gimbal lock
         this.pitch = Math.max(Math.min(this.pitch, Math.PI / 2 - 0.01), -Math.PI / 2 + 0.01);

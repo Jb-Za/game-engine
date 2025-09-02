@@ -8,7 +8,7 @@ import { InputManager } from "../../input/InputManager";
 import { Circle2D } from "../../game_objects/2D/Circle2D";
 import { PointLightsCollection } from "../../lights/PointLight";
 import { WaterParticle } from "./WaterParticle";
-import { SPHSimulator } from "./SPHSimulator";
+import { SPHSimulatorCPU } from "./SPHSimulatorCPU";
 import { Vec2 } from "../../math/Vec2";
 import { GeometryBuilder } from "../../geometry/GeometryBuilder";
 import { InstancedParticleRenderer } from "../../particles/InstancedParticleRenderer";
@@ -83,7 +83,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     maxY: 14,
   };
 
-  const sphSimulator = new SPHSimulator(gridCellSize, NumWaterParticles, containerBounds);
+  const sphSimulator = new SPHSimulatorCPU(gridCellSize, NumWaterParticles, containerBounds);
   const circleGeometry = new GeometryBuilder().createCircleGeometry(particleRadius, 16);
   const particleRenderer = new InstancedParticleRenderer<WaterParticle>(
     device,
