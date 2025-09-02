@@ -63,7 +63,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   const targetFPS = 60;
   const minFrameTime = 1 / targetFPS;
   let lastDrawTime = performance.now() * 0.001;
-    const update = (deltaTime: number) => {
+    const update = (/*deltaTime: number*/) => {
     // Update camera
     camera.update();
 
@@ -72,7 +72,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     pointLights.update();
 
     // Add simple animation - rotate sprites
-    sprites.forEach((sprite, index) => {
+    sprites.forEach((sprite) => {
       sprite.update();
     });
   };
@@ -118,7 +118,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     then = now;
     const startTime = performance.now();
 
-    update(deltaTime);
+    update(/*deltaTime*/);
 
     const commandEncoder = device.createCommandEncoder();
     scenePass(commandEncoder);

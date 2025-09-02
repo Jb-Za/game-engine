@@ -10,7 +10,6 @@ import { PointLightsCollection } from "../../lights/PointLight";
 import { WaterParticle } from "./WaterParticle";
 import { SPHSimulatorGPU } from "./SPHSimulatorGPU";
 import { Vec2 } from "../../math/Vec2";
-import { GeometryBuilder } from "../../geometry/GeometryBuilder";
 
 let animationFrameId: number | null = null;
 
