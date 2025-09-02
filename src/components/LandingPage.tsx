@@ -10,7 +10,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onSelectScene }) => {
   return (
     <div className="landing-page">
       <header>
-        <h1>WebGPU Game Engine</h1>
+        <h1>WebGPU Renderer</h1>
         <p>Select a demo scene to explore</p>
       </header>
       

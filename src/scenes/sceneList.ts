@@ -11,36 +11,23 @@ export const scenes: SceneInfo[] = [{
   id: "gltf",
   name: "GLTF Import Scene",
   description: "A demo of GLTF model loading and rendering with animated models.",
-  thumbnail: "/thumbnails/walking-character.svg",
+  thumbnail: "/thumbnails/undefined.svg",
   importPath: "../scenes/GLTFImportScene/GLTFImportScene.ts",
   components: ['backButton', 'animationMenu']
-}, {
-  id: "shadow",
-  name: "Shadow Demo",
-  description: "A demonstration of shadow mapping techniques.",
-  thumbnail: "/thumbnails/shadow.svg",
-  importPath: "../scenes/shadowDemoScene.ts",
-  components: ['backButton']
-}, {
-  id: "physics",
-  name: "Physics Demo",
-  description: "A demonstration of rigid body physics with colliders, gravity, and forces.",
-  thumbnail: "/thumbnails/shadow.svg", // Using shadow thumbnail for now
-  importPath: "../scenes/physicsTestScene/physicsTestScene.ts",
-  components: ['backButton']
-}, {
+}, 
+{
   id: "plinko",
   name: "Plinko Physics",
   description: "Classic Plinko game demonstrating sphere-sphere and sphere-box collisions with bouncing physics.",
-  thumbnail: "/thumbnails/plinko.svg",
+  thumbnail: "/thumbnails/undefined.svg",
   importPath: "../scenes/plinkoScene/plinkoScene.ts",
   components: ['backButton']
 },
 {
   id: "gridPlane",
-  name: "Terrain & Water Scene",
-  description: "Procedural terrain generation with animated water simulation and real-time parameter controls.",
-  thumbnail: "/thumbnails/shadow.svg",
+  name: "Terrain Generator Scene (WIP)",
+  description: "Procedural terrain generation. Planned addition of erosion and texture mapping",
+  thumbnail: "/thumbnails/undefined.svg",
   importPath: "../scenes/TerrainGeneratorScene/TerrainGeneratorScene.ts",
   components: ['backButton', 'terrainControls']
 },
@@ -48,7 +35,7 @@ export const scenes: SceneInfo[] = [{
   id: "sceneEditor",
   name: "Scene Editor",
   description: "React-based scene editor with real-time controls",
-  thumbnail: "/thumbnails/shadow.svg",
+  thumbnail: "/thumbnails/undefined.svg",
   importPath: "../scenes/SceneEditor/SceneEditor.ts",
   components: ['backButton', 'sceneEditorControls']
 },
@@ -56,9 +43,25 @@ export const scenes: SceneInfo[] = [{
   id: "raytracing",
   name: "Ray Tracing Scene",
   description: "ray tracing scene editor with real-time material and geometry controls.",
-  thumbnail: "/thumbnails/shadow.svg",
+  thumbnail: "/thumbnails/undefined.svg",
   importPath: "../scenes/raytracingSceneEditor/raytracingSceneEditor.ts",
   components: ['backButton', 'rayTracingSceneEditorControls']
+},
+{
+  id: "waterSim2D GPU",
+  name: "Water Simulation 2D",
+  description: "SPH fluid simulation using GPU compute shaders",
+  thumbnail: "/thumbnails/undefined.svg",
+  importPath: "../scenes/waterSim2D/waterSim2DGPU.ts",
+  components: ['backButton']
+},
+{
+  id: "shadow",
+  name: "Shadow Demo",
+  description: "A demonstration of rasterized shadow mapping techniques.",
+  thumbnail: "/thumbnails/undefined.svg",
+  importPath: "../scenes/shadowDemoScene.ts",
+  components: ['backButton']
 }
 ];
 
@@ -72,11 +75,30 @@ export const scenes: SceneInfo[] = [{
 //   components: ['backButton', 'rayTracingControls']
 // },
 
+
+// {
+//   id: "waterSim2D CPU",
+//   name: "Water Simulation 2D CPU",
+//   description: "A 2D scene with water simulation effects.",
+//   thumbnail: "/thumbnails/undefined.svg",
+//   importPath: "../scenes/waterSim2D/waterSim2DCPU.ts",
+//   components: ['backButton']
+// },
+
 // {
 //   id: "characterController",
 //   name: "Character Controller Scene",
 //   description: "(A WIP) A Scene to showcase a character controller with a GLTF model.",
 //   thumbnail: "/thumbnails/shadow.svg",
 //   importPath: "../scenes/characterControllerScene/characterControllerScene.ts",
+//   components: ['backButton']
+// },
+
+// {
+//   id: "physics",
+//   name: "Physics Demo",
+//   description: "A demonstration of rigid body physics with colliders, gravity, and forces.",
+//   thumbnail: "/thumbnails/undefined.svg",
+//   importPath: "../scenes/physicsTestScene/physicsTestScene.ts",
 //   components: ['backButton']
 // },

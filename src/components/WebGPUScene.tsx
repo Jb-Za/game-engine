@@ -21,9 +21,24 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
   const [webgpuReady, setWebgpuReady] = useState(false);
   const deviceRef = useRef<GPUDevice | null>(null);
   const gpuContextRef = useRef<GPUCanvasContext | null>(null);
-  const presentationFormatRef = useRef<GPUTextureFormat | null>(null);
-  // Store GLTF options if needed
-  const [gltfOptions, setGLTFOptions] = useState<any>(null);  // Track the current scene module for disposal
+  const presentationFormatRef = useRef<GPUTextureFormat | null>(null);  // Store GLTF options if needed
+  const [gltfOptions, setGLTFOptions] = useState<any>(null);
+  
+  // Handler for GLTF options change that properly disposes scene
+  const handleGLTFOptionsChange = (options: any) => {
+    // Dispose the current scene before setting new options
+    if (sceneModuleRef.current && typeof sceneModuleRef.current.dispose === 'function') {
+      try { 
+        sceneModuleRef.current.dispose(); 
+      } catch (error) {
+        console.warn('Error disposing scene:', error);
+      }
+    }
+    sceneModuleRef.current = null;
+    setGLTFOptions(options); // This will trigger the scene reload with new options
+  };
+
+  // Track the current scene module for disposal
   const sceneModuleRef = useRef<any>(null);
   const sceneEditorControlsRef = useRef<SceneEditorControlsRef>(null);
   const rayTracingSceneEditorControlsRef = useRef<RayTracingSceneEditorControlsRef>(null);
@@ -182,9 +197,9 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
           return;
         }
         const SceneModule = await sceneModules[moduleKey]();
-        
-        sceneModuleRef.current = SceneModule;
-        if (scene.components.includes('animationMenu') && gltfOptions) {
+          sceneModuleRef.current = SceneModule;
+        if (scene.components.includes('animationMenu')) {
+          // For animation menu scenes, pass gltfOptions if available, otherwise pass null
           await SceneModule.init(
             canvasRef.current,
             deviceRef.current,
@@ -291,7 +306,7 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
           &larr; Back to Scenes
         </button>
       </div>      {scene.components.includes('animationMenu') && (
-        <GLTFControls onGLTFOptionsChange={setGLTFOptions} />
+        <GLTFControls onGLTFOptionsChange={handleGLTFOptionsChange} />
       )}
       {scene.components.includes('terrainControls') && (
         <TerrainWaterControls 
@@ -334,6 +349,7 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
       <canvas 
         ref={canvasRef} 
         id="canvas" 
+        onContextMenu={(e) => e.preventDefault()}
         width={1280} 
         height={720} 
       />
