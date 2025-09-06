@@ -20,8 +20,8 @@ export interface GLTFAssetInfo {
 // }
 
 export class AssetScanner {
-  private static readonly ASSETS_PATH = '/src/scenes/SceneEditor/assets/';
-  private static readonly THUMBNAILS_PATH = '/src/scenes/SceneEditor/assets/thumbnails/';
+  private static readonly ASSETS_PATH = '/assets/gltf/';
+  private static readonly THUMBNAILS_PATH = '/thumbnails/';
 
   /**
    * Scan for GLTF assets in the assets directory

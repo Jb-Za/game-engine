@@ -709,7 +709,7 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                 }}>
                   No GLTF assets found.<br/>
                   Place .glb or .gltf files in:<br/>
-                  <code style={{ color: '#aaa' }}>/src/scenes/SceneEditor/assets</code>
+                  <code style={{ color: '#aaa' }}>/assets/gltf</code>
                 </div>
               )}
             </div>
