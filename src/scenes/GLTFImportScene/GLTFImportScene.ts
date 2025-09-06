@@ -19,7 +19,7 @@ import { Cube } from "../../game_objects/Cube";
 let animationFrameId: number | null = null;
 
 async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement, options?: {
-  gltfPath?: string;
+  filePath?: string;
   skinMode?: boolean;
   onGLTFGameObject?: (gltfGameObject: any) => void;
 }){
@@ -70,14 +70,14 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   camera.target = new Vec3(3.2, -0.8, 2.1);
 
   // SHADOW CAMERA
-  const sunRadius = 6;
+  const sunRadius = 10;
   const sceneCenter = new Vec3(0, 0, 0);
   // we use directional light to simulate sunlight
 
   const sunPosition = Vec3.add(
     sceneCenter,
-  Vec3.scale(directionalLight.direction, -sunRadius)
-);
+    Vec3.scale(directionalLight.direction, -sunRadius)
+  );
 
   const shadowCamera = new ShadowCamera(device);
 
@@ -92,18 +92,18 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
 
-  const gltfPath = options?.gltfPath || "/assets/gltf/sponza.glb";
+  const filePath = options?.filePath || "/assets/gltf/sponza.glb";
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture, new Vec3(1, 1, 1), new Vec3(0, 0, 0), new Quaternion(), true); // Enable lighting
-  await _gltfGameObject.initialize(gltfPath, shadowTexture); // Pass the shadow texture
+  await _gltfGameObject.initialize(filePath, shadowTexture); // Pass the shadow texture
   _gltfGameObject.skinMode = options?.skinMode ? options?.skinMode === true ? 1 : 0 : 0;
   if (typeof options?.onGLTFGameObject === "function") {
     options.onGLTFGameObject(_gltfGameObject);
   }
 
-  const stripAssetName = (gltfPath: string) => {
-    return gltfPath.split('/').pop()?.split('.').shift() || "gltfModel";
+  const stripAssetName = (filePath: string) => {
+    return filePath.split('/').pop()?.split('.').shift() || "gltfModel";
   }
-  const objectConfig = (LayoutConfig as Record<string, typeof LayoutConfig.default>)[stripAssetName(gltfPath)] ?? LayoutConfig.default;
+  const objectConfig = (LayoutConfig as Record<string, typeof LayoutConfig.default>)[stripAssetName(filePath)] ?? LayoutConfig.default;
 
   // Set position, scale, and rotation for the GLTF model
   _gltfGameObject.position = new Vec3(objectConfig.static.position[0], objectConfig.static.position[1], objectConfig.static.position[2]); // Place at origin

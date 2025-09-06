@@ -3,9 +3,30 @@ import { Texture2D } from "../../texture/Texture2D";
 import { InputManager } from "../../input/InputManager";
 import { Scene } from "../../sceneEditor/Scene";
 import sceneDataJson from "./scene.json";
+import { Camera } from "../../camera/Camera";
+import { AmbientLight } from "../../lights/AmbientLight";
+import { DirectionalLight } from "../../lights/DirectionalLight";
+import { PointLightsCollection } from "../../lights/PointLight";
+import { ShadowCamera } from "../../camera/ShadowCamera";
 
-let scene: Scene;
+let scene: Scene | null = null;
 let animationFrameId: number | null = null;
+
+// Module-level resources so loadScene can be called at any time
+let _device: GPUDevice | null = null;
+let _gpuContext: GPUCanvasContext | null = null;
+let _presentationFormat: GPUTextureFormat | null = null;
+let _canvas: HTMLCanvasElement | null = null;
+let _infoElem: HTMLPreElement | null = null;
+let _inputManager: InputManager | null = null;
+let _depthTexture: Texture2D | null = null;
+let _shadowTexture: Texture2D | null = null;
+
+let camera: Camera | null = null;
+let ambientLight: AmbientLight | null = null;
+let directionalLight: DirectionalLight | null = null;
+let pointLights: PointLightsCollection | null = null;
+let shadowCamera: ShadowCamera | null = null;
 
 async function init(
     canvas: HTMLCanvasElement,
@@ -22,27 +43,29 @@ async function init(
 
     const sceneData = sceneDataJson as any;
 
+    // Store module-level references for later use
+    _canvas = canvas;
+    _device = device;
+    _gpuContext = gpuContext;
+    _presentationFormat = presentationFormat;
+    _infoElem = infoElem;
+
     // Input Manager
-    const inputManager = new InputManager(canvas);
+    _inputManager = new InputManager(canvas);
     GeometryBuffersCollection.initialize(device);
 
-    // DEPTH TEXTURE
-    const depthTexture = Texture2D.createDepthTexture(device, canvas.width, canvas.height);
-    const shadowTexture = Texture2D.createShadowTexture(device, 2048, 2048);
+    // Create shared depth and shadow textures once
+    _depthTexture = Texture2D.createDepthTexture(device, canvas.width, canvas.height);
+    _shadowTexture = Texture2D.createShadowTexture(device, 4096, 4096);
 
-    scene = new Scene(sceneData, device, canvas.width / canvas.height, inputManager, shadowTexture);
-    const sceneObjects = scene.getSceneObjects();
-    const camera = scene.getCamera();
-    const ambientLight = scene.getAmbientLight();
-    const directionalLight = scene.getDirectionalLight();
-    const pointLights = scene.getPointLights();
-    const shadowCamera = scene.getShadowCamera();
+    // Create the initial scene (uses the module-level resources)
+    loadScene(sceneData);
 
     // === GAME FUNCTIONS ===
     function handleInput(): void {
         // Add some basic input handling
-        if (inputManager.isKeyDown('r') || inputManager.isKeyDown('R')) {
-            
+        if (_inputManager && (_inputManager.isKeyDown('r') || _inputManager.isKeyDown('R'))) {
+            // placeholder for future
         }
     }
 
@@ -52,11 +75,26 @@ async function init(
         const deltaTime = (currentTime - lastTime) / 1000;
         lastTime = currentTime;
 
-        if (infoElem != null) {
-            infoElem.textContent = `fps: ${(1 / deltaTime).toFixed(1)}\n`
+        if (_infoElem != null) {
+            _infoElem.textContent = `fps: ${(1 / deltaTime).toFixed(1)}\n`
         }
 
         handleInput();
+
+        if (!scene) {
+            // No scene to update/render yet
+            animationFrameId = requestAnimationFrame(renderLoop);
+            return;
+        }
+
+        // Query scene-local components each frame so loadScene can swap them at runtime
+        const sceneObjects = scene.getSceneObjects();
+        camera = scene.getCamera();
+        ambientLight = scene.getAmbientLight();
+        directionalLight = scene.getDirectionalLight();
+        pointLights = scene.getPointLights();
+        shadowCamera = scene.getShadowCamera();
+
         camera.update();
         ambientLight.update();
         directionalLight.update();
@@ -75,7 +113,7 @@ async function init(
         const shadowRenderPass = shadowCommandEncoder.beginRenderPass({
             colorAttachments: [],
             depthStencilAttachment: {
-                view: shadowTexture.texture.createView(),
+                view: _shadowTexture!.texture.createView(),
                 depthClearValue: 1.0,
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store'
@@ -101,7 +139,7 @@ async function init(
                 storeOp: 'store'
             }],
             depthStencilAttachment: {
-                view: depthTexture.texture.createView(),
+                view: _depthTexture!.texture.createView(),
                 depthClearValue: 1.0,
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store'
@@ -132,20 +170,20 @@ export function dispose() {
 }
 
 // Export the main init function and related scene functions
-export { init, getScene, addObject, removeObject };
+export { init, getScene, addObject, removeObject, saveScene, loadScene };
 
 // Function to get the current scene instance
-function getScene(): Scene {
+function getScene(): Scene | null {
     return scene;
 }
 
 // Function to add a new object to the scene
-function addObject(type: 'cube' | 'sphere' | 'light' | 'camera'): Scene | null {
+function addObject(type: 'cube' | 'sphere' | 'light' | 'camera' | 'gltf', data?: any): Scene | null {
     if (!scene) {
         console.error('Scene not initialized');
         return null;
     }
-    return scene.addNewObject(type);
+    return scene.addNewObject(type, data);
 }
 
 // Function to remove an object from the scene
@@ -155,4 +193,32 @@ function removeObject(id: string): void {
         return;
     }
     scene.deleteSceneObject(id);
+}
+
+function disposeScene(): void{
+    camera = null;
+    ambientLight = null;
+    directionalLight = null;
+    pointLights = null;
+    shadowCamera = null;
+}
+
+function loadScene(sceneJson: any): void {
+    disposeScene();
+
+    // Create/replace the scene instance
+    try {
+        scene = new Scene(sceneJson, _device!, _canvas!.width / _canvas!.height, _inputManager!, _shadowTexture!, _presentationFormat!, _depthTexture!.texture);
+        console.log('Scene loaded');
+    } catch (e) {
+        console.error('Failed to load scene:', e);
+    }
+}
+
+function saveScene(): void {
+    if (!scene) {
+        console.error('Scene not initialized');
+        return;
+    }  
+    scene.saveScene();
 }

@@ -15,7 +15,9 @@ interface SceneObject {
     position: number[],
     rotation: number[],
     color: number[],
-    scale: number[]
+    scale: number[],
+    filePath?: string,  // For GLTF objects
+    name?: string      // For GLTF objects
 }
 
 interface PointLight {
@@ -44,7 +46,7 @@ interface SceneConfiguration {
         specularIntensity: number,
         specularColor: number[]
     },
-    shadowCamera: {
+    ShadowCamera: {
         position: number[],
         target: number[]
     },
@@ -87,6 +89,87 @@ export class Scene {
         return this._sceneObjects;
     }
 
+    public saveScene(): void{
+        // Convert internal Map of scene objects into a serializable array
+        const sceneObjectsArray: SceneObject[] = [];
+
+        for (const [id, obj] of this._sceneObjects._objects.entries()) {
+            const position = obj.position ? [obj.position.x ?? 0, obj.position.y ?? 0, obj.position.z ?? 0] : [0, 0, 0];
+            const rotation = obj.rotation ? [obj.rotation.x ?? 0, obj.rotation.y ?? 0, obj.rotation.z ?? 0] : [0, 0, 0];
+            const scale = obj.scale ? [obj.scale.x ?? 1, obj.scale.y ?? 1, obj.scale.z ?? 1] : [1, 1, 1];
+            const color = obj.color ? [
+                (obj.color.r ?? 1),
+                (obj.color.g ?? 1),
+                (obj.color.b ?? 1),
+                (obj.color.a ?? 1)
+            ] : [1, 1, 1, 1];
+
+            const entry: any = {
+                id: id,
+                position: position,
+                rotation: rotation,
+                color: color,
+                scale: scale,
+                filePath: obj.filePath ? obj.filePath : undefined
+            };
+
+            sceneObjectsArray.push(entry as SceneObject);
+        }
+
+        const shadowCameraData = this._shadowCamera ? {
+            position: [this._shadowCamera.eye.x, this._shadowCamera.eye.y, this._shadowCamera.eye.z],
+            target: [this._shadowCamera.target.x, this._shadowCamera.target.y, this._shadowCamera.target.z]
+        } : null;
+
+        const cameraData = this._camera ? {
+            position: [this._camera.eye.x, this._camera.eye.y, this._camera.eye.z],
+            target: [this._camera.target.x, this._camera.target.y, this._camera.target.z],
+            //up: [this._camera.up.x, this._camera.up.y, this._camera.up.z],
+            fov: this._camera.fov
+        } : null;
+
+        const directionalLightData = this._directionalLight ? {
+            color: [this._directionalLight.color.r, this._directionalLight.color.g, this._directionalLight.color.b, this._directionalLight.color.a],
+            intensity: this._directionalLight.intensity,
+            direction: [this._directionalLight.direction.x, this._directionalLight.direction.y, this._directionalLight.direction.z],
+            specularIntensity: this._directionalLight.specularIntensity,
+            specularColor: [this._directionalLight.specularColor.r, this._directionalLight.specularColor.g, this._directionalLight.specularColor.b, this._directionalLight.specularColor.a]
+        } : null;
+
+        const ambientLightData = this._ambientLight ? {
+            color: [this._ambientLight.color.r, this._ambientLight.color.g, this._ambientLight.color.b, this._ambientLight.color.a],
+            intensity: this._ambientLight.intensity
+        } : null;
+
+        const pointLightsData = this._pointLights ? this._pointLights.lights.map(light => ({
+            color: new Color(light.color.r, light.color.g, light.color.b, light.color.a),
+            intensity: light.intensity,
+            position: new Vec3(light.position.x, light.position.y, light.position.z),
+            specularIntensity: light.specularIntensity,
+            specularColor: new Color(light.specularColor.r, light.specularColor.g, light.specularColor.b, light.specularColor.a)
+        })) : null;
+
+        const sceneData = {
+            sceneObjects: sceneObjectsArray,
+            ShadowCamera: shadowCameraData,
+            Camera: cameraData,
+            DirectionalLight: directionalLightData,
+            AmbientLight: ambientLightData,
+            PointLights: pointLightsData
+        };
+
+        const json = JSON.stringify(sceneData, null, 2);
+
+        // download to device
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'scene.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     public addSceneObjects(objects: SceneObject[]): ObjectMap {
         objects.forEach(object => {
             const position = new Vec3(object.position[0], object.position[1], object.position[2]);
@@ -101,7 +184,7 @@ export class Scene {
                     cube.rotation = rotation;
                     cube.color = color;
                     cube.scale = scale;
-                    break;
+                    break;                
                 case "sphere":
                     const sphere = this._sceneObjects.createSphere(this._objectParameters, this._shadowTexture, false);
                     sphere.position = position;
@@ -110,7 +193,22 @@ export class Scene {
                     sphere.scale = scale;
                     break;
                 case "gltf":
-                    break; // TODO: Add GLTF support
+                    // Create GLTF object using the provided data
+                    if (object.filePath) {
+                        const gltfObject = this._sceneObjects.createGLTF(
+                            this._objectParameters, 
+                            this._shadowTexture, 
+                            object.filePath, 
+                            object.name
+                        );
+                        gltfObject.position = position;
+                        gltfObject.rotation = rotation;
+                        gltfObject.scale = scale;
+                        gltfObject.filePath = object.filePath;
+                        gltfObject.name = object.name || "GLTF Object";
+                        // Note: GLTF objects manage their own color internally
+                    }
+                    break;
                 default:
                     break;
             }
@@ -122,32 +220,36 @@ export class Scene {
 
     public deleteSceneObject(id: string): void {
         this._sceneObjects.objects.delete(id);
-    }
-
-    public addNewObject(type: string): Scene {
+    }    public addNewObject(type: string, data?: any): Scene {
         const objectId = `${type}_${Date.now()}`;
-        const object = {
+        let object: any = {
             id: objectId,
             position: [0,0,0], //TODO: make this camera.target at some point
             rotation: [0,0,0],
             color: [1,1,1,1],
             scale: [1,1,1]
+        };
+
+        // Add GLTF-specific data if provided
+        if (type === 'gltf' && data) {
+            object = {
+                ...object,
+                filePath: data.filePath,
+                name: data.name || `gltf_${Date.now()}`
+            };
         }
+
         this.addSceneObjects([object]);
         
         // Return the entire scene for re-parsing
         return this;
-    }
-
-    constructor(SceneData: SceneConfiguration, device: GPUDevice, aspectRatio: number, inputManager: InputManager, shadowTexture: Texture2D) {
+    }    constructor(SceneData: SceneConfiguration, device: GPUDevice, aspectRatio: number, inputManager: InputManager, shadowTexture: Texture2D, presentationFormat: GPUTextureFormat, depthTexture: GPUTexture) {
         this._camera = this.setupCamera(device, aspectRatio, inputManager, SceneData.Camera ?? null);
-        this._shadowCamera = this.setupShadowCamera(device, SceneData.shadowCamera ?? null);
         this._ambientLight = this.setupAmbientLight(device, SceneData.AmbientLight ?? null);
         this._directionalLight = this.setupDirectionalLight(device, SceneData.DirectionalLight ?? null);
+        this._shadowCamera = this.setupShadowCamera(device, SceneData.ShadowCamera ?? null);
         this._pointLights = this.setupPointLights(device, SceneData.PointLights ?? null);
         this._shadowTexture = shadowTexture;
-
-        this._directionalLight.direction = new Vec3(this._shadowCamera.target.x - this._shadowCamera.eye.x, this._shadowCamera.target.y - this._shadowCamera.eye.y, this._shadowCamera.target.z - this._shadowCamera.eye.z);
 
         this._objectParameters = {
             device: device,
@@ -156,6 +258,8 @@ export class Scene {
             ambientLight: this._ambientLight,
             directionalLight: this._directionalLight,
             pointLights: this._pointLights,
+            presentationFormat: presentationFormat,
+            depthTexture: depthTexture,
         };
         this._sceneObjects = new ObjectMap();
         this.setupSceneObjects(device, SceneData.sceneObjects ?? null);
@@ -184,11 +288,20 @@ export class Scene {
         return ambientLight;
     }
 
-    private setupShadowCamera(device: GPUDevice, shadowCameraData: SceneConfiguration["shadowCamera"] | null): ShadowCamera {
+    private setupShadowCamera(device: GPUDevice, shadowCameraData: SceneConfiguration["ShadowCamera"] | null): ShadowCamera {
         const shadowCamera = new ShadowCamera(device);
 
+        const sunRadius = 10;
+        const sceneCenter = new Vec3(0, 0, 0);
+        // we use directional light to simulate sunlight
+
+        const sunPosition = Vec3.add(
+            sceneCenter,
+            Vec3.scale(this._directionalLight.direction, -sunRadius)
+        );
+
         if (shadowCameraData != null) {
-            shadowCamera.eye = new Vec3(shadowCameraData.position[0] ?? 0, shadowCameraData.position[1] ?? 0, shadowCameraData.position[2] ?? 0);
+            shadowCamera.eye = new Vec3(sunPosition.x, sunPosition.y, sunPosition.z);
             shadowCamera.target = new Vec3(shadowCameraData.target[0] ?? 0, shadowCameraData.target[1] ?? 0, shadowCameraData.target[2] ?? 0);
         }
 

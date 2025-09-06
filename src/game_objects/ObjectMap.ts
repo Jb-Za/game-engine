@@ -5,19 +5,20 @@ import { DirectionalLight } from "../lights/DirectionalLight";
 import { PointLightsCollection } from "../lights/PointLight";
 import { Color } from "../math/Color";
 import { Vec3 } from "../math/Vec3";
+import { Quaternion } from "../math/Quaternion";
 import { RenderPipeline } from "../render_pipelines/RenderPipeline";
 import { Texture2D } from "../texture/Texture2D";
 import { Ball } from "./Ball";
 // import { Ball } from "./Ball";
 import { Cube } from "./Cube";
 import { Arrow } from "./Arrow";
-import { Quaternion } from "../math/Quaternion";
 import { GLTFAnimationPlayer } from "../gltf/GLTFAnimationPlayer";
 import { GridPlane } from "./GridPlane";
 import { GridPlaneTerrain, TerrainParameters } from "./GridPlaneTerrain";
 import { PlaneWater, WaterParameters } from "./PlaneWater";
 import { TerrainRenderPipeline } from "../render_pipelines/TerrainRenderPipeline";
 import { WaterRenderPipeline } from "../render_pipelines/WaterRenderPipeline";
+import { GLTFGameObject } from "../gltf/GLTFGameObject";
 // import { Floor } from "./Floor";
 // import { Paddle } from "./Paddle";
 
@@ -136,7 +137,6 @@ export class ObjectMap {
     this._objects.set(this.createObjectId('Arrow'), arrow);
     return arrow;
   }
-
   public createPlaneWater(objectParameters: ObjectParameters, shadowTexture: Texture2D, waterParams?: WaterParameters) {
     const planeWater = new PlaneWater(
       objectParameters.device,
@@ -152,6 +152,38 @@ export class ObjectMap {
     this.objectIdCounter++;
     this._objects.set(this.createObjectId('PlaneWater'), planeWater);
     return planeWater;
+  }  public createGLTF(objectParameters: ObjectParameters, shadowTexture: Texture2D, filePath: string, name?: string) {
+    const gltfObject = new GLTFGameObject(
+      objectParameters.device,
+      objectParameters.camera,
+      objectParameters.shadowCamera,
+      objectParameters.ambientLight,
+      objectParameters.directionalLight,
+      objectParameters.pointLights,
+      objectParameters.presentationFormat || navigator.gpu.getPreferredCanvasFormat(),
+      objectParameters.depthTexture || objectParameters.device.createTexture({
+        size: [1280, 720],
+        format: "depth32float",
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      }),
+      new Vec3(1, 1, 1), // Default scale
+      new Vec3(0, 0, 0), // Default position
+      new Quaternion(), // Default rotation
+      true // Enable lighting
+    );
+    
+    // Initialize the GLTF object asynchronously
+    gltfObject.initialize(filePath, shadowTexture).then(() => {
+      console.log(`GLTF object ${name || 'unnamed'} loaded successfully from ${filePath}`);
+    }).catch(error => {
+      console.error('Failed to initialize GLTF object:', error);
+    });
+    
+    // Assign a unique ID to the object
+    this.objectIdCounter++;
+    const objectId = name ? `gltf_${name}_${this.objectIdCounter}` : this.createObjectId('GLTF');
+    this._objects.set(objectId, gltfObject);
+    return gltfObject;
   }
 
   private generateRandomColor() : Color {
@@ -170,6 +202,8 @@ export interface GameObject {
     drawShadows: Function;
     animationPlayer?: GLTFAnimationPlayer;
     visible: boolean;
+    filePath?: string; // For objects, store the file path
+    name?: string;
     
     orbit?: boolean; // TODO: Decouple orbiting from the game object. this was POC
     orbitDistance?: number;
@@ -189,4 +223,6 @@ export interface ObjectParameters {
   ambientLight: AmbientLight;
   directionalLight: DirectionalLight;
   pointLights: PointLightsCollection;
+  presentationFormat?: GPUTextureFormat;
+  depthTexture?: GPUTexture;
 }

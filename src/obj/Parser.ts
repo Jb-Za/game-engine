@@ -2,7 +2,7 @@ import { Geometry } from "../geometry/Geometry";
 import { Color } from "../math/Color";
 
 type ObjFile = string;
-type FilePath = string;
+type filePath = string;
 
 export interface Material {
   name: string;
@@ -15,7 +15,7 @@ export interface Material {
 export default class ObjLoader {
   constructor() {}
 
-  static async load(filePath: FilePath): Promise<ObjFile> {
+  static async load(filePath: filePath): Promise<ObjFile> {
     const resp = await fetch(filePath);
     if (!resp.ok) {
       throw new Error(
@@ -31,7 +31,7 @@ export default class ObjLoader {
     return file;
   }
 
-  static async loadMtl(filePath: FilePath): Promise<string> {
+  static async loadMtl(filePath: filePath): Promise<string> {
     const resp = await fetch(filePath);
     if (!resp.ok) {
       throw new Error(`ObjLoader could not find MTL file at ${filePath}. Please check your path.`);

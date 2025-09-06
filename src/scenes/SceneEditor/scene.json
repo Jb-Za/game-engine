@@ -1,62 +1,197 @@
 {
-    "AmbientLight":{
-        "color": [1, 1, 1, 1],
-        "intensity": 0.6
+  "sceneObjects": [
+    {
+      "id": "Cube_1",
+      "position": [
+        0,
+        -0.4000000059604645,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": [
+        1,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     },
-    "DirectionalLight": {
-        "color": [1, 1, 1, 1],
-        "intensity": 0.5,
-        "direction": [-1, -1, 0],
-        "specularIntensity": 0,
-        "specularColor": [1, 1, 1, 1]
+    {
+      "id": "Cube_2",
+      "position": [
+        0,
+        -1,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": [
+        0.800000011920929,
+        0.800000011920929,
+        0.800000011920929,
+        1
+      ],
+      "scale": [
+        10,
+        0.10000000149011612,
+        10
+      ]
     },
-    "Camera": {
-        "position": [10, 4, 10],
-        "target": [0, 0, 0],
-        "up": [0, 1, 0],
-        "fov": 75
-    },
-    "shadowCamera": {
-        "position": [20, 10, 10],
-        "target": [0, 0, 0]
-    },
-    "PointLights": [
-        {
-            "color": [1, 1, 1, 1],
-            "intensity": 0,
-            "position": [0, 0, 0],
-            "specularIntensity": 0,
-            "specularColor": [1, 1, 1, 1]
-        },
-        {
-            "color": [1, 1, 1, 1],
-            "intensity": 0,
-            "position": [0, 0, 0],
-            "specularIntensity": 0,
-            "specularColor": [1, 1, 1, 1]
-        },
-        {
-            "color": [1, 1, 1, 1],
-            "intensity": 0,
-            "position": [0, 0, 0],
-            "specularIntensity": 0,
-            "specularColor": [1, 1, 1, 1]
-        }
+    {
+      "id": "GLTF_3",
+      "position": [
+        0,
+        -1,
+        -1.5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "scale": [
+        0.009999999776482582,
+        0.009999999776482582,
+        0.009999999776482582
+      ],
+      "filePath": "/src/scenes/SceneEditor/assets/Duck.glb"
+    }
+  ],
+  "ShadowCamera": {
+    "position": [
+      8,
+      10,
+      2
     ],
-    "sceneObjects" : [
-        {
-            "id": "Cube",
-            "position": [0, 0, 0],
-            "rotation": [0, 0, 0],
-            "color": [1, 0, 0, 1],
-            "scale": [1, 1, 1]
-        },
-        {
-            "id": "Cube",
-            "position": [0, -1, 0],
-            "rotation": [0, 0, 0],
-            "color": [0.8, 0.8, 0.8, 1],
-            "scale": [10, 0.1, 10]
-        }
+    "target": [
+      0,
+      0,
+      0
     ]
+  },
+  "Camera": {
+    "position": [
+      10,
+      4,
+      10
+    ],
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "fov": 75
+  },
+  "DirectionalLight": {
+    "color": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "intensity": 0.5,
+    "direction": [
+      -0.800000011920929,
+      -1,
+      -0.20000000298023224
+    ],
+    "specularIntensity": 0,
+    "specularColor": [
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "AmbientLight": {
+    "color": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "intensity": 0.6
+  },
+  "PointLights": [
+    {
+      "color": {
+        "0": 1,
+        "1": 1,
+        "2": 1,
+        "3": 1
+      },
+      "intensity": 0,
+      "position": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "specularIntensity": 0,
+      "specularColor": {
+        "0": 1,
+        "1": 1,
+        "2": 1,
+        "3": 1
+      }
+    },
+    {
+      "color": {
+        "0": 1,
+        "1": 1,
+        "2": 1,
+        "3": 1
+      },
+      "intensity": 0,
+      "position": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "specularIntensity": 0,
+      "specularColor": {
+        "0": 1,
+        "1": 1,
+        "2": 1,
+        "3": 1
+      }
+    },
+    {
+      "color": {
+        "0": 1,
+        "1": 1,
+        "2": 1,
+        "3": 1
+      },
+      "intensity": 0,
+      "position": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "specularIntensity": 0,
+      "specularColor": {
+        "0": 1,
+        "1": 1,
+        "2": 1,
+        "3": 1
+      }
+    }
+  ]
 }

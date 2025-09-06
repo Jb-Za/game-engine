@@ -71,9 +71,9 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   floor.pipeline.shadowTexture = shadowTexture; floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
   
-  const gltfPath = "../../../assets/gltf/MushroomGuy.glb";
+  const filePath = "../../../assets/gltf/MushroomGuy.glb";
   const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture, new Vec3(1, 1, 1), new Vec3(0, 0, 0), new Quaternion(), true); // Enable lighting
-  await _gltfGameObject.initialize(gltfPath);
+  await _gltfGameObject.initialize(filePath);
   _gltfGameObject.skinMode = 0;
   if (typeof options?.onGLTFGameObject === "function") {
     options.onGLTFGameObject(_gltfGameObject);

@@ -1,0 +1,9 @@
+<!-- Default GLTF icon placeholder -->
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="8" fill="#333333"/>
+  <path d="M20 20H44V44H20V20Z" stroke="#666666" stroke-width="2" fill="none"/>
+  <path d="M26 28L32 22L38 28" stroke="#888888" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M32 22V38" stroke="#888888" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="36" cy="30" r="2" fill="#888888"/>
+  <text x="32" y="52" text-anchor="middle" fill="#888888" font-family="Arial, sans-serif" font-size="8">GLTF</text>
+</svg>

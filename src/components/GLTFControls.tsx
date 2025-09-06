@@ -5,7 +5,7 @@ import { getGLTFAnimationNames } from "../gltf/GLTFGameObject";
 
 interface GLTFControlsProps {
   onGLTFOptionsChange: (opts: {
-    gltfPath: string;
+    filePath: string;
     skinMode: boolean;
     onGLTFGameObject: (gltfGameObject: any) => void;
   }) => void;
@@ -35,7 +35,7 @@ const GLTFControls: React.FC<GLTFControlsProps> = ({ onGLTFOptionsChange }) => {
   // Notify parent of GLTF options only when the GLTF file changes
   useEffect(() => {
     onGLTFOptionsChange({
-      gltfPath: selectedGLTF,
+      filePath: selectedGLTF,
       skinMode,
       onGLTFGameObject: (gltfGameObject: any) => {
         gltfGameObjectRef.current = gltfGameObject;

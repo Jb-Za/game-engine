@@ -55,10 +55,9 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
     // The raytracing scene updates happen automatically through the updateSceneFromState in the controls
     console.log('Ray tracing scene state changed:', state);
   };
-
-  const handleAddObject = async (type: 'cube' | 'sphere' | 'light' | 'camera') => {
+  const handleAddObject = async (type: 'cube' | 'sphere' | 'light' | 'camera' | 'gltf', data?: any) => {
     if (sceneModuleRef.current && typeof sceneModuleRef.current.addObject === 'function') {
-      const updatedScene = sceneModuleRef.current.addObject(type);
+      const updatedScene = sceneModuleRef.current.addObject(type, data);
       if (updatedScene && sceneEditorControlsRef.current) {
         console.log('Object added, refreshing scene');
         // Refresh the scene editor to show the new object
@@ -119,10 +118,35 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
   };
 
   const handleLoadScene = async () => {
-    if (sceneModuleRef.current && typeof sceneModuleRef.current.loadScene === 'function') {
-      sceneModuleRef.current.loadScene();
+    try {
+      const file: File | null = await new Promise(resolve => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = () => resolve(input.files && input.files.length > 0 ? input.files[0] : null);
+        // Trigger picker - must be called from a user gesture (button) for most browsers
+        input.click();
+      });
+
+      if (!file) return; // user cancelled
+
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+
+      if (sceneModuleRef.current && typeof sceneModuleRef.current.loadScene === 'function') {
+        sceneModuleRef.current.loadScene(parsed);
+        // Refresh editor panels to reflect newly loaded scene
+        if (sceneEditorControlsRef.current) sceneEditorControlsRef.current.refreshFromScene();
+        if (rayTracingSceneEditorControlsRef.current) rayTracingSceneEditorControlsRef.current.refreshFromScene();
+      } else {
+        setError('No scene module available to load scene into');
+      }
+    } catch (err: any) {
+      console.error('Failed to load scene file', err);
+      setError(err instanceof Error ? err.message : String(err));
     }
   };
+
   // Preload all scene modules for dynamic imports
   const sceneModules = {
     ...import.meta.glob<any>('../scenes/**/*.ts'),

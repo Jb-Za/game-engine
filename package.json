@@ -8,8 +8,9 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "npm run generate:gltf-manifest && vite",
+    "generate:gltf-manifest": "node scripts/generate-gltf-manifest.js",
+    "build": "tsc && npm run generate:gltf-manifest && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {

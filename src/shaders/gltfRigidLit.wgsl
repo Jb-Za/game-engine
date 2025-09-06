@@ -60,7 +60,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
             var shadowCoords = input.lightSpaceFragmentPos.xyz / input.lightSpaceFragmentPos.w;
             var shadowTextureCoords = shadowCoords.xy * 0.5 + 0.5;
             shadowTextureCoords.y = 1.0 - shadowTextureCoords.y;
-            var shadow = textureSampleCompare(shadowTexture, shadowSampler, shadowTextureCoords, shadowCoords.z - 0.01);
+            var shadow = textureSampleCompare(shadowTexture, shadowSampler, shadowTextureCoords, shadowCoords.z - 0.008);
 
             // Vector toward the eye
             var toEye = normalize(input.eye - input.fragPos);

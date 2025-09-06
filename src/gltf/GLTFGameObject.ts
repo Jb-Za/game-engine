@@ -28,6 +28,8 @@ export class GLTFGameObject implements GameObject {
   public materialBindGroups: GPUBindGroup[] = [];  public pipeline: any;
   public color: Color = new Color(1, 1, 1, 1); // Default color
   public visible: boolean = true;
+  public filePath: string = ""; // Path to the GLTF/GLB file
+  public name: string = ""; // Name of the GLTF object
 
   public get animationPlayer(): GLTFAnimationPlayer | undefined {
     return this._animationPlayer;
@@ -94,9 +96,8 @@ export class GLTFGameObject implements GameObject {
     const renderMode = this.useLighting ? 3 : 2; // Mode 3 for lighting, mode 2 for texture
     this.device.queue.writeBuffer(this._gltfScene.bindGroupLayouts.generalUniformsBuffer, 0, new Uint32Array([renderMode, this.skinMode]));
   }  
-  
-  public draw(renderPassEncoder: GPURenderPassEncoder) {
-    if (!this.visible) return;
+    public draw(renderPassEncoder: GPURenderPassEncoder) {
+    if (!this.visible || !this._gltfScene) return;
     for (const scene of this._gltfScene.scenes) {
       const bindGroups = [
         this._gltfScene.bindGroupLayouts.cameraBindGroup, 
@@ -107,7 +108,7 @@ export class GLTFGameObject implements GameObject {
       
       scene.root.renderDrawables(renderPassEncoder, bindGroups, this._gltfScene.getBindGroupForPrimitive);
     }
-  }  public drawShadows(renderPassEncoder: GPURenderPassEncoder) {
+  }public drawShadows(renderPassEncoder: GPURenderPassEncoder) {
     if (!this.visible || !this._gltfScene) return;
     
     // Create shadow-specific camera bind group that uses shadow camera projection-view matrix at binding 0
@@ -191,7 +192,9 @@ export class GLTFGameObject implements GameObject {
     if (this._animationPlayer) {
       this._animationPlayer.activeAnimation = idx;
     }
-  }  // Add a public method to set the active animation by name
+  }  
+  
+  // Add a public method to set the active animation by name
   public setActiveAnimationByName(name: string) {
     if (!this.gltfScene || !this.gltfScene.animations) {
       console.warn("Cannot set animation: No animations available for this model");
@@ -209,7 +212,6 @@ export class GLTFGameObject implements GameObject {
       console.warn(`Animation "${name}" not found in this model`);
     }
   }
-
   /**
    * Set the animation playback speed
    * @param speed Animation speed multiplier (0.0 to 1.0)
@@ -220,6 +222,13 @@ export class GLTFGameObject implements GameObject {
     } else {
       console.warn("Cannot set animation speed: No animation player available for this model");
     }
+  }
+
+  /**
+   * Reset the model to its bind pose (original transform before animation)
+   */
+  public setSkinMode(mode: number) {
+    this.skinMode = mode;
   }
 }
 
