@@ -14,7 +14,7 @@ let animationFrameId: number | null = null;
 
 // Module-level resources so loadScene can be called at any time
 let _device: GPUDevice | null = null;
-let _gpuContext: GPUCanvasContext | null = null;
+// let _gpuContext: GPUCanvasContext | null = null;
 let _presentationFormat: GPUTextureFormat | null = null;
 let _canvas: HTMLCanvasElement | null = null;
 let _infoElem: HTMLPreElement | null = null;
@@ -46,7 +46,7 @@ async function init(
     // Store module-level references for later use
     _canvas = canvas;
     _device = device;
-    _gpuContext = gpuContext;
+    // _gpuContext = gpuContext;
     _presentationFormat = presentationFormat;
     _infoElem = infoElem;
 

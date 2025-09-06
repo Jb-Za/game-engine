@@ -13,8 +13,6 @@ import { ObjectMap } from "../../game_objects/ObjectMap";
 import { GLTFGameObject } from "../../gltf/GLTFGameObject";
 import LayoutConfig from "./LayoutConfig.json";
 import { Quaternion } from "../../math/Quaternion";
-import { Ball } from "../../game_objects/Ball";
-import { Cube } from "../../game_objects/Cube";
 
 let animationFrameId: number | null = null;
 

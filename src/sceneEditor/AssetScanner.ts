@@ -11,13 +11,13 @@ export interface GLTFAssetInfo {
   category?: string;
 }
 
-interface AssetConfig {
-  name: string;
-  file: string;
-  description: string;
-  category: string;
-  hasAnimation: boolean;
-}
+// interface AssetConfig {
+//   name: string;
+//   file: string;
+//   description: string;
+//   category: string;
+//   hasAnimation: boolean;
+// }
 
 export class AssetScanner {
   private static readonly ASSETS_PATH = '/src/scenes/SceneEditor/assets/';
