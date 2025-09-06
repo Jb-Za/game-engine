@@ -1,8 +1,7 @@
 [
-  "gltf\\gltf\\AntiqueCamera.glb",
-  "gltf\\gltf\\Avocado.glb",
-  "gltf\\gltf\\CesiumMan.glb",
-  "gltf\\gltf\\Duck.glb",
-  "gltf\\gltf\\MushroomGuy.glb",
-  "gltf\\gltf\\sponza.glb"
+  "assets/gltf/AntiqueCamera.glb",
+  "assets/gltf/CesiumMan.glb",
+  "assets/gltf/Duck.glb",
+  "assets/gltf/MushroomGuy.glb",
+  "assets/gltf/sponza.glb"
 ]

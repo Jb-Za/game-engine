@@ -7,11 +7,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ASSETS_DIR = path.join(__dirname, '..', 'public', 'assets');
+const ASSETS_DIR = path.join(__dirname, '..', 'public');
 const OUT_DIR = path.join(__dirname, '..', 'public', 'config');
 const OUT_FILE = path.join(OUT_DIR, 'gltf-assets.json');
 const IGNORE_PATHS = [
-  'gltfDU', // Example: ignore a directory named 'ignore_this_dir'
+  'assets/gltfDU', // Example: ignore a directory named 'ignore_this_dir'
   'somefile.gltf',   // Example: ignore a specific file
 ];
 
@@ -26,9 +26,9 @@ async function walk(dir) {
     const full = path.join(dir, e.name);
     if (e.isDirectory()) {
       const sub = await walk(full);
-      files.push(...sub.map(s => path.relative(ASSETS_DIR, path.join(full, s))));
+      files.push(...sub);
     } else if (/\.(gltf|glb)$/i.test(e.name)) {
-      files.push(relPath);
+      files.push(path.relative(ASSETS_DIR, full).replace(/\\/g, '/'));
     }
   }
   return files;

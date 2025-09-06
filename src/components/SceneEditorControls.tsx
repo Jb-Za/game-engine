@@ -120,7 +120,13 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
         step={step}
         placeholder={placeholder}
         value={local}
-        onChange={(e) => setLocal(e.target.value)}
+        onChange={(e) => {
+          const val = e.target.value;
+          // Allow empty, '-', '.', '-.', or valid number
+          if (/^-?\d*(\.|,)?\d*$/.test(val)) {
+            setLocal(val);
+          }
+        }}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -1061,29 +1067,66 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
 
                 <label style={labelStyle}>Scale</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', marginBottom: '8px' }}>
-                  <NumericInput
+                  <input
                     style={inputStyle}
+                    type="number"
                     step="0.01"
                     placeholder="X"
                     value={selectedObject.scale.x}
-                    onCommit={(num) => updateObject(selectedObject.id, { scale: { ...selectedObject.scale, x: num } })}
+                    onChange={(e) => updateObject(selectedObject.id, { scale: { ...selectedObject.scale, x: parseFloat(e.target.value) || 0 } })}
                   />
-                  <NumericInput
+                  <input
                     style={inputStyle}
+                    type="number"
                     step="0.01"
                     placeholder="Y"
                     value={selectedObject.scale.y}
-                    onCommit={(num) => updateObject(selectedObject.id, { scale: { ...selectedObject.scale, y: num } })}
+                    onChange={(e) => updateObject(selectedObject.id, { scale: { ...selectedObject.scale, y: parseFloat(e.target.value) || 0 } })}
                   />
-                  <NumericInput
+                  <input
                     style={inputStyle}
+                    type="number"                    
                     step="0.01"
                     placeholder="Z"
                     value={selectedObject.scale.z}
-                    onCommit={(num) => updateObject(selectedObject.id, { scale: { ...selectedObject.scale, z: num } })}
+                    onChange={(e) => updateObject(selectedObject.id, { scale: { ...selectedObject.scale, z: parseFloat(e.target.value) || 0 } })}
                   />
                 </div>
-              </div>              {/* Appearance */}
+
+                <label style={labelStyle}>Rotation (degrees)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', marginBottom: '8px' }}>
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    step="1"
+                    placeholder="X"
+                    value={selectedObject.rotation.x * (180 / Math.PI)}
+                    onChange={(e) => updateObject(selectedObject.id, { 
+                      rotation: { ...selectedObject.rotation, x: parseFloat(e.target.value) * (Math.PI / 180) } 
+                    })}
+                  />
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    step="1"
+                    placeholder="Y"
+                    value={selectedObject.rotation.y * (180 / Math.PI)}
+                    onChange={(e) => updateObject(selectedObject.id, { 
+                      rotation: { ...selectedObject.rotation, y: parseFloat(e.target.value) * (Math.PI / 180) } 
+                    })}
+                  />
+                  <input
+                    style={inputStyle}
+                    type="number"
+                    step="1"
+                    placeholder="Z"
+                    value={selectedObject.rotation.z * (180 / Math.PI)}
+                    onChange={(e) => updateObject(selectedObject.id, { 
+                      rotation: { ...selectedObject.rotation, z: parseFloat(e.target.value) * (Math.PI / 180) } 
+                    })}
+                  />
+                </div>
+              </div>{/* Appearance */}
               <div style={{ marginBottom: '20px' }}>
                 <h4 style={{ marginBottom: '10px', fontSize: '12px', color: '#ccc' }}>APPEARANCE</h4>
                 
