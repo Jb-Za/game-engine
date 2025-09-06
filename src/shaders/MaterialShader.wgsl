@@ -110,7 +110,7 @@ fn materialFS(in : VSOutput) -> @location(0) vec4f
     var shadowTextureCoords = shadowCoords.xy * 0.5 + 0.5;
     shadowTextureCoords.y = 1.0 - shadowTextureCoords.y;
     
-    var shadow = textureSampleCompare(shadowTexture, shadowSampler, shadowTextureCoords, shadowCoords.z - 0.01); //0.01 is a bias. have yo play with this value
+    var shadow = textureSampleCompare(shadowTexture, shadowSampler, shadowTextureCoords, shadowCoords.z - 0.05); //0.01 is a bias. have yo play with this value
 
     //vector toward the eye
     var toEye = normalize(in.eye - in.fragPos);

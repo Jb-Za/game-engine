@@ -40,13 +40,12 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   const ambientLight = new AmbientLight(device);
   ambientLight.color = new Color(1, 1, 1, 1);
   ambientLight.intensity = 0.6;
-
   const directionalLight = new DirectionalLight(device);
   directionalLight.color = new Color(1, 1, 1, 1);
-  directionalLight.intensity = 0;
-  directionalLight.direction = new Vec3(-1, 0, 0);
-  directionalLight.specularIntensity = 0;
-  directionalLight.specularColor = new Color(1, 0, 0, 1);
+  directionalLight.intensity = 0.8; // Enable directional light
+  directionalLight.direction = new Vec3(-1, -1, 0);
+  directionalLight.specularIntensity = 0.5;
+  directionalLight.specularColor = new Color(1, 1, 1, 1);
 
   const pointLights = new PointLightsCollection(device, 3);
   pointLights.lights[0].color = new Color(0, 0, 1, 1);
@@ -72,9 +71,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   floor.pipeline.shadowTexture = shadowTexture; floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
   
-
   const gltfPath = "../../../assets/gltf/MushroomGuy.glb";
-  const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
+  const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture, new Vec3(1, 1, 1), new Vec3(0, 0, 0), new Quaternion(), true); // Enable lighting
   await _gltfGameObject.initialize(gltfPath);
   _gltfGameObject.skinMode = 0;
   if (typeof options?.onGLTFGameObject === "function") {

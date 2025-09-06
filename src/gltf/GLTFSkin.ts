@@ -12,15 +12,14 @@ export class GLTFSkin {
   // [5, 2, 3] means our joint info is at nodes 5, 2, and 3
   joints: number[];
   // Bind Group for this skin's uniform buffer
-  skinBindGroup: GPUBindGroup;
-  // Static bindGroupLayout shared across all skins
+  skinBindGroup: GPUBindGroup;  // Static bindGroupLayout shared across all skins
   // In a larger shader with more properties, certain bind groups
   // would likely have to be combined due to device limitations in the number of bind groups
   // allowed within a shader
   // Inverse bind matrices parsed from the accessor
   private inverseBindMatrices: Float32Array;
-  private jointMatricesUniformBuffer: GPUBuffer;
-  private inverseBindMatricesUniformBuffer: GPUBuffer;
+  public jointMatricesUniformBuffer: GPUBuffer;
+  public inverseBindMatricesUniformBuffer: GPUBuffer;
   static skinBindGroupLayout: GPUBindGroupLayout;
   static rigidBindGroupLayout: GPUBindGroupLayout;
 

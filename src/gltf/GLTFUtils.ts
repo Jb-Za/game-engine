@@ -11,8 +11,14 @@ import { GLTFAccessor } from "./GLTFAccessor.ts";
 import { GLTFBufferView } from "./GLTFBufferView.ts";
 import { BindGroupLayouts } from "./BindGroupLayouts.ts";
 import { Camera } from "../camera/Camera.ts";
+import { ShadowCamera } from "../camera/ShadowCamera.ts";
+import { AmbientLight } from "../lights/AmbientLight.ts";
+import { DirectionalLight } from "../lights/DirectionalLight.ts";
+import { PointLightsCollection } from "../lights/PointLight.ts";
 import gltfSkinnedWGSL from "../shaders/gltfSkinned.wgsl?raw";
 import gltfRigidWGSL from "../shaders/gltfRigid.wgsl?raw";
+import gltfRigidLitWGSL from "../shaders/gltfRigidLit.wgsl?raw";
+import gltfSkinnedLitWGSL from "../shaders/gltfSkinnedLit.wgsl?raw";
 
 //most of this implementation is based on the gltf-skinning example from the webgpu samples repo
 //https://webgpu.github.io/webgpu-samples/.
@@ -204,11 +210,61 @@ export const validateBinaryHeader = (header: Uint32Array) => {
   }
 };
 
+// Helper functions for lit materials
+const createDiffuseColorBuffer = (device: GPUDevice, color: number[]): GPUBuffer => {
+  const buffer = device.createBuffer({
+    size: 16, // vec4<f32>
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(buffer, 0, new Float32Array(color));
+  return buffer;
+};
+
+const createShininessBuffer = (device: GPUDevice, shininess: number): GPUBuffer => {
+  const buffer = device.createBuffer({
+    size: 4, // f32
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(buffer, 0, new Float32Array([shininess]));
+  return buffer;
+};
+
+const createDefaultShadowTexture = (device: GPUDevice): GPUTexture => {
+  return device.createTexture({
+    size: [1, 1],
+    format: "depth32float",
+    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+};
+
+const createDefaultShadowSampler = (device: GPUDevice): GPUSampler => {
+  return device.createSampler({
+    magFilter: "linear",
+    minFilter: "linear",
+    compare: "less",
+  });
+};
+
 // Upload a GLB model, parse its JSON and Binary components, and create the requisite GPU resources
 // to render them. NOTE: Not extensible to all GLTF contexts at this point in time
-export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPUDevice, camera: Camera, depthTexture: GPUTexture, presentationFormat: GPUTextureFormat): Promise<TempReturn> => {
-  // Binary GLTF layout: https://cdn.willusher.io/webgpu-0-to-gltf/glb-layout.svg
-  const bindGroupLayouts = new BindGroupLayouts(device, camera);
+export const convertGLBToJSONAndBinary = async (
+  buffer: ArrayBuffer, 
+  device: GPUDevice, 
+  camera: Camera, 
+  depthTexture: GPUTexture, 
+  presentationFormat: GPUTextureFormat,
+  shadowCamera?: ShadowCamera,
+  ambientLight?: AmbientLight,
+  directionalLight?: DirectionalLight,
+  pointLights?: PointLightsCollection,
+  useLighting: boolean = false,
+  _shadowTexture?: any
+): Promise<TempReturn> => {  // Binary GLTF layout: https://cdn.willusher.io/webgpu-0-to-gltf/glb-layout.svg
+  
+  // Use actual shadow texture if provided, otherwise use default
+  const shadowTexture = _shadowTexture ? _shadowTexture.texture : createDefaultShadowTexture(device);
+  const shadowSampler = _shadowTexture ? _shadowTexture.sampler : createDefaultShadowSampler(device);
+  const bindGroupLayouts = new BindGroupLayouts(device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
   const jsonHeader = new DataView(buffer, 0, 20);
   validateGLBHeader(jsonHeader);
 
@@ -537,69 +593,303 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
 
         baseColorTexture = colorTexture;
       }
+    }    
+    
+    // Create material bind group based on lighting mode
+    if (useLighting && ambientLight && directionalLight && pointLights) {      // Create enhanced material bind group for lit rendering
+      const bindGroup = device.createBindGroup({
+        layout: bindGroupLayouts.litMaterialBindGroupLayout,
+        entries: [
+          {
+            binding: 0,
+            resource: baseColorTexture.createView(),
+          },
+          {
+            binding: 1,
+            resource: baseColorSampler,
+          },          {
+            binding: 2,
+            resource: { buffer: createDiffuseColorBuffer(device, material.pbrMetallicRoughness?.baseColorFactor || [1, 1, 1, 1]) },
+          },
+          {
+            binding: 3,
+            resource: { buffer: createShininessBuffer(device, 32.0) }, // Default shininess
+          },
+          {
+            binding: 4,
+            resource: shadowTexture.createView(),
+          },
+          {
+            binding: 5,
+            resource: shadowSampler,
+          },
+          // Light bindings (combined to stay within 4 bind group limit)
+          {
+            binding: 6,
+            resource: { buffer: ambientLight.buffer.buffer },
+          },
+          {
+            binding: 7,
+            resource: { buffer: directionalLight.buffer.buffer },
+          },
+          {
+            binding: 8,
+            resource: { buffer: pointLights.buffer.buffer },
+          },
+        ],
+        label: `LitMaterial_${materialBindGroups.length}_BindGroup`,
+      });
+      materialBindGroups.push(bindGroup);
+    } else {
+      // Create standard material bind group
+      const bindGroup = device.createBindGroup({
+        layout: bindGroupLayouts.materialBindGroupLayout,
+        entries: [
+          {
+            binding: 0,
+            resource: baseColorTexture.createView(),
+          },
+          {
+            binding: 1,
+            resource: baseColorSampler,
+          },
+        ],
+        label: `Material_${materialBindGroups.length}_BindGroup`,
+      });
+      materialBindGroups.push(bindGroup);
     }
-
-    // For rigid models - create standard material bind group
-    const bindGroup = device.createBindGroup({
-      layout: bindGroupLayouts.materialBindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: baseColorTexture.createView(),
-        },
-        {
-          binding: 1,
-          resource: baseColorSampler,
-        },
-      ],
-      label: `Material_${materialBindGroups.length}_BindGroup`,
-    });
-
-    materialBindGroups.push(bindGroup);
   }
-
   // Add a default material bind group if no materials are defined
   if (materialBindGroups.length === 0) {
-    const bindGroup = device.createBindGroup({
-      layout: bindGroupLayouts.materialBindGroupLayout,
-      entries: [
-        {
-          binding: 0,
-          resource: defaultColorTexture.createView(),
-        },
-        {
-          binding: 1,
-          resource: defaultSampler,
-        },
-      ],
-      label: "Default_Material_BindGroup",
-    });
-
-    materialBindGroups.push(bindGroup);
+    if (useLighting && ambientLight && directionalLight && pointLights) {
+      // Create enhanced default material bind group for lit rendering
+      const bindGroup = device.createBindGroup({
+        layout: bindGroupLayouts.litMaterialBindGroupLayout,
+        entries: [
+          {
+            binding: 0,
+            resource: defaultColorTexture.createView(),
+          },
+          {
+            binding: 1,
+            resource: defaultSampler,
+          },          {
+            binding: 2,
+            resource: { buffer: createDiffuseColorBuffer(device, [1, 1, 1, 1]) },
+          },
+          {
+            binding: 3,
+            resource: { buffer: createShininessBuffer(device, 32.0) },
+          },
+          {
+            binding: 4,
+            resource: shadowTexture.createView(),
+          },
+          {
+            binding: 5,
+            resource: shadowSampler,
+          },
+        ],
+        label: "Default_LitMaterial_BindGroup",
+      });
+      materialBindGroups.push(bindGroup);
+    } else {
+      // Create standard default material bind group
+      const bindGroup = device.createBindGroup({
+        layout: bindGroupLayouts.materialBindGroupLayout,
+        entries: [
+          {
+            binding: 0,
+            resource: defaultColorTexture.createView(),
+          },
+          {
+            binding: 1,
+            resource: defaultSampler,
+          },
+        ],
+        label: "Default_Material_BindGroup",
+      });
+      materialBindGroups.push(bindGroup);
+    }
   }
-
   GLTFSkin.createSharedBindGroupLayout(device);
+  
+  // Create enhanced skinned bind groups for lit skinned materials if lighting is enabled
+  const skinnedBindGroups: GPUBindGroup[] = [];
+  
   for (const skin of jsonChunk.skins ?? []) {
     if (skin.inverseBindMatrices !== undefined && accessors[skin.inverseBindMatrices] !== undefined) {
       const inverseBindMatrixAccessor = accessors[skin.inverseBindMatrices];
       const joints = skin.joints;
-      skins.push(new GLTFSkin(device, inverseBindMatrixAccessor, joints, baseColorTexture, baseColorSampler));
+      const gltfSkin = new GLTFSkin(device, inverseBindMatrixAccessor, joints, baseColorTexture, baseColorSampler);
+      skins.push(gltfSkin);
+      
+      // Create enhanced bind group for lit skinned materials
+      if (useLighting && ambientLight && directionalLight && pointLights) {
+        const litSkinnedBindGroup = device.createBindGroup({
+          layout: bindGroupLayouts.litSkinnedMaterialBindGroupLayout,
+          entries: [
+            // Material entries
+            {
+              binding: 0,
+              resource: baseColorTexture.createView(),
+            },
+            {
+              binding: 1,
+              resource: baseColorSampler,
+            },
+            // Skin data entries
+            {
+              binding: 2,
+              resource: {
+                buffer: gltfSkin.jointMatricesUniformBuffer,
+              },
+            },
+            {
+              binding: 3,
+              resource: {
+                buffer: gltfSkin.inverseBindMatricesUniformBuffer,
+              },
+            },
+            // Additional material properties for lighting
+            {
+              binding: 4,
+              resource: { buffer: createDiffuseColorBuffer(device, [1, 1, 1, 1]) },
+            },            {
+              binding: 5,
+              resource: { buffer: createShininessBuffer(device, 32.0) },
+            },
+            {
+              binding: 6,
+              resource: shadowTexture.createView(),
+            },
+            {
+              binding: 7,
+              resource: shadowSampler,
+            },
+            // Light entries
+            {
+              binding: 8,
+              resource: { buffer: ambientLight.buffer.buffer },
+            },
+            {
+              binding: 9,
+              resource: { buffer: directionalLight.buffer.buffer },
+            },
+            {
+              binding: 10,
+              resource: { buffer: pointLights.buffer.buffer },
+            },
+          ],
+          label: `LitSkinnedMaterial_${skinnedBindGroups.length}_BindGroup`,
+        });
+        skinnedBindGroups.push(litSkinnedBindGroup);
+      } else {
+        // Use the standard skin bind group for non-lit skinned materials
+        skinnedBindGroups.push(gltfSkin.skinBindGroup);
+      }
     }
-  }
-
-  const staticLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.materialBindGroupLayout];
+  }const staticLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.materialBindGroupLayout];
   const skinLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.skinnedMaterialBindGroupLayout];
-  if (jsonChunk.skins) {
-    meshes.forEach((mesh: GLTFMesh) => {
-      mesh.buildRenderPipeline(device, gltfSkinnedWGSL, gltfSkinnedWGSL, presentationFormat, depthTexture.format, skinLayouts);
-    });
-  } else {
-    meshes.forEach((mesh: GLTFMesh) => {
-      mesh.buildRenderPipeline(device, gltfRigidWGSL, gltfRigidWGSL, presentationFormat, depthTexture.format, staticLayouts);
-    });
-  }
+    // Lighting layouts for lit rendering (only 4 bind groups to stay within WebGPU limit)
+  const litStaticLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.litMaterialBindGroupLayout];
+  const litSkinLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.litSkinnedMaterialBindGroupLayout];  // Apply shader selection per primitive rather than per model
+  meshes.forEach((mesh: GLTFMesh) => {
+    mesh.primitives.forEach((primitive) => {
+      // Check if this specific primitive has joint data
+      const hasJoints = primitive.attributeNames.includes('JOINTS_0') && primitive.attributeNames.includes('WEIGHTS_0');
+      
+      if (hasJoints && jsonChunk.skins) {
+        // This primitive needs skinned shader
+        if (useLighting && ambientLight && directionalLight && pointLights) {
+          // For lit skinned rendering, pass only uniforms for vertex shader since vertex shader is dynamically generated
+          const skinnedUniforms = `
+struct GeneralUniforms {
+  render_mode: u32,
+  skin_mode: u32,
+}
 
-  const selectedBindGroup = jsonChunk.skins ? skins.map((skin) => skin.skinBindGroup) : materialBindGroups;
+struct NodeUniforms {
+  world_matrix: mat4x4f,
+}
+
+@group(0) @binding(0) var<uniform> projectionView: mat4x4f;
+@group(0) @binding(1) var<uniform> eyePosition: vec3f;
+@group(0) @binding(2) var<uniform> lightSpaceProjectionView: mat4x4f;
+@group(1) @binding(0) var<uniform> general_uniforms: GeneralUniforms;
+@group(2) @binding(0) var<uniform> node_uniforms: NodeUniforms;
+@group(3) @binding(2) var<storage, read> joint_matrices: array<mat4x4f>;
+@group(3) @binding(3) var<storage, read> inverse_bind_matrices: array<mat4x4f>;
+
+const MAX_JOINTS_PER_VERTEX = 4u;
+`;
+          primitive.buildRenderPipeline(device, skinnedUniforms, gltfSkinnedLitWGSL, presentationFormat, depthTexture.format, litSkinLayouts, `PrimitivePipeline_Skinned_Lit_${mesh.name}_${primitive.materialIndex || 0}`);
+        } else {
+          primitive.buildRenderPipeline(device, gltfSkinnedWGSL, gltfSkinnedWGSL, presentationFormat, depthTexture.format, skinLayouts, `PrimitivePipeline_Skinned_${mesh.name}_${primitive.materialIndex || 0}`);
+        }
+      } else {
+        // This primitive needs rigid shader
+        if (useLighting && ambientLight && directionalLight && pointLights) {
+          // For lit rendering, provide basic uniforms for vertex shader since vertex shader is dynamically generated
+          const rigidUniforms = `
+struct GeneralUniforms {
+  render_mode: u32,
+}
+
+struct NodeUniforms {
+  world_matrix: mat4x4f,
+}
+
+@group(0) @binding(0) var<uniform> projectionView: mat4x4f;
+@group(0) @binding(1) var<uniform> eyePosition: vec3f;
+@group(0) @binding(2) var<uniform> lightSpaceProjectionView: mat4x4f;
+@group(1) @binding(0) var<uniform> general_uniforms: GeneralUniforms;
+@group(2) @binding(0) var<uniform> node_uniforms: NodeUniforms;
+`;
+          primitive.buildRenderPipeline(device, rigidUniforms, gltfRigidLitWGSL, presentationFormat, depthTexture.format, litStaticLayouts, `PrimitivePipeline_Rigid_Lit_${mesh.name}_${primitive.materialIndex || 0}`);
+        } else {
+          primitive.buildRenderPipeline(device, gltfRigidWGSL, gltfRigidWGSL, presentationFormat, depthTexture.format, staticLayouts, `PrimitivePipeline_Rigid_${mesh.name}_${primitive.materialIndex || 0}`);
+        }
+      }    });
+  });
+  // Build shadow render pipelines for all meshes after regular pipelines are built
+  // Shadow pipelines need different bind group layouts for rigid vs skinned models
+  const rigidShadowBindGroupLayouts = [
+    bindGroupLayouts.cameraBGCluster,        // group 0: camera + projection
+    bindGroupLayouts.generalUniformsBGCLuster, // group 1: general uniforms
+    bindGroupLayouts.nodeUniformsBindGroupLayout // group 2: node transform
+  ];
+  
+  const skinnedShadowBindGroupLayouts = [
+    bindGroupLayouts.cameraBGCluster,        // group 0: camera + projection
+    bindGroupLayouts.generalUniformsBGCLuster, // group 1: general uniforms
+    bindGroupLayouts.nodeUniformsBindGroupLayout, // group 2: node transform
+    bindGroupLayouts.skinnedMaterialBindGroupLayout // group 3: joint matrices for skinned models
+  ];
+  
+  meshes.forEach((mesh: GLTFMesh) => {
+    mesh.buildShadowRenderPipelines(device, rigidShadowBindGroupLayouts, skinnedShadowBindGroupLayouts);
+  });
+
+  // Create separate bind group arrays for primitives to choose from based on their shader requirements
+  const materialBindGroupsForSelection = materialBindGroups;
+  const skinnedBindGroupsForSelection = skinnedBindGroups;
+  
+  // Create a mapping function that primitives can use to get the correct bind group
+  const getBindGroupForPrimitive = (primitive: GLTFPrimitive) => {
+    const hasJoints = primitive.attributeNames.includes('JOINTS_0') && primitive.attributeNames.includes('WEIGHTS_0');
+    
+    if (hasJoints && jsonChunk.skins) {
+      // Return skinned bind group for skinned primitives
+      return skinnedBindGroupsForSelection[primitive.materialIndex ?? 0] || skinnedBindGroupsForSelection[0];
+    } else {
+      // Return material bind group for non-skinned primitives  
+      return materialBindGroupsForSelection[primitive.materialIndex ?? 0] || materialBindGroupsForSelection[0];
+    }
+  };
+  
+  // For backward compatibility, still provide a selectedBindGroup (use material bind groups as default)
+  const selectedBindGroup = materialBindGroups;
 
   const nodes: GLTFNode[] = [];
 
@@ -615,8 +905,7 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
         visibility: GPUShaderStage.VERTEX,
       },
     ],
-  });
-  for (const currNode of jsonChunk.nodes ?? []) {
+  });  for (const currNode of jsonChunk.nodes ?? []) {
     const pos = currNode.translation ? new Vec3(...currNode.translation) : new Vec3(0, 0, 0);
     const scl = currNode.scale ? new Vec3(...currNode.scale) : new Vec3(1, 1, 1);
     const rot = currNode.rotation ?? [0, 0, 0, 1];
@@ -624,8 +913,13 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
 
     const nodeToCreate = new GLTFNode(device, nodeUniformsBindGroupLayout, nodeTransform, currNode.name, currNode.skin !== undefined && skins[currNode.skin] !== undefined ? skins[currNode.skin] : undefined);
     const meshToAdd = currNode.mesh !== undefined && meshes[currNode.mesh] !== undefined ? meshes[currNode.mesh] : undefined;
+    
+    // Debug logging
+    console.log(`Node: ${currNode.name || 'unnamed'}, has mesh: ${currNode.mesh !== undefined}, mesh index: ${currNode.mesh}, meshes length: ${meshes.length}`);
+    
     if (meshToAdd) {
       nodeToCreate.drawables.push(meshToAdd);
+      console.log(`Added mesh to node ${currNode.name || 'unnamed'}, drawables count: ${nodeToCreate.drawables.length}`);
     }
     nodes.push(nodeToCreate);
   }
@@ -676,8 +970,7 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
       child.setParent(scene.root);
     });
     scenes.push(scene);
-  }
-  return {
+  }  return {
     meshes,
     nodes,
     scenes,
@@ -686,7 +979,10 @@ export const convertGLBToJSONAndBinary = async (buffer: ArrayBuffer, device: GPU
     textures,
     materials,
     bindGroupLayouts,
-    selectedBindGroup
+    selectedBindGroup,
+    getBindGroupForPrimitive,
+    useLighting,
+    lightsBindGroup: bindGroupLayouts.lightsBindGroup
   };
 };
 
@@ -700,6 +996,9 @@ export type TempReturn = {
   materials: any[]; //TODO: Define a proper type for materials,
   bindGroupLayouts: BindGroupLayouts;
   selectedBindGroup: any[]; //TODO: Define a proper type for selectedBindGroup
+  getBindGroupForPrimitive: (primitive: GLTFPrimitive) => GPUBindGroup;
+  useLighting: boolean;
+  lightsBindGroup?: GPUBindGroup;
 };
 
 

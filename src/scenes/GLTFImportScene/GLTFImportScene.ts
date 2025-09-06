@@ -13,6 +13,8 @@ import { ObjectMap } from "../../game_objects/ObjectMap";
 import { GLTFGameObject } from "../../gltf/GLTFGameObject";
 import LayoutConfig from "./LayoutConfig.json";
 import { Quaternion } from "../../math/Quaternion";
+import { Ball } from "../../game_objects/Ball";
+import { Cube } from "../../game_objects/Cube";
 
 let animationFrameId: number | null = null;
 
@@ -37,27 +39,29 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     format: "depth32float",
     usage: GPUTextureUsage.RENDER_ATTACHMENT,
   });
-  const shadowTexture = Texture2D.createShadowTexture(device, 2048, 2048);
+  const shadowTexture = Texture2D.createShadowTexture(device, 4096, 4096);
   // LIGHTS
   const ambientLight = new AmbientLight(device);
   ambientLight.color = new Color(1, 1, 1, 1);
-  ambientLight.intensity = 0.6;
-
+  ambientLight.intensity = 0.8;
+  
   const directionalLight = new DirectionalLight(device);
   directionalLight.color = new Color(1, 1, 1, 1);
-  directionalLight.intensity = 0;
-  directionalLight.direction = new Vec3(-1, 0, 0);
-  directionalLight.specularIntensity = 0;
-  directionalLight.specularColor = new Color(1, 0, 0, 1);
+  directionalLight.intensity = 0.8
+  directionalLight.direction = new Vec3(0, -0.8, -0.08);
+  directionalLight.specularIntensity = 0.5;
+  directionalLight.specularColor = new Color(1, 1, 1, 1);
 
   const pointLights = new PointLightsCollection(device, 3);
-  pointLights.lights[0].color = new Color(0, 0, 1, 1);
-  pointLights.lights[0].intensity = 0.6;
-  pointLights.lights[0].position = new Vec3(5.74, 2.48, -3.0);
-  pointLights.lights[1].intensity = 1;
+  pointLights.lights[0].color = new Color(0, 1, 0, 1);
+  pointLights.lights[0].intensity = 0;
+  pointLights.lights[0].position = new Vec3(2.2, 2, 4);
+  pointLights.lights[1].intensity = 0;
+  pointLights.lights[1].color = new Color(1, 0, 0, 1);
   pointLights.lights[1].specularIntensity = 0;
   pointLights.lights[1].position = new Vec3(5.74, 2.48, -3.0);
   pointLights.lights[2].intensity = 0;
+  pointLights.lights[2].color = new Color(0, 0, 1, 1);
   pointLights.lights[2].specularIntensity = 0;
 
   // Cameras
@@ -65,18 +69,32 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   camera.eye = new Vec3(3.9, -0.68, 2.75);
   camera.target = new Vec3(3.2, -0.8, 2.1);
 
+  // SHADOW CAMERA
+  const sunRadius = 6;
+  const sceneCenter = new Vec3(0, 0, 0);
+  // we use directional light to simulate sunlight
+
+  const sunPosition = Vec3.add(
+    sceneCenter,
+  Vec3.scale(directionalLight.direction, -sunRadius)
+);
+
   const shadowCamera = new ShadowCamera(device);
-  shadowCamera.eye = new Vec3(5.74, 2.48, -3.0); // Let's imagine it as a negative direction light * -20 or any other fitting scalar
-  shadowCamera.target = new Vec3(4.85, 2.38, -2.61);
+
+  shadowCamera.eye = sunPosition;
+  shadowCamera.target = sceneCenter;
+  shadowCamera.far = Vec3.distance(shadowCamera.eye, shadowCamera.target) * 3.0;
+  shadowCamera.scale = 40;
 
   // Game Objects
   const floor = new Floor(device, camera, shadowCamera, ambientLight, directionalLight, pointLights);
-  floor.pipeline.shadowTexture = shadowTexture;  floor.scale = new Vec3(40, 0.1, 40);
+  floor.pipeline.shadowTexture = shadowTexture;
+  floor.scale = new Vec3(40, 0.1, 40);
   floor.position = new Vec3(0, -2, 0);
-  // Use absolute paths for assets in production
-  const gltfPath = options?.gltfPath || "/assets/gltf/MushroomGuy.glb";
-  const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture);
-  await _gltfGameObject.initialize(gltfPath);
+
+  const gltfPath = options?.gltfPath || "/assets/gltf/sponza.glb";
+  const _gltfGameObject = new GLTFGameObject(device, camera, shadowCamera, ambientLight, directionalLight, pointLights, presentationFormat, depthTexture, new Vec3(1, 1, 1), new Vec3(0, 0, 0), new Quaternion(), true); // Enable lighting
+  await _gltfGameObject.initialize(gltfPath, shadowTexture); // Pass the shadow texture
   _gltfGameObject.skinMode = options?.skinMode ? options?.skinMode === true ? 1 : 0 : 0;
   if (typeof options?.onGLTFGameObject === "function") {
     options.onGLTFGameObject(_gltfGameObject);
@@ -128,6 +146,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     objectMap.objects.forEach((object) => {
       object.drawShadows(renderPassEncoder);
     });
+    //cube.drawShadows(renderPassEncoder);
+    _gltfGameObject.drawShadows(renderPassEncoder);
     renderPassEncoder.end();
   };
 

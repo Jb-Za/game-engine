@@ -20,15 +20,13 @@ import { Color } from "../math/Color";
  * 0: Normal visualization (default)
  * 1: UV coordinates visualization (or joint indices for skinned models)
  * 2: Texture rendering (if available) or weights visualization for skinned models
- * 3: Weights visualization (skinned models only)
+ * 3: Lighting mode (for lit models) or weights visualization (skinned models only in non-lit mode)
  */
 export class GLTFGameObject implements GameObject {
   private _gltfScene: any;
   private _animationPlayer?: GLTFAnimationPlayer;
-  public materialBindGroups: GPUBindGroup[] = [];
-  public pipeline: any;
+  public materialBindGroups: GPUBindGroup[] = [];  public pipeline: any;
   public color: Color = new Color(1, 1, 1, 1); // Default color
-  public drawShadows: any;
   public visible: boolean = true;
 
   public get animationPlayer(): GLTFAnimationPlayer | undefined {
@@ -38,20 +36,20 @@ export class GLTFGameObject implements GameObject {
   public get gltfScene(): any {
     return this._gltfScene;
   }
-
   public skinMode = 0; // 0=skinned, 1=non-skinned
   constructor(
     private device: GPUDevice,
     private camera: Camera,
-    _shadowCamera: ShadowCamera,
-    _ambientLight: AmbientLight,
-    _directionalLight: DirectionalLight,
-    _pointLights: PointLightsCollection,
+    private _shadowCamera: ShadowCamera,
+    private _ambientLight: AmbientLight,
+    private _directionalLight: DirectionalLight,
+    private _pointLights: PointLightsCollection,
     private presentationFormat: GPUTextureFormat,
     private depthTexture: GPUTexture,
     public scale: Vec3 = new Vec3(1, 1, 1),
     public position: Vec3 = new Vec3(0, 0, 0),
-    public rotation: Quaternion = new Quaternion() // quaternion [x, y, z, w]
+    public rotation: Quaternion = new Quaternion(), // quaternion [x, y, z, w]
+    public useLighting: boolean = false // Enable lighting support
   ) {
    
   }
@@ -92,18 +90,51 @@ export class GLTFGameObject implements GameObject {
           }
         }
       }
-    }
-
-    // Default to normal visualization if no materials/textures
-    this.device.queue.writeBuffer(this._gltfScene.bindGroupLayouts.generalUniformsBuffer, 0, new Uint32Array([2, this.skinMode]));
-  }
-
+    }    // Set render mode based on lighting support
+    const renderMode = this.useLighting ? 3 : 2; // Mode 3 for lighting, mode 2 for texture
+    this.device.queue.writeBuffer(this._gltfScene.bindGroupLayouts.generalUniformsBuffer, 0, new Uint32Array([renderMode, this.skinMode]));
+  }  
+  
   public draw(renderPassEncoder: GPURenderPassEncoder) {
     if (!this.visible) return;
     for (const scene of this._gltfScene.scenes) {
-      scene.root.renderDrawables(renderPassEncoder, [this._gltfScene.bindGroupLayouts.cameraBindGroup, this._gltfScene.bindGroupLayouts.generalUniformsBindGroup, this._gltfScene.selectedBindGroup]);
+      const bindGroups = [
+        this._gltfScene.bindGroupLayouts.cameraBindGroup, 
+        this._gltfScene.bindGroupLayouts.generalUniformsBindGroup, 
+        // Use a placeholder bind group that will be replaced per primitive
+        this._gltfScene.selectedBindGroup[0] || this._gltfScene.selectedBindGroup
+      ];
+      
+      scene.root.renderDrawables(renderPassEncoder, bindGroups, this._gltfScene.getBindGroupForPrimitive);
     }
-  }  public async initialize(assetLocation: string) {
+  }  public drawShadows(renderPassEncoder: GPURenderPassEncoder) {
+    if (!this.visible || !this._gltfScene) return;
+    
+    // Create shadow-specific camera bind group that uses shadow camera projection-view matrix at binding 0
+    const shadowCameraBindGroup = this.device.createBindGroup({
+      label: "ShadowCamera.bindGroup",
+      layout: this._gltfScene.bindGroupLayouts.cameraBGCluster,
+      entries: [
+        { binding: 0, resource: { buffer: this._shadowCamera.buffer.buffer } },        // Shadow camera projection-view matrix
+        { binding: 1, resource: { buffer: this._shadowCamera.buffer.buffer } },        // Shadow camera eye position (reuse for simplicity)
+        { binding: 2, resource: { buffer: this._shadowCamera.buffer.buffer } },        // Shadow camera matrix (consistent)
+      ],
+    });
+    
+    // For shadow rendering, we need to render all the drawables in the scene
+    // but without color/material information - only depth
+    for (const scene of this._gltfScene.scenes) {
+      // Use shadow camera bind group instead of main camera bind group
+      const shadowBindGroups = [
+        shadowCameraBindGroup,                                    // group 0: shadow camera matrices
+        this._gltfScene.bindGroupLayouts.generalUniformsBindGroup, // group 1: general uniforms
+        // Node transform will be inserted per node in renderShadowDrawables
+      ];
+      
+      scene.root.renderShadowDrawables(renderPassEncoder, shadowBindGroups);
+    }
+  }
+  public async initialize(assetLocation: string, shadowTexture?: any) {
     try {
       const response = await fetch(assetLocation);
       
@@ -117,14 +148,18 @@ export class GLTFGameObject implements GameObject {
         throw new Error(`Empty GLB file from ${assetLocation}`);
       }
       
-      console.log(`Successfully loaded GLB file from ${assetLocation}, size: ${buffer.byteLength} bytes`);
-      
-      this._gltfScene = await convertGLBToJSONAndBinary(
+      console.log(`Successfully loaded GLB file from ${assetLocation}, size: ${buffer.byteLength} bytes`);        this._gltfScene = await convertGLBToJSONAndBinary(
         buffer, 
         this.device, 
         this.camera, 
         this.depthTexture, 
-        this.presentationFormat
+        this.presentationFormat,
+        this._shadowCamera,
+        this._ambientLight,
+        this._directionalLight,
+        this._pointLights,
+        this.useLighting,
+        shadowTexture
       );
     } catch (error) {
       console.error(`Error initializing GLTFGameObject with ${assetLocation}:`, error);

@@ -76,10 +76,9 @@ export class GLTFNode {
     fn(this);
     for (const child of this.children) {
       child.traverse(fn);
-    }
-  }
+    }  }
 
-  renderDrawables(passEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[], materialBindGroups?: GPUBindGroup[]) {
+  renderDrawables(passEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[], getBindGroupForPrimitive?: (primitive: any) => GPUBindGroup) {
     if (this.drawables !== undefined) {
       for (const drawable of this.drawables) {
         const reorderedBindGroups = [...bindGroups];
@@ -91,17 +90,47 @@ export class GLTFNode {
             reorderedBindGroups.push(this.nodeTransformBindGroup);
           }
         if (this.skin) {
-          drawable.render(passEncoder, [...reorderedBindGroups]);
+          drawable.render(passEncoder, [...reorderedBindGroups], getBindGroupForPrimitive);
         } else {
-          
-          
-          drawable.render(passEncoder, [...reorderedBindGroups]);
+          drawable.render(passEncoder, [...reorderedBindGroups], getBindGroupForPrimitive);
         }
       }
     }
     // Render any of its children
     for (const child of this.children) {
-      child.renderDrawables(passEncoder, bindGroups, materialBindGroups);
+      child.renderDrawables(passEncoder, bindGroups, getBindGroupForPrimitive);
+    }
+  }  
+  renderShadowDrawables(passEncoder: GPURenderPassEncoder, bindGroups: GPUBindGroup[]) {
+    
+    if (this.drawables !== undefined) {
+      for (const drawable of this.drawables) {
+        const reorderedBindGroups = [...bindGroups];
+        // Insert node transform bind group at position 2 for shadow rendering
+        if (reorderedBindGroups.length >= 2) {
+          reorderedBindGroups.splice(2, 0, this.nodeTransformBindGroup);
+        } else {
+          reorderedBindGroups.push(this.nodeTransformBindGroup);
+        }
+        
+        // For skinned models, we need to add the skin bind group at position 3
+        // Check if any primitive in this drawable needs skinning
+        const needsSkinning = drawable.primitives.some(primitive => 
+          primitive.attributeNames.includes('JOINTS_0')
+        );
+        
+        if (needsSkinning && this.skin) {
+          // Add the skin bind group for joint matrices
+          reorderedBindGroups.push(this.skin.skinBindGroup);
+        }
+        
+        // For shadow rendering, use the shadow-specific render method
+        drawable.renderShadows(passEncoder, reorderedBindGroups);
+      }
+    }
+    // Render any of its children
+    for (const child of this.children) {
+      child.renderShadowDrawables(passEncoder, bindGroups);
     }
   }
 
