@@ -789,7 +789,9 @@ export const convertGLBToJSONAndBinary = async (
         skinnedBindGroups.push(gltfSkin.skinBindGroup);
       }
     }
-  }const staticLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.materialBindGroupLayout];
+  }
+  
+  const staticLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.materialBindGroupLayout];
   const skinLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.skinnedMaterialBindGroupLayout];
     // Lighting layouts for lit rendering (only 4 bind groups to stay within WebGPU limit)
   const litStaticLayouts = [bindGroupLayouts.cameraBGCluster, bindGroupLayouts.generalUniformsBGCLuster, bindGroupLayouts.nodeUniformsBindGroupLayout, bindGroupLayouts.litMaterialBindGroupLayout];
@@ -914,9 +916,6 @@ struct NodeUniforms {
     const nodeToCreate = new GLTFNode(device, nodeUniformsBindGroupLayout, nodeTransform, currNode.name, currNode.skin !== undefined && skins[currNode.skin] !== undefined ? skins[currNode.skin] : undefined);
     const meshToAdd = currNode.mesh !== undefined && meshes[currNode.mesh] !== undefined ? meshes[currNode.mesh] : undefined;
     
-    // Debug logging
-    console.log(`Node: ${currNode.name || 'unnamed'}, has mesh: ${currNode.mesh !== undefined}, mesh index: ${currNode.mesh}, meshes length: ${meshes.length}`);
-    
     if (meshToAdd) {
       nodeToCreate.drawables.push(meshToAdd);
       console.log(`Added mesh to node ${currNode.name || 'unnamed'}, drawables count: ${nodeToCreate.drawables.length}`);
@@ -962,6 +961,32 @@ struct NodeUniforms {
 
   const scenes: GLTFScene[] = [];
 
+  const calculateGLTFBoundingBox = (gltfData: any): { min: Vec3; max: Vec3 } => {
+      let min = new Vec3(Infinity, Infinity, Infinity);
+      let max = new Vec3(-Infinity, -Infinity, -Infinity);
+
+      // Iterate through all meshes and their primitives
+      if (gltfData.meshes) {
+          for (const mesh of gltfData.meshes) {
+              for (const primitive of mesh.primitives) {
+                  const positionAccessor = gltfData.accessors[primitive.attributes.POSITION];
+                  if (positionAccessor && positionAccessor.min && positionAccessor.max) {
+                      // Update overall bounding box
+                      min.x = Math.min(min.x, positionAccessor.min[0]);
+                      min.y = Math.min(min.y, positionAccessor.min[1]);
+                      min.z = Math.min(min.z, positionAccessor.min[2]);
+                      
+                      max.x = Math.max(max.x, positionAccessor.max[0]);
+                      max.y = Math.max(max.y, positionAccessor.max[1]);
+                      max.z = Math.max(max.z, positionAccessor.max[2]);
+                  }
+              }
+          }
+      }
+
+      return { min, max };
+  }
+
   for (const jsonScene of jsonChunk.scenes ?? []) {
     const scene = new GLTFScene(device, nodeUniformsBindGroupLayout, jsonScene);
     const sceneChildren = scene.nodes;
@@ -982,7 +1007,8 @@ struct NodeUniforms {
     selectedBindGroup,
     getBindGroupForPrimitive,
     useLighting,
-    lightsBindGroup: bindGroupLayouts.lightsBindGroup
+    lightsBindGroup: bindGroupLayouts.lightsBindGroup,
+    boundingBox: calculateGLTFBoundingBox(jsonChunk),
   };
 };
 
@@ -999,6 +1025,7 @@ export type TempReturn = {
   getBindGroupForPrimitive: (primitive: GLTFPrimitive) => GPUBindGroup;
   useLighting: boolean;
   lightsBindGroup?: GPUBindGroup;
+  boundingBox?: { min: Vec3; max: Vec3 };
 };
 
 

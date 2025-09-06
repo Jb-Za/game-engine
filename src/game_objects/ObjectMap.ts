@@ -152,7 +152,9 @@ export class ObjectMap {
     this.objectIdCounter++;
     this._objects.set(this.createObjectId('PlaneWater'), planeWater);
     return planeWater;
-  }  public createGLTF(objectParameters: ObjectParameters, shadowTexture: Texture2D, filePath: string, name?: string) {
+  }  
+  
+  public createGLTF(objectParameters: ObjectParameters, shadowTexture: Texture2D, filePath: string, name?: string) {
     const gltfObject = new GLTFGameObject(
       objectParameters.device,
       objectParameters.camera,

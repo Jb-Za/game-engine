@@ -46,7 +46,7 @@ export class Camera {
 
   // MATRICES
   private perspective = Mat4x4.identity();
-  private view = Mat4x4.identity();
+  private _view = Mat4x4.identity();
   private projectionView = Mat4x4.identity();
 
   private rotation = Mat4x4.identity();
@@ -58,6 +58,14 @@ export class Camera {
 
   public set aspectRatio(value: number) {
     this._aspectRatio = value;
+  }
+
+  public get view(): Mat4x4 {
+    return this._view;
+  }
+
+  public get projection (): Mat4x4 {
+    return this.perspective;
   }
 
   constructor(device: GPUDevice, private _aspectRatio: number, private inputmanager?: InputManager) {
@@ -98,11 +106,11 @@ export class Camera {
         this.eye = Vec3.subtract(this.eye, Vec3.multiplyScalar(rotatedRight, movementSpeed));
         this.target = Vec3.subtract(this.target, Vec3.multiplyScalar(rotatedRight, movementSpeed));
       }
-      this.view = Mat4x4.lookAt(this.eye, this.target, this.up);
+      this._view = Mat4x4.lookAt(this.eye, this.target, this.up);
     }
 
     this.perspective = Mat4x4.perspective(this.fov, this._aspectRatio, this.near, this.far);
-    this.projectionView = Mat4x4.multiply(this.perspective, this.view);
+    this.projectionView = Mat4x4.multiply(this.perspective, this._view);
 
     this.buffer.update(this.projectionView);
     this.eyeBuffer.update(this.eye);

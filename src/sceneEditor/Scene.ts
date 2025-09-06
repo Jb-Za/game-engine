@@ -171,7 +171,7 @@ export class Scene {
     }
 
     public addSceneObjects(objects: SceneObject[]): ObjectMap {
-        objects.forEach(object => {
+        for (const object of objects) {
             const position = new Vec3(object.position[0], object.position[1], object.position[2]);
             const rotation = new Quaternion(object.rotation[0], object.rotation[1], object.rotation[2], 1);
             const color = new Color(object.color[0], object.color[1], object.color[2], object.color[3]);
@@ -206,21 +206,40 @@ export class Scene {
                         gltfObject.scale = scale;
                         gltfObject.filePath = object.filePath;
                         gltfObject.name = object.name || "GLTF Object";
+
+                        if(gltfObject.gltfScene.boundingBox){
+                            gltfObject.gltfScene.boundingBox.max = Vec3.multiply(gltfObject.gltfScene.boundingBox.max, scale);
+                            gltfObject.gltfScene.boundingBox.min = Vec3.multiply(gltfObject.gltfScene.boundingBox.min, scale);
+
+                            // const cube = this._sceneObjects.createCube(this._objectParameters, this._shadowTexture, true);
+                            // cube.position = Vec3.add(position, Vec3.scale(Vec3.add(gltfObject.gltfScene.boundingBox.min, gltfObject.gltfScene.boundingBox.max), 0.5));
+                            // cube.scale = Vec3.subtract(gltfObject.gltfScene.boundingBox.max, gltfObject.gltfScene.boundingBox.min);
+                            // cube.color = new Color(1, 1, 0, 0.25); // Yellow with some transparency
+                            // cube.visible = false; // Hide the bounding box by default
+
+                            // gltfObject.boundingBoxCube = cube;
+                            gltfObject.boundingBox = gltfObject.gltfScene.boundingBox;
+                        }
+
                         // Note: GLTF objects manage their own color internally
                     }
                     break;
                 default:
                     break;
             }
-        });
-        
+        };
+
+
+
         // Return the updated scene objects
         return this._sceneObjects;
     }
 
     public deleteSceneObject(id: string): void {
         this._sceneObjects.objects.delete(id);
-    }    public addNewObject(type: string, data?: any): Scene {
+    }
+
+    public async addNewObject(type: string, data?: any): Promise<Scene> {
         const objectId = `${type}_${Date.now()}`;
         let object: any = {
             id: objectId,
@@ -243,7 +262,9 @@ export class Scene {
         
         // Return the entire scene for re-parsing
         return this;
-    }    constructor(SceneData: SceneConfiguration, device: GPUDevice, aspectRatio: number, inputManager: InputManager, shadowTexture: Texture2D, presentationFormat: GPUTextureFormat, depthTexture: GPUTexture) {
+    }    
+    
+    constructor(SceneData: SceneConfiguration, device: GPUDevice, aspectRatio: number, inputManager: InputManager, shadowTexture: Texture2D, presentationFormat: GPUTextureFormat, depthTexture: GPUTexture) {
         this._camera = this.setupCamera(device, aspectRatio, inputManager, SceneData.Camera ?? null);
         this._ambientLight = this.setupAmbientLight(device, SceneData.AmbientLight ?? null);
         this._directionalLight = this.setupDirectionalLight(device, SceneData.DirectionalLight ?? null);
@@ -339,9 +360,9 @@ export class Scene {
         return pointLights;
     }
 
-    private setupSceneObjects(_device: GPUDevice, sceneObjects: SceneConfiguration["sceneObjects"] | null): void {
+    private async setupSceneObjects(_device: GPUDevice, sceneObjects: SceneConfiguration["sceneObjects"] | null): Promise<void> {
         if (sceneObjects) {
-            this.addSceneObjects(sceneObjects);
+            await this.addSceneObjects(sceneObjects);
         }
     }
 }

@@ -10,6 +10,7 @@ import { Vec3 } from "../math/Vec3";
 import { PointLightsCollection } from "../lights/PointLight";
 import { Quaternion } from "../math/Quaternion";
 import { Color } from "../math/Color";
+import { Cube } from "../game_objects/Cube";
 
 //most of this implementation is based on the gltf-skinning example from the webgpu samples repo
 //https://webgpu.github.io/webgpu-samples/.
@@ -30,6 +31,8 @@ export class GLTFGameObject implements GameObject {
   public visible: boolean = true;
   public filePath: string = ""; // Path to the GLTF/GLB file
   public name: string = ""; // Name of the GLTF object
+  public boundingBoxCube: Cube | null = null;
+  public boundingBox: { min: Vec3; max: Vec3 } | null = null;
 
   public get animationPlayer(): GLTFAnimationPlayer | undefined {
     return this._animationPlayer;
@@ -149,7 +152,8 @@ export class GLTFGameObject implements GameObject {
         throw new Error(`Empty GLB file from ${assetLocation}`);
       }
       
-      console.log(`Successfully loaded GLB file from ${assetLocation}, size: ${buffer.byteLength} bytes`);        this._gltfScene = await convertGLBToJSONAndBinary(
+      console.log(`Successfully loaded GLB file from ${assetLocation}, size: ${buffer.byteLength} bytes`);        
+      this._gltfScene = await convertGLBToJSONAndBinary(
         buffer, 
         this.device, 
         this.camera, 

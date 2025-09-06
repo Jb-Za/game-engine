@@ -8,6 +8,44 @@ import { AmbientLight } from "../../lights/AmbientLight";
 import { DirectionalLight } from "../../lights/DirectionalLight";
 import { PointLightsCollection } from "../../lights/PointLight";
 import { ShadowCamera } from "../../camera/ShadowCamera";
+import { Mat4x4 } from "../../math/Mat4x4";
+import { Vec4 } from "../../math/Vec4";
+function intersectRayBox(rayOrigin: Vec3, rayDirection: Vec3, boxScale: Vec3): { distance: number; point: Vec3 } | null {
+  // Normalize ray direction so distance is in world units
+  const len = Math.hypot(rayDirection.x, rayDirection.y, rayDirection.z);
+  if (len < 1e-8) return null; // invalid ray
+  const d = new Vec3(rayDirection.x / len, rayDirection.y / len, rayDirection.z / len);
+
+  // Box extends from -scale to +scale
+  const boxMin = new Vec3(-boxScale.x, -boxScale.y, -boxScale.z);
+  const boxMax = new Vec3(boxScale.x, boxScale.y, boxScale.z);
+
+  const invDir = new Vec3(d.x === 0 ? Infinity : 1 / d.x, d.y === 0 ? Infinity : 1 / d.y, d.z === 0 ? Infinity : 1 / d.z);
+
+  const t1 = (boxMin.x - rayOrigin.x) * invDir.x;
+  const t2 = (boxMax.x - rayOrigin.x) * invDir.x;
+  const t3 = (boxMin.y - rayOrigin.y) * invDir.y;
+  const t4 = (boxMax.y - rayOrigin.y) * invDir.y;
+  const t5 = (boxMin.z - rayOrigin.z) * invDir.z;
+  const t6 = (boxMax.z - rayOrigin.z) * invDir.z;
+
+  const tmin = Math.max(Math.max(Math.min(t1, t2), Math.min(t3, t4)), Math.min(t5, t6));
+  const tmax = Math.min(Math.min(Math.max(t1, t2), Math.max(t3, t4)), Math.max(t5, t6));
+
+  // Require a minimum distance to avoid selecting objects behind the camera
+  if (tmax < 0.01 || tmin > tmax) {
+    return null;
+  }
+
+  const distance = tmin > 0.01 ? tmin : tmax;
+  if (distance < 0.01) {
+    return null;
+  }
+
+  const point = Vec3.add(rayOrigin, Vec3.scale(d, distance));
+
+  return { distance, point };
+}import { Vec3 } from "../../math/Vec3";
 
 let scene: Scene | null = null;
 let animationFrameId: number | null = null;
@@ -28,197 +66,430 @@ let directionalLight: DirectionalLight | null = null;
 let pointLights: PointLightsCollection | null = null;
 let shadowCamera: ShadowCamera | null = null;
 
-async function init(
-    canvas: HTMLCanvasElement,
-    device: GPUDevice,
-    gpuContext: GPUCanvasContext,
-    presentationFormat: GPUTextureFormat,
-    infoElem: HTMLPreElement
-) {
-    canvas?.addEventListener("click", async () => {
-        await canvas?.requestPointerLock();
+let isObjectPickingEnabled = true;
+let onObjectSelected: ((objectId: string | null) => void) | null = null;
+
+// Add this interface for ray-object intersection
+interface RayIntersection {
+  objectId: string;
+  distance: number;
+  point: Vec3;
+}
+
+async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement) {
+  canvas?.addEventListener("click", async (event: MouseEvent) => {
+    if (isObjectPickingEnabled && !document.pointerLockElement) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;      const selectedObjectId = performRayPicking(mouseX, mouseY);
+
+      if (onObjectSelected) {
+        onObjectSelected(selectedObjectId);
+      }
+
+    } else {
+      // // Original pointer lock behavior
+      // await canvas?.requestPointerLock();
+    }
+  });
+
+  if (presentationFormat) {
+  } // lazy linting
+
+  const sceneData = sceneDataJson as any;
+
+  // Store module-level references for later use
+  _canvas = canvas;
+  _device = device;
+  // _gpuContext = gpuContext;
+  _presentationFormat = presentationFormat;
+  _infoElem = infoElem;
+
+  // Input Manager
+  _inputManager = new InputManager(canvas);
+  GeometryBuffersCollection.initialize(device);
+
+  // Create shared depth and shadow textures once
+  _depthTexture = Texture2D.createDepthTexture(device, canvas.width, canvas.height);
+  _shadowTexture = Texture2D.createShadowTexture(device, 4096, 4096);
+
+  // Create the initial scene (uses the module-level resources)
+  loadScene(sceneData);
+
+  // === GAME FUNCTIONS ===
+  function handleInput(): void {
+    // Add some basic input handling
+    if (_inputManager && (_inputManager.isKeyDown("r") || _inputManager.isKeyDown("R"))) {
+      // placeholder for future
+    }
+  }
+
+  // === RENDER LOOP ===
+  let lastTime = performance.now();
+  function renderLoop(currentTime: number) {
+    const deltaTime = (currentTime - lastTime) / 1000;
+    lastTime = currentTime;
+
+    if (_infoElem != null) {
+      _infoElem.textContent = `fps: ${(1 / deltaTime).toFixed(1)}\n`;
+    }
+
+    handleInput();
+
+    if (!scene) {
+      // No scene to update/render yet
+      animationFrameId = requestAnimationFrame(renderLoop);
+      return;
+    }
+
+    // Query scene-local components each frame so loadScene can swap them at runtime
+    const sceneObjects = scene.getSceneObjects();
+
+    camera = scene.getCamera();
+    ambientLight = scene.getAmbientLight();
+    directionalLight = scene.getDirectionalLight();
+    pointLights = scene.getPointLights();
+    shadowCamera = scene.getShadowCamera();
+
+    camera.update();
+    ambientLight.update();
+    directionalLight.update();
+    pointLights.update();
+    shadowCamera.update();
+
+    // Update game objects
+    sceneObjects.objects.forEach((obj) => {
+      if (obj && typeof obj.update === "function") {
+        obj.update(deltaTime);
+      }
     });
 
-    if (presentationFormat) { } // lazy linting
+    // === SHADOW PASS ===
+    const shadowCommandEncoder = device.createCommandEncoder();
+    const shadowRenderPass = shadowCommandEncoder.beginRenderPass({
+      colorAttachments: [],
+      depthStencilAttachment: {
+        view: _shadowTexture!.texture.createView(),
+        depthClearValue: 1.0,
+        depthLoadOp: "clear",
+        depthStoreOp: "store",
+      },
+    });
 
-    const sceneData = sceneDataJson as any;
+    sceneObjects.objects.forEach((obj) => {
+      if (obj && typeof obj.drawShadows === "function") {
+        obj.drawShadows(shadowRenderPass);
+      }
+    });
+    shadowRenderPass.end();
+    device.queue.submit([shadowCommandEncoder.finish()]);
 
-    // Store module-level references for later use
-    _canvas = canvas;
-    _device = device;
-    // _gpuContext = gpuContext;
-    _presentationFormat = presentationFormat;
-    _infoElem = infoElem;
+    // === MAIN RENDER PASS ===
+    const commandEncoder = device.createCommandEncoder();
+    const textureView = gpuContext.getCurrentTexture().createView();
+    const renderPass = commandEncoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: textureView,
+          clearValue: { r: 0.2, g: 0.2, b: 0.25, a: 1.0 },
+          loadOp: "clear",
+          storeOp: "store",
+        },
+      ],
+      depthStencilAttachment: {
+        view: _depthTexture!.texture.createView(),
+        depthClearValue: 1.0,
+        depthLoadOp: "clear",
+        depthStoreOp: "store",
+      },
+    });
 
-    // Input Manager
-    _inputManager = new InputManager(canvas);
-    GeometryBuffersCollection.initialize(device);
+    // Render game objects
+    sceneObjects.objects.forEach((obj) => {
+      if (obj && typeof obj.draw === "function" && obj.visible !== false) {
+        obj.draw(renderPass);
+      }
+    });
 
-    // Create shared depth and shadow textures once
-    _depthTexture = Texture2D.createDepthTexture(device, canvas.width, canvas.height);
-    _shadowTexture = Texture2D.createShadowTexture(device, 4096, 4096);
+    renderPass.end();
+    device.queue.submit([commandEncoder.finish()]);
+    animationFrameId = requestAnimationFrame(renderLoop);
+  }
 
-    // Create the initial scene (uses the module-level resources)
-    loadScene(sceneData);
-
-    // === GAME FUNCTIONS ===
-    function handleInput(): void {
-        // Add some basic input handling
-        if (_inputManager && (_inputManager.isKeyDown('r') || _inputManager.isKeyDown('R'))) {
-            // placeholder for future
-        }
-    }
-
-    // === RENDER LOOP ===
-    let lastTime = performance.now();
-    function renderLoop(currentTime: number) {
-        const deltaTime = (currentTime - lastTime) / 1000;
-        lastTime = currentTime;
-
-        if (_infoElem != null) {
-            _infoElem.textContent = `fps: ${(1 / deltaTime).toFixed(1)}\n`
-        }
-
-        handleInput();
-
-        if (!scene) {
-            // No scene to update/render yet
-            animationFrameId = requestAnimationFrame(renderLoop);
-            return;
-        }
-
-        // Query scene-local components each frame so loadScene can swap them at runtime
-        const sceneObjects = scene.getSceneObjects();
-        camera = scene.getCamera();
-        ambientLight = scene.getAmbientLight();
-        directionalLight = scene.getDirectionalLight();
-        pointLights = scene.getPointLights();
-        shadowCamera = scene.getShadowCamera();
-
-        camera.update();
-        ambientLight.update();
-        directionalLight.update();
-        pointLights.update();
-        shadowCamera.update();
-
-        // Update game objects
-        sceneObjects.objects.forEach(obj => {
-            if (obj && typeof obj.update === 'function') {
-                obj.update(deltaTime);
-            }
-        });
-
-        // === SHADOW PASS ===
-        const shadowCommandEncoder = device.createCommandEncoder();
-        const shadowRenderPass = shadowCommandEncoder.beginRenderPass({
-            colorAttachments: [],
-            depthStencilAttachment: {
-                view: _shadowTexture!.texture.createView(),
-                depthClearValue: 1.0,
-                depthLoadOp: 'clear',
-                depthStoreOp: 'store'
-            }
-        });
-
-        sceneObjects.objects.forEach(obj => {
-            if (obj && typeof obj.drawShadows === 'function') {
-                obj.drawShadows(shadowRenderPass);
-            }
-        });
-        shadowRenderPass.end();
-        device.queue.submit([shadowCommandEncoder.finish()]);
-
-        // === MAIN RENDER PASS ===
-        const commandEncoder = device.createCommandEncoder();
-        const textureView = gpuContext.getCurrentTexture().createView();
-        const renderPass = commandEncoder.beginRenderPass({
-            colorAttachments: [{
-                view: textureView,
-                clearValue: { r: 0.2, g: 0.2, b: 0.25, a: 1.0 },
-                loadOp: 'clear',
-                storeOp: 'store'
-            }],
-            depthStencilAttachment: {
-                view: _depthTexture!.texture.createView(),
-                depthClearValue: 1.0,
-                depthLoadOp: 'clear',
-                depthStoreOp: 'store'
-            }
-        });
-
-        // Render game objects
-        sceneObjects.objects.forEach(obj => {
-            if (obj && typeof obj.draw === 'function' && obj.visible !== false) {
-                obj.draw(renderPass);
-            }
-        });
-
-
-        renderPass.end();
-        device.queue.submit([commandEncoder.finish()]);
-        animationFrameId = requestAnimationFrame(renderLoop);
-    }
-
-    renderLoop(performance.now());
+  renderLoop(performance.now());
 }
 
 export function dispose() {
-    if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
-    }
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
 }
 
 // Export the main init function and related scene functions
-export { init, getScene, addObject, removeObject, saveScene, loadScene };
+export { init, getScene, addObject, removeObject, saveScene, loadScene, selectObject };
 
 // Function to get the current scene instance
 function getScene(): Scene | null {
-    return scene;
+  return scene;
 }
 
 // Function to add a new object to the scene
-function addObject(type: 'cube' | 'sphere' | 'light' | 'camera' | 'gltf', data?: any): Scene | null {
-    if (!scene) {
-        console.error('Scene not initialized');
-        return null;
-    }
-    return scene.addNewObject(type, data);
+async function addObject(type: "cube" | "sphere" | "light" | "camera" | "gltf", data?: any): Promise<Scene | null> {
+  if (!scene) {
+    console.error("Scene not initialized");
+    return null;
+  }
+  return await scene.addNewObject(type, data);
 }
 
 // Function to remove an object from the scene
 function removeObject(id: string): void {
-    if (!scene) {
-        console.error('Scene not initialized');
-        return;
-    }
-    scene.deleteSceneObject(id);
+  if (!scene) {
+    console.error("Scene not initialized");
+    return;
+  }
+  scene.deleteSceneObject(id);
 }
 
-function disposeScene(): void{
-    camera = null;
-    ambientLight = null;
-    directionalLight = null;
-    pointLights = null;
-    shadowCamera = null;
+function disposeScene(): void {
+  camera = null;
+  ambientLight = null;
+  directionalLight = null;
+  pointLights = null;
+  shadowCamera = null;
 }
 
 function loadScene(sceneJson: any): void {
-    disposeScene();
+  disposeScene();
 
-    // Create/replace the scene instance
-    try {
-        scene = new Scene(sceneJson, _device!, _canvas!.width / _canvas!.height, _inputManager!, _shadowTexture!, _presentationFormat!, _depthTexture!.texture);
-        console.log('Scene loaded');
-    } catch (e) {
-        console.error('Failed to load scene:', e);
-    }
+  // Create/replace the scene instance
+  try {
+    scene = new Scene(sceneJson, _device!, _canvas!.width / _canvas!.height, _inputManager!, _shadowTexture!, _presentationFormat!, _depthTexture!.texture);
+    console.log("Scene loaded");
+  } catch (e) {
+    console.error("Failed to load scene:", e);
+  }
 }
 
 function saveScene(): void {
-    if (!scene) {
-        console.error('Scene not initialized');
-        return;
-    }  
-    scene.saveScene();
+  if (!scene) {
+    console.error("Scene not initialized");
+    return;
+  }
+  scene.saveScene();
+}
+
+function selectObject(objectId: string | null): void {
+  console.log('SceneEditor.selectObject called with:', objectId);
+  // For now, we'll just trigger the callback if one is set
+  // In the future, this could highlight the object in the 3D scene
+  if (onObjectSelected) {
+    onObjectSelected(objectId);
+  }
+}
+
+function performRayPicking(mouseX: number, mouseY: number): string | null {
+  if (!scene || !camera || !_canvas) return null;
+
+  // Convert screen coordinates to normalized device coordinates (-1 to 1)
+  const ndcX = (mouseX / _canvas.width) * 2 - 1;
+  const ndcY = -((mouseY / _canvas.height) * 2 - 1); // Flip Y axis
+
+  // Create ray in world space
+  const ray = createRayFromCamera(ndcX, ndcY);
+
+  // Test intersection with all scene objects
+  const intersections: RayIntersection[] = [];
+  const sceneObjects = scene.getSceneObjects();
+
+  sceneObjects.objects.forEach((obj, objId) => {
+    if (obj && obj.visible !== false) {
+      const intersection = testRayObjectIntersection(ray, obj, objId);
+      if (intersection) {
+        intersections.push(intersection);
+      }
+    }
+  }); 
+  
+  if (intersections.length > 0) {
+    // Sort by distance first
+    intersections.sort((a, b) => a.distance - b.distance);
+    
+    const closest = intersections[0];
+
+    console.log(`Selected object: ${closest.objectId}`);
+    return closest.objectId;
+  }
+
+  return null;
+}
+
+function createRayFromCamera(ndcX: number, ndcY: number): { origin: Vec3; direction: Vec3 } {
+  if (!camera) throw new Error("Camera not available");
+
+  // Get camera matrices
+  const viewMatrix = camera.view;
+  const projMatrix = camera.projection;
+
+  // Calculate inverse matrices
+  const invProjMatrix = Mat4x4.inverse(projMatrix);
+  const invViewMatrix = Mat4x4.inverse(viewMatrix);
+
+  // Create near and far points in clip space
+  const nearPoint = new Vec4(ndcX, ndcY, -1, 1); // Near plane
+  const farPoint = new Vec4(ndcX, ndcY, 1, 1); // Far plane
+
+  // Unproject to world space
+  let nearWorldPoint = Mat4x4.multiplyVec4(invProjMatrix, nearPoint);
+  nearWorldPoint = Vec4.scale(nearWorldPoint, 1 / nearWorldPoint.w); // Perspective divide
+  nearWorldPoint = Mat4x4.multiplyVec4(invViewMatrix, nearWorldPoint);
+
+  let farWorldPoint = Mat4x4.multiplyVec4(invProjMatrix, farPoint);
+  farWorldPoint = Vec4.scale(farWorldPoint, 1 / farWorldPoint.w); // Perspective divide
+  farWorldPoint = Mat4x4.multiplyVec4(invViewMatrix, farWorldPoint);
+
+  // Calculate ray direction from near to far
+  const rayDirection = Vec3.normalize(new Vec3(farWorldPoint.x - nearWorldPoint.x, farWorldPoint.y - nearWorldPoint.y, farWorldPoint.z - nearWorldPoint.z));
+
+  return {
+    origin: camera.eye,
+    direction: rayDirection,
+  };
+}
+
+function testRayObjectIntersection(ray: { origin: Vec3; direction: Vec3 }, obj: any, objId: string): RayIntersection | null {
+  // Transform ray to object space
+  const objMatrix = getObjectTransformMatrix(obj);
+  const invObjMatrix = Mat4x4.inverse(objMatrix);
+  const localRayOrigin = Vec3.transformPoint(invObjMatrix, ray.origin);
+  const localRayDirection = Vec3.transformVector(invObjMatrix, ray.direction);
+
+  let intersection: { distance: number; point: Vec3 } | null = null;
+
+  // Check object type and perform appropriate intersection test
+  const objectType = objId.split("_")[0].toLowerCase();
+  switch (objectType) {
+    case "cube":
+      // In object space, cube geometry is defined from -0.5 to +0.5
+      intersection = intersectRayBox(localRayOrigin, localRayDirection, new Vec3(0.5, 0.5, 0.5));
+      break;
+    case "sphere":
+      // In object space, sphere radius should be 1.0 (geometry is defined with radius 1)
+      intersection = intersectRaySphere(localRayOrigin, localRayDirection, 1.0);
+      break;    case "gltf":
+      // In object space, use the actual bounding box without additional scaling
+      if (obj.gltfScene.boundingBox && obj.gltfScene.boundingBox.min && obj.gltfScene.boundingBox.max) {
+        // Use the original GLTF bounding box directly (transformation is already handled by object space conversion)
+        const gltfBounds = obj.gltfScene.boundingBox;
+        console.log(`GLTF using original bounds - min: (${gltfBounds.min.x.toFixed(3)}, ${gltfBounds.min.y.toFixed(3)}, ${gltfBounds.min.z.toFixed(3)}), max: (${gltfBounds.max.x.toFixed(3)}, ${gltfBounds.max.y.toFixed(3)}, ${gltfBounds.max.z.toFixed(3)})`);
+        intersection = intersectRayGltf(localRayOrigin, localRayDirection, gltfBounds);
+      } else {
+        // Fall back to a reasonable default size in object space
+        const defaultBounds = new Vec3(1.0, 1.0, 1.0);
+        console.log(`GLTF using default bounds: (${defaultBounds.x.toFixed(3)}, ${defaultBounds.y.toFixed(3)}, ${defaultBounds.z.toFixed(3)})`);
+        intersection = intersectRayBox(localRayOrigin, localRayDirection, defaultBounds);
+      }
+      break;
+    default:
+      return null;
+  }
+
+  if (intersection) {
+    const worldPoint = Vec3.transformPoint(objMatrix, intersection.point);
+    const worldDistance = Vec3.distance(ray.origin, worldPoint);
+
+    return {
+      objectId: objId,
+      distance: worldDistance,
+      point: worldPoint,
+    };
+  }
+
+  return null;
+}
+
+function getObjectTransformMatrix(obj: any): Mat4x4 {
+  // Create transformation matrix from object's position, rotation, and scale
+  const translation = Mat4x4.translation(obj.position.x, obj.position.y, obj.position.z);
+  const rotation = Mat4x4.fromQuaternion(obj.rotation);
+  const scale = Mat4x4.scale(obj.scale.x, obj.scale.y, obj.scale.z);
+
+  return Mat4x4.multiply(Mat4x4.multiply(translation, rotation), scale);
+}
+
+function intersectRayGltf(rayOrigin: Vec3, rayDirection: Vec3, boxMinMax: { min: Vec3; max: Vec3 }): { distance: number; point: Vec3 } | null {
+  // Normalize ray direction so distance is in world units
+  const len = Math.hypot(rayDirection.x, rayDirection.y, rayDirection.z);
+  if (len < 1e-8) return null; // invalid ray
+  const d = new Vec3(rayDirection.x / len, rayDirection.y / len, rayDirection.z / len);
+
+  // Box extends from -scale to +scale
+  const boxMin = boxMinMax.min;
+  const boxMax = boxMinMax.max;
+
+  const invDir = new Vec3(d.x === 0 ? Infinity : 1 / d.x, d.y === 0 ? Infinity : 1 / d.y, d.z === 0 ? Infinity : 1 / d.z);
+
+  const t1 = (boxMin.x - rayOrigin.x) * invDir.x;
+  const t2 = (boxMax.x - rayOrigin.x) * invDir.x;
+  const t3 = (boxMin.y - rayOrigin.y) * invDir.y;
+  const t4 = (boxMax.y - rayOrigin.y) * invDir.y;
+  const t5 = (boxMin.z - rayOrigin.z) * invDir.z;
+  const t6 = (boxMax.z - rayOrigin.z) * invDir.z;
+
+  const tmin = Math.max(Math.max(Math.min(t1, t2), Math.min(t3, t4)), Math.min(t5, t6));
+  const tmax = Math.min(Math.min(Math.max(t1, t2), Math.max(t3, t4)), Math.max(t5, t6));
+
+  // Require a minimum distance to avoid selecting objects behind the camera
+  if (tmax < 0.01 || tmin > tmax) {
+    return null;
+  }
+
+  const distance = tmin > 0.01 ? tmin : tmax;
+  if (distance < 0.01) {
+    return null;
+  }
+
+  const point = Vec3.add(rayOrigin, Vec3.scale(d, distance));
+
+  return { distance, point };
+}
+
+
+
+function intersectRaySphere(rayOrigin: Vec3, rayDirection: Vec3, radius: number): { distance: number; point: Vec3 } | null {
+  const oc = Vec3.subtract(rayOrigin, new Vec3(0, 0, 0)); // Sphere centered at origin
+  const a = Vec3.dot(rayDirection, rayDirection);
+  const b = 2.0 * Vec3.dot(oc, rayDirection);
+  const c = Vec3.dot(oc, oc) - radius * radius;
+
+  const discriminant = b * b - 4 * a * c;
+
+  if (discriminant < 0) {
+    return null; // No intersection
+  }
+
+  const sqrt_discriminant = Math.sqrt(discriminant);
+  const t1 = (-b - sqrt_discriminant) / (2 * a);
+  const t2 = (-b + sqrt_discriminant) / (2 * a);
+
+  const distance = t1 > 0 ? t1 : t2 > 0 ? t2 : -1;
+
+  if (distance < 0) {
+    return null;
+  }
+
+  const point = Vec3.add(rayOrigin, Vec3.scale(rayDirection, distance));
+  return { distance, point };
+}
+
+// Export functions to enable/disable object picking
+export function enableObjectPicking(callback: (objectId: string | null) => void) {
+  isObjectPickingEnabled = true;
+  onObjectSelected = callback;
+}
+
+export function disableObjectPicking() {
+  isObjectPickingEnabled = false;
+  onObjectSelected = null;
 }

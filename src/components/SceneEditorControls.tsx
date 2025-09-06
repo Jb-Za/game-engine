@@ -46,6 +46,7 @@ export interface SceneEditorControlsRef {
   addNewObject: (objectData: SceneObjectData) => void;
   updateSceneState: (newState: SceneEditorState) => void;
   refreshFromScene: () => void; // Method to refresh data from the scene
+  selectObject: (objectId: string | null) => void; // select object (comes from scene)
 }
 
 export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEditorControlsProps>(({
@@ -53,10 +54,10 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
   onAddObject,
   onRemoveObject,
   onSelectObject,
-  onSaveScene,
-  onLoadScene,
+  onSaveScene,  onLoadScene,
   onGetScene
-}, ref) => {  const [sceneState, setSceneState] = useState<SceneEditorState>({
+}, ref) => {
+  const [sceneState, setSceneState] = useState<SceneEditorState>({
     objects: [],
     selectedObjectId: null,
     cameraPosition: { x: 0, y: 5, z: 10 },
@@ -152,7 +153,6 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     try {
       console.log('Loading GLTF assets...');
       const assets = await AssetScanner.scanGLTFAssets();
-      console.log('Found assets:', assets);
       setGltfAssets(assets);
 
       // Generate missing thumbnails
@@ -227,13 +227,13 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
 
     try {
       // Update camera
-      const camera = scene.getCamera();
-      camera.eye.x = state.cameraPosition.x;
-      camera.eye.y = state.cameraPosition.y;
-      camera.eye.z = state.cameraPosition.z;
-      camera.target.x = state.cameraTarget.x;
-      camera.target.y = state.cameraTarget.y;
-      camera.target.z = state.cameraTarget.z;
+      // const camera = scene.getCamera();
+      // camera.eye.x = state.cameraPosition.x;
+      // camera.eye.y = state.cameraPosition.y;
+      // camera.eye.z = state.cameraPosition.z;
+      // camera.target.x = state.cameraTarget.x;
+      // camera.target.y = state.cameraTarget.y;
+      // camera.target.z = state.cameraTarget.z;
 
       // Update ambient light
       const ambientLight = scene.getAmbientLight();
@@ -400,7 +400,6 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
       }
     }
   };
-
   // Update parent when scene state changes
   useEffect(() => {
     // Don't update scene objects if we're currently refreshing from scene (prevents circular updates)
@@ -410,7 +409,7 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     
     // Always notify parent component of state changes
     onSceneChange(sceneState);
-  }, [sceneState, onSceneChange]);
+  }, [sceneState]);
 
   // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
@@ -423,7 +422,11 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     updateSceneState: (newState: SceneEditorState) => {
       setSceneState(newState);
     },
-    refreshFromScene: refreshFromScene
+    refreshFromScene: refreshFromScene,    
+    selectObject: (objectId: string | null) => {
+      console.log('SceneEditorControls.selectObject called with:', objectId);
+      setSceneState(prev => ({ ...prev, selectedObjectId: objectId }));
+    }
   }));
 
   // Get selected object
