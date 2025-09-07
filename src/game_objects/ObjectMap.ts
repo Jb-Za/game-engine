@@ -7,6 +7,7 @@ import { Color } from "../math/Color";
 import { Vec3 } from "../math/Vec3";
 import { Quaternion } from "../math/Quaternion";
 import { RenderPipeline } from "../render_pipelines/RenderPipeline";
+import { GizmoRenderPipeline } from "../render_pipelines/GizmoRenderPipeline";
 import { Texture2D } from "../texture/Texture2D";
 import { Ball } from "./Ball";
 // import { Ball } from "./Ball";
@@ -194,7 +195,7 @@ export class ObjectMap {
 }
 
 export interface GameObject {
-    pipeline: RenderPipeline | TerrainRenderPipeline | WaterRenderPipeline;
+    pipeline: RenderPipeline | TerrainRenderPipeline | WaterRenderPipeline | GizmoRenderPipeline;
     scale: Vec3;
     position: Vec3;
     rotation: Quaternion;

@@ -205,9 +205,8 @@ export class Scene {
                         gltfObject.rotation = rotation;
                         gltfObject.scale = scale;
                         gltfObject.filePath = object.filePath;
-                        gltfObject.name = object.name || "GLTF Object";
-
-                        if(gltfObject.gltfScene.boundingBox){
+                        gltfObject.name = object.name || "GLTF Object";                        
+                        if(gltfObject.gltfScene && gltfObject.gltfScene.boundingBox){
                             gltfObject.gltfScene.boundingBox.max = Vec3.multiply(gltfObject.gltfScene.boundingBox.max, scale);
                             gltfObject.gltfScene.boundingBox.min = Vec3.multiply(gltfObject.gltfScene.boundingBox.min, scale);
 

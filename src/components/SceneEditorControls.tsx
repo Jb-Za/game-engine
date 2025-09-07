@@ -2,6 +2,7 @@ import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } f
 import { AssetScanner, GLTFAssetInfo } from '../sceneEditor/AssetScanner';
 import { ThumbnailGenerator } from '../sceneEditor/ThumbnailGenerator';
 import { Vec3 } from '../math/Vec3';
+import { Quaternion } from '../math/Quaternion';
 
 // Scene Editor Control Interfaces
 export interface SceneObjectData {
@@ -47,6 +48,7 @@ export interface SceneEditorControlsRef {
   updateSceneState: (newState: SceneEditorState) => void;
   refreshFromScene: () => void; // Method to refresh data from the scene
   selectObject: (objectId: string | null) => void; // select object (comes from scene)
+  updateObjectPosition: (objectId: string, position: { x: number, y: number, z: number }) => void; // update object position from gizmo
 }
 
 export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEditorControlsProps>(({
@@ -79,68 +81,165 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [generatingThumbnails, setGeneratingThumbnails] = useState<Set<string>>(new Set());
   // Flag to prevent circular updates when refreshing from scene
-  const isRefreshingFromScene = useRef(false);
-  // State to track if we're viewing scene settings
+  const isRefreshingFromScene = useRef(false);  // State to track if we're viewing scene settings
   const [isViewingSceneSettings, setIsViewingSceneSettings] = useState(false);
+    // State for draggable/resizable hierarchy panel
+  const [hierarchyPanelWidth, setHierarchyPanelWidth] = useState(280);
+  const [hierarchyPanelHeight, setHierarchyPanelHeight] = useState(600);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [isResizingVertical, setIsResizingVertical] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [panelPosition, setPanelPosition] = useState({ x: 10, y: 10 });  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Numeric input that accepts both comma and dot as decimal separator and commits on blur/Enter
-  const NumericInput: React.FC<{
-    value: number;
-    step?: string;
-    placeholder?: string;
-    style?: React.CSSProperties;
-    onCommit: (v: number) => void;
-  }> = ({ value, step, placeholder, style, onCommit }) => {
-    const [local, setLocal] = useState<string>(() => String(value));
-    const inputRef = useRef<HTMLInputElement | null>(null);
-
-    useEffect(() => {
-      // Keep local input in sync when external value changes, but don't clobber while user is editing (focused)
-      if (document.activeElement !== inputRef.current) {
-        setLocal(String(value));
-      }
-    }, [value]);
-
-    const commit = () => {
-      const normalized = local.replace(',', '.');
-      const parsed = parseFloat(normalized);
-      if (!isNaN(parsed)) {
-        onCommit(parsed);
-      } else {
-        // Revert to the last known numeric value if parsing failed
-        setLocal(String(value));
-      }
-    };
-
-    return (
-      <input
-        ref={inputRef}
-        style={style}
-        type="text"
-        inputMode="decimal"
-        step={step}
-        placeholder={placeholder}
-        value={local}
-        onChange={(e) => {
-          const val = e.target.value;
-          // Allow empty, '-', '.', '-.', or valid number
-          if (/^-?\d*(\.|,)?\d*$/.test(val)) {
-            setLocal(val);
-          }
-        }}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            commit();
-            (e.target as HTMLInputElement).blur();
-          } else if (e.key === 'Escape') {
-            setLocal(String(value));
-            (e.target as HTMLInputElement).blur();
-          }
-        }}
-      />
-    );
+  // State for draggable/resizable properties panel
+  const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(320);
+  const [propertiesPanelHeight, setPropertiesPanelHeight] = useState(600);
+  const [isPropertiesDragging, setIsPropertiesDragging] = useState(false);
+  const [isPropertiesResizing, setIsPropertiesResizing] = useState(false);
+  const [isPropertiesResizingVertical, setIsPropertiesResizingVertical] = useState(false);
+  const [propertiesDragOffset, setPropertiesDragOffset] = useState({ x: 0, y: 0 });
+  const [propertiesPanelPosition, setPropertiesPanelPosition] = useState({ x: window.innerWidth - 340, y: 10 });
+  const propertiesPanelRef = useRef<HTMLDivElement>(null);  // Mouse event handlers for hierarchy panel dragging
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Check if clicking on resize handles
+    if ((e.target as HTMLElement).classList.contains('resize-handle-horizontal') || 
+        (e.target as HTMLElement).closest('.resize-handle-horizontal')) {
+      setIsResizing(true);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    if ((e.target as HTMLElement).classList.contains('resize-handle-vertical') || 
+        (e.target as HTMLElement).closest('.resize-handle-vertical')) {
+      setIsResizingVertical(true);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    // Check if clicking on header area (not content area)
+    const panel = panelRef.current;
+    if (!panel) return;
+    
+    const rect = panel.getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    
+    // Only allow dragging from header area (first ~50px)
+    if (clickY <= 50) {
+      setIsDragging(true);
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      e.preventDefault();
+    }
   };
+
+  // Mouse event handlers for properties panel dragging
+  const handlePropertiesMouseDown = (e: React.MouseEvent) => {
+    // Check if clicking on resize handles
+    if ((e.target as HTMLElement).classList.contains('resize-handle-horizontal') || 
+        (e.target as HTMLElement).closest('.resize-handle-horizontal')) {
+      setIsPropertiesResizing(true);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    if ((e.target as HTMLElement).classList.contains('resize-handle-vertical') || 
+        (e.target as HTMLElement).closest('.resize-handle-vertical')) {
+      setIsPropertiesResizingVertical(true);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    
+    // Check if clicking on header area (not content area)
+    const panel = propertiesPanelRef.current;
+    if (!panel) return;
+    
+    const rect = panel.getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    
+    // Only allow dragging from header area (first ~50px)
+    if (clickY <= 50) {
+      setIsPropertiesDragging(true);
+      setPropertiesDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    // Hierarchy panel resizing
+    if (isResizing) {
+      const rect = panelRef.current?.getBoundingClientRect();
+      if (rect) {
+        const newWidth = e.clientX - rect.left;
+        setHierarchyPanelWidth(Math.max(200, Math.min(600, newWidth)));
+      }
+    } else if (isResizingVertical) {
+      const rect = panelRef.current?.getBoundingClientRect();
+      if (rect) {
+        const newHeight = e.clientY - rect.top;
+        setHierarchyPanelHeight(Math.max(300, Math.min(window.innerHeight - 50, newHeight)));
+      }
+    } else if (isDragging) {
+      setPanelPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y
+      });
+    }    // Properties panel resizing
+    if (isPropertiesResizing) {
+      const rect = propertiesPanelRef.current?.getBoundingClientRect();
+      if (rect) {
+        const deltaX = e.clientX - rect.left;
+        const newWidth = rect.width - deltaX;
+        const clampedWidth = Math.max(200, Math.min(600, newWidth));
+        
+        // Update both width and position to expand to the left
+        setPropertiesPanelWidth(clampedWidth);
+        setPropertiesPanelPosition(prev => ({
+          ...prev,
+          x: prev.x + (rect.width - clampedWidth)
+        }));
+      }
+    } else if (isPropertiesResizingVertical) {
+      const rect = propertiesPanelRef.current?.getBoundingClientRect();
+      if (rect) {
+        const newHeight = e.clientY - rect.top;
+        setPropertiesPanelHeight(Math.max(300, Math.min(window.innerHeight - 50, newHeight)));
+      }
+    } else if (isPropertiesDragging) {
+      setPropertiesPanelPosition({
+        x: e.clientX - propertiesDragOffset.x,
+        y: e.clientY - propertiesDragOffset.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setIsResizing(false);
+    setIsResizingVertical(false);
+    setIsPropertiesDragging(false);
+    setIsPropertiesResizing(false);
+    setIsPropertiesResizingVertical(false);
+  };
+  // Add global mouse event listeners
+  useEffect(() => {
+    if (isDragging || isResizing || isResizingVertical || isPropertiesDragging || isPropertiesResizing || isPropertiesResizingVertical) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }  }, [isDragging, isResizing, isResizingVertical, isPropertiesDragging, isPropertiesResizing, isPropertiesResizingVertical, dragOffset, propertiesDragOffset]);
 
   // Load GLTF assets on mount
   useEffect(() => {
@@ -290,13 +389,21 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
             sceneObj.color.g = stateObj.color.g;
             sceneObj.color.b = stateObj.color.b;
             sceneObj.color.a = stateObj.color.a;
-          }
-
-          // Update rotation (assuming it's a Quaternion or has x,y,z properties)
+          }          // Update rotation - convert Euler angles to quaternion
           if (sceneObj.rotation) {
-            sceneObj.rotation.x = stateObj.rotation.x;
-            sceneObj.rotation.y = stateObj.rotation.y;
-            sceneObj.rotation.z = stateObj.rotation.z;
+            // Create quaternions for each axis rotation (in radians)
+            const qx = Quaternion.fromPitch(stateObj.rotation.x);
+            const qy = Quaternion.fromYaw(stateObj.rotation.y);
+            const qz = Quaternion.fromRoll(stateObj.rotation.z);
+            
+            // Combine rotations: Yaw * Pitch * Roll (Y * X * Z)
+            const combinedRotation = Quaternion.multiply(qy, Quaternion.multiply(qx, qz));
+            
+            // Apply to scene object
+            sceneObj.rotation.x = combinedRotation.x;
+            sceneObj.rotation.y = combinedRotation.y;
+            sceneObj.rotation.z = combinedRotation.z;
+            sceneObj.rotation.w = combinedRotation.w;
           }
 
           // Update visibility
@@ -340,11 +447,13 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
           g: obj.color?.g ?? 1, 
           b: obj.color?.b ?? 1, 
           a: obj.color?.a ?? 1 
-        },
-        rotation: { 
-          x: obj.rotation?.x ?? 0, 
-          y: obj.rotation?.y ?? 0, 
-          z: obj.rotation?.z ?? 0 
+        },        rotation: { 
+          ...(obj.rotation ? quaternionToEuler({
+            x: obj.rotation.x ?? 0,
+            y: obj.rotation.y ?? 0, 
+            z: obj.rotation.z ?? 0,
+            w: obj.rotation.w ?? 1
+          }) : { x: 0, y: 0, z: 0 })
         },
         visible: obj.visible !== false,
         properties: {}
@@ -410,7 +519,6 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     // Always notify parent component of state changes
     onSceneChange(sceneState);
   }, [sceneState]);
-
   // Expose methods to parent component via ref
   useImperativeHandle(ref, () => ({
     addNewObject: (objectData: SceneObjectData) => {
@@ -424,8 +532,10 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     },
     refreshFromScene: refreshFromScene,    
     selectObject: (objectId: string | null) => {
-      console.log('SceneEditorControls.selectObject called with:', objectId);
       setSceneState(prev => ({ ...prev, selectedObjectId: objectId }));
+    },
+    updateObjectPosition: (objectId: string, position: { x: number, y: number, z: number }) => {
+      updateObject(objectId, { position });
     }
   }));
 
@@ -448,8 +558,7 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
   const handleSelectObject = (id: string | null) => {
     setSceneState(prev => ({ ...prev, selectedObjectId: id }));
     setIsViewingSceneSettings(false); // Close scene settings when selecting an object
-    onSelectObject(id);
-  };
+    onSelectObject(id);  };
 
   const handleRemoveObject = (id: string) => {
     setSceneState(prev => ({
@@ -459,45 +568,27 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     }));
     onRemoveObject(id);
   };
-
   const handleViewSceneSettings = () => {
     setIsViewingSceneSettings(true);
     setSceneState(prev => ({ ...prev, selectedObjectId: null })); // Deselect any object
   };
-  // Helper functions
-  const hierarchyPanelStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '10px',
-    left: '10px',
-    width: '280px',
-    height: 'calc(100vh - 120px)',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    color: 'white',
-    borderRadius: '8px',
-    fontFamily: 'Arial, sans-serif',
-    fontSize: '12px',
-    zIndex: 1000,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden'
-  };
 
-  const propertiesPanelStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '10px',
-    right: '10px',
-    width: '320px',
-    height: 'calc(100vh - 120px)',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    color: 'white',
-    borderRadius: '8px',
-    fontFamily: 'Arial, sans-serif',
-    fontSize: '12px',
-    zIndex: 1000,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden'  };
+  // Helper function to convert quaternion to Euler angles
+  const quaternionToEuler = (q: { x: number, y: number, z: number, w: number }) => {
+    // Convert quaternion to Euler angles (in radians)
+    const sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
+    const cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
+    const roll = Math.atan2(sinr_cosp, cosr_cosp);
 
+    const sinp = 2 * (q.w * q.y - q.z * q.x);
+    const pitch = Math.abs(sinp) >= 1 ? Math.sign(sinp) * Math.PI / 2 : Math.asin(sinp);
+
+    const siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+    const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+    const yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+    return { x: roll, y: pitch, z: yaw };
+  };// Helper functions
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '4px',
@@ -533,9 +624,31 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     backgroundColor: '#f44336'
   };
   return (
-    <>
-      {/* Hierarchy Panel - Left Side */}
-      <div style={hierarchyPanelStyle}>        {/* Header */}
+    <>      {/* Hierarchy Panel - Left Side - now draggable and resizable */}
+      <div
+        ref={panelRef}
+        style={{
+          position: 'absolute',
+          left: `${panelPosition.x}px`,
+          top: `${panelPosition.y}px`,
+          width: `${hierarchyPanelWidth}px`,
+          height: `${hierarchyPanelHeight}px`,
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          color: 'white',
+          borderRadius: '8px',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '12px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
+          border: '1px solid #333',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+        }}
+        onMouseDown={handleMouseDown}
+      >{/* Header */}
         <div style={{ padding: '15px', borderBottom: '1px solid #444' }}>
           <h3 style={{ margin: '0 0 15px 0', fontSize: '14px' }}>Scene Hierarchy</h3>
           
@@ -770,18 +883,96 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
               </p>
             )}
           </div>
-        </div>
-
-        {/* Footer */}
+        </div>        {/* Footer */}
         <div style={{ padding: '10px', borderTop: '1px solid #444', fontSize: '10px', color: '#888' }}>
           Use mouse to look around<br/>
           WASD - Move camera<br/>
           R - Reset camera
+        </div>        {/* Resize Handles */}
+        {/* Right resize handle */}
+        <div
+          className="resize-handle-horizontal"
+          style={{
+            position: 'absolute',
+            right: '0',
+            top: '0',
+            bottom: '0',
+            width: '4px',
+            backgroundColor: 'transparent',
+            cursor: 'ew-resize',
+            zIndex: 1001
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setIsResizing(true);
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            right: '1px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '2px',
+            height: '30px',
+            backgroundColor: '#666',
+            borderRadius: '1px'
+          }} />
         </div>
-      </div>
 
-      {/* Properties Panel - Right Side */}
-      <div style={propertiesPanelStyle}>        {/* Header */}
+        {/* Bottom resize handle */}
+        <div
+          className="resize-handle-vertical"
+          style={{
+            position: 'absolute',
+            bottom: '0',
+            left: '0',
+            right: '0',
+            height: '4px',
+            backgroundColor: 'transparent',
+            cursor: 'ns-resize',
+            zIndex: 1001
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setIsResizingVertical(true);
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            bottom: '1px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '30px',
+            height: '2px',
+            backgroundColor: '#666',
+            borderRadius: '1px'
+          }} />
+        </div>
+      </div>      {/* Properties Panel - Right Side - now draggable and resizable */}
+      <div
+        ref={propertiesPanelRef}
+        style={{
+          position: 'absolute',
+          left: `${propertiesPanelPosition.x}px`,
+          top: `${propertiesPanelPosition.y}px`,
+          width: `${propertiesPanelWidth}px`,
+          height: `${propertiesPanelHeight}px`,
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          color: 'white',
+          borderRadius: '8px',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '12px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          cursor: isPropertiesDragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
+          border: '1px solid #333',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+        }}
+        onMouseDown={handlePropertiesMouseDown}
+      >{/* Header */}
         <div style={{ padding: '15px', borderBottom: '1px solid #444' }}>
           <h3 style={{ margin: '0', fontSize: '14px' }}>
             {isViewingSceneSettings ? 'Scene Settings' : selectedObject ? `Properties - ${selectedObject.name}` : 'Properties'}
@@ -1041,7 +1232,7 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     type="number"
                     step="0.1"
                     placeholder="X"
-                    value={selectedObject.position.x}
+                    value={selectedObject.position.x.toFixed(3)}
                     onChange={(e) => updateObject(selectedObject.id, {
                       position: { ...selectedObject.position, x: parseFloat(e.target.value) || 0 }
                     })}
@@ -1051,7 +1242,7 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     type="number"
                     step="0.1"
                     placeholder="Y"
-                    value={selectedObject.position.y}
+                    value={selectedObject.position.y.toFixed(3)}
                     onChange={(e) => updateObject(selectedObject.id, {
                       position: { ...selectedObject.position, y: parseFloat(e.target.value) || 0 }
                     })}
@@ -1061,7 +1252,7 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     type="number"
                     step="0.1"
                     placeholder="Z"
-                    value={selectedObject.position.z}
+                    value={selectedObject.position.z.toFixed(3)}
                     onChange={(e) => updateObject(selectedObject.id, {
                       position: { ...selectedObject.position, z: parseFloat(e.target.value) || 0 }
                     })}
@@ -1094,18 +1285,19 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     value={selectedObject.scale.z}
                     onChange={(e) => updateObject(selectedObject.id, { scale: { ...selectedObject.scale, z: parseFloat(e.target.value) || 0 } })}
                   />
-                </div>
-
-                <label style={labelStyle}>Rotation (degrees)</label>
+                </div>                <label style={labelStyle}>Rotation (degrees)</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px', marginBottom: '8px' }}>
                   <input
                     style={inputStyle}
                     type="number"
                     step="1"
                     placeholder="X"
-                    value={selectedObject.rotation.x * (180 / Math.PI)}
+                    value={((selectedObject.rotation.x || 0) * (180 / Math.PI)).toFixed(0)}
                     onChange={(e) => updateObject(selectedObject.id, { 
-                      rotation: { ...selectedObject.rotation, x: parseFloat(e.target.value) * (Math.PI / 180) } 
+                      rotation: { 
+                        ...selectedObject.rotation, 
+                        x: parseFloat(e.target.value) * (Math.PI / 180) || 0 
+                      } 
                     })}
                   />
                   <input
@@ -1113,9 +1305,12 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     type="number"
                     step="1"
                     placeholder="Y"
-                    value={selectedObject.rotation.y * (180 / Math.PI)}
+                    value={((selectedObject.rotation.y || 0) * (180 / Math.PI)).toFixed(0)}
                     onChange={(e) => updateObject(selectedObject.id, { 
-                      rotation: { ...selectedObject.rotation, y: parseFloat(e.target.value) * (Math.PI / 180) } 
+                      rotation: { 
+                        ...selectedObject.rotation, 
+                        y: parseFloat(e.target.value) * (Math.PI / 180) || 0 
+                      } 
                     })}
                   />
                   <input
@@ -1123,9 +1318,12 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     type="number"
                     step="1"
                     placeholder="Z"
-                    value={selectedObject.rotation.z * (180 / Math.PI)}
+                    value={((selectedObject.rotation.z || 0) * (180 / Math.PI)).toFixed(0)}
                     onChange={(e) => updateObject(selectedObject.id, { 
-                      rotation: { ...selectedObject.rotation, z: parseFloat(e.target.value) * (Math.PI / 180) } 
+                      rotation: { 
+                        ...selectedObject.rotation, 
+                        z: parseFloat(e.target.value) * (Math.PI / 180) || 0 
+                      } 
                     })}
                   />
                 </div>
@@ -1365,7 +1563,69 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
               </p>
             </div>
           )}
-        </div>      </div>
+        </div>
+
+        {/* Resize Handles for Properties Panel */}
+        {/* Left resize handle */}
+        <div
+          className="resize-handle-horizontal"
+          style={{
+            position: 'absolute',
+            left: '0',
+            top: '0',
+            bottom: '0',
+            width: '4px',
+            backgroundColor: 'transparent',
+            cursor: 'ew-resize',
+            zIndex: 1001
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setIsPropertiesResizing(true);
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            left: '1px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '2px',
+            height: '30px',
+            backgroundColor: '#666',
+            borderRadius: '1px'
+          }} />
+        </div>
+
+        {/* Bottom resize handle */}
+        <div
+          className="resize-handle-vertical"
+          style={{
+            position: 'absolute',
+            bottom: '0',
+            left: '0',
+            right: '0',
+            height: '4px',
+            backgroundColor: 'transparent',
+            cursor: 'ns-resize',
+            zIndex: 1001
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            setIsPropertiesResizingVertical(true);
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            bottom: '1px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '30px',
+            height: '2px',
+            backgroundColor: '#666',
+            borderRadius: '1px'
+          }} />
+        </div>
+      </div>
     </>
   );
 });

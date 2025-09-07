@@ -10,6 +10,10 @@ import { PointLightsCollection } from "../../lights/PointLight";
 import { ShadowCamera } from "../../camera/ShadowCamera";
 import { Mat4x4 } from "../../math/Mat4x4";
 import { Vec4 } from "../../math/Vec4";
+import { Vec3 } from "../../math/Vec3";
+import { GizmoArrow } from "../../game_objects/GizmoArrow";
+import { Color } from "../../math/Color";
+
 function intersectRayBox(rayOrigin: Vec3, rayDirection: Vec3, boxScale: Vec3): { distance: number; point: Vec3 } | null {
   // Normalize ray direction so distance is in world units
   const len = Math.hypot(rayDirection.x, rayDirection.y, rayDirection.z);
@@ -43,9 +47,8 @@ function intersectRayBox(rayOrigin: Vec3, rayDirection: Vec3, boxScale: Vec3): {
   }
 
   const point = Vec3.add(rayOrigin, Vec3.scale(d, distance));
-
   return { distance, point };
-}import { Vec3 } from "../../math/Vec3";
+}
 
 let scene: Scene | null = null;
 let animationFrameId: number | null = null;
@@ -68,6 +71,18 @@ let shadowCamera: ShadowCamera | null = null;
 
 let isObjectPickingEnabled = true;
 let onObjectSelected: ((objectId: string | null) => void) | null = null;
+let onObjectPositionChanged: ((objectId: string, position: { x: number, y: number, z: number }) => void) | null = null;
+
+// Add gizmo variables
+let selectedObjectId: string | null = null;
+let selectedObject: any = null;
+let xAxisArrow: GizmoArrow | null = null;
+let yAxisArrow: GizmoArrow | null = null;
+let zAxisArrow: GizmoArrow | null = null;
+let isDragging = false;
+let activeArrow: 'x' | 'y' | 'z' | null = null;
+let dragStartMousePos: { x: number, y: number } | null = null;
+let dragStartObjectPos: Vec3 | null = null;
 
 // Add this interface for ray-object intersection
 interface RayIntersection {
@@ -77,19 +92,37 @@ interface RayIntersection {
 }
 
 async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement) {
-  canvas?.addEventListener("click", async (event: MouseEvent) => {
+  canvas?.addEventListener("mousedown", async (event: MouseEvent) => {
     if (isObjectPickingEnabled && !document.pointerLockElement) {
       const rect = canvas.getBoundingClientRect();
       const mouseX = event.clientX - rect.left;
-      const mouseY = event.clientY - rect.top;      const selectedObjectId = performRayPicking(mouseX, mouseY);
-
-      if (onObjectSelected) {
-        onObjectSelected(selectedObjectId);
+      const mouseY = event.clientY - rect.top;
+      
+      // First check if we're clicking on a gizmo arrow
+      const clickedArrow = checkArrowSelection(mouseX, mouseY);
+      if (clickedArrow && selectedObject) {
+        startDragging(clickedArrow, mouseX, mouseY);
+        return;
       }
+      
+      // Otherwise, perform regular object selection
+      const selectedObjectIdResult = performRayPicking(mouseX, mouseY);
+      selectObject(selectedObjectIdResult);
+    }
+  });
 
-    } else {
-      // // Original pointer lock behavior
-      // await canvas?.requestPointerLock();
+  canvas?.addEventListener("mousemove", (event: MouseEvent) => {
+    if (isDragging && activeArrow && selectedObject) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+      updateDragging(mouseX, mouseY);
+    }
+  });
+
+  canvas?.addEventListener("mouseup", () => {
+    if (isDragging) {
+      stopDragging();
     }
   });
 
@@ -202,14 +235,26 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
         depthLoadOp: "clear",
         depthStoreOp: "store",
       },
-    });
-
-    // Render game objects
+    });    // Render game objects
     sceneObjects.objects.forEach((obj) => {
       if (obj && typeof obj.draw === "function" && obj.visible !== false) {
         obj.draw(renderPass);
       }
     });
+
+    // Render gizmo arrows on top
+    if (xAxisArrow && xAxisArrow.visible) {
+      xAxisArrow.update();
+      xAxisArrow.draw(renderPass);
+    }
+    if (yAxisArrow && yAxisArrow.visible) {
+      yAxisArrow.update();
+      yAxisArrow.draw(renderPass);
+    }
+    if (zAxisArrow && zAxisArrow.visible) {
+      zAxisArrow.update();
+      zAxisArrow.draw(renderPass);
+    }
 
     renderPass.end();
     device.queue.submit([commandEncoder.finish()]);
@@ -258,6 +303,12 @@ function disposeScene(): void {
   directionalLight = null;
   pointLights = null;
   shadowCamera = null;
+  
+  // Reset gizmo arrows to ensure they use the new scene's device
+  hideGizmoArrows();
+  xAxisArrow = null;
+  yAxisArrow = null;
+  zAxisArrow = null;
 }
 
 function loadScene(sceneJson: any): void {
@@ -282,8 +333,13 @@ function saveScene(): void {
 
 function selectObject(objectId: string | null): void {
   console.log('SceneEditor.selectObject called with:', objectId);
-  // For now, we'll just trigger the callback if one is set
-  // In the future, this could highlight the object in the 3D scene
+  
+  selectedObjectId = objectId;
+  selectedObject = objectId ? scene?.getSceneObjects().objects.get(objectId) : null;
+  
+  // Update gizmo visibility and position
+  updateGizmoArrows();
+  
   if (onObjectSelected) {
     onObjectSelected(objectId);
   }
@@ -379,7 +435,7 @@ function testRayObjectIntersection(ray: { origin: Vec3; direction: Vec3 }, obj: 
       intersection = intersectRaySphere(localRayOrigin, localRayDirection, 1.0);
       break;    case "gltf":
       // In object space, use the actual bounding box without additional scaling
-      if (obj.gltfScene.boundingBox && obj.gltfScene.boundingBox.min && obj.gltfScene.boundingBox.max) {
+      if (obj.gltfScene && obj.gltfScene.boundingBox && obj.gltfScene.boundingBox.min && obj.gltfScene.boundingBox.max) {
         // Use the original GLTF bounding box directly (transformation is already handled by object space conversion)
         const gltfBounds = obj.gltfScene.boundingBox;
         console.log(`GLTF using original bounds - min: (${gltfBounds.min.x.toFixed(3)}, ${gltfBounds.min.y.toFixed(3)}, ${gltfBounds.min.z.toFixed(3)}), max: (${gltfBounds.max.x.toFixed(3)}, ${gltfBounds.max.y.toFixed(3)}, ${gltfBounds.max.z.toFixed(3)})`);
@@ -410,12 +466,13 @@ function testRayObjectIntersection(ray: { origin: Vec3; direction: Vec3 }, obj: 
 }
 
 function getObjectTransformMatrix(obj: any): Mat4x4 {
-  // Create transformation matrix from object's position, rotation, and scale
+ // Create transformation matrix from object's position, rotation, and scale
   const translation = Mat4x4.translation(obj.position.x, obj.position.y, obj.position.z);
   const rotation = Mat4x4.fromQuaternion(obj.rotation);
   const scale = Mat4x4.scale(obj.scale.x, obj.scale.y, obj.scale.z);
 
-  return Mat4x4.multiply(Mat4x4.multiply(translation, rotation), scale);
+  // Correct order: Scale → Rotation → Translation (multiply right to left)
+  return Mat4x4.multiply(translation, Mat4x4.multiply(rotation, scale));
 }
 
 function intersectRayGltf(rayOrigin: Vec3, rayDirection: Vec3, boxMinMax: { min: Vec3; max: Vec3 }): { distance: number; point: Vec3 } | null {
@@ -478,9 +535,188 @@ function intersectRaySphere(rayOrigin: Vec3, rayDirection: Vec3, radius: number)
   if (distance < 0) {
     return null;
   }
-
   const point = Vec3.add(rayOrigin, Vec3.scale(rayDirection, distance));
   return { distance, point };
+}
+
+function updateGizmoArrows(): void {
+  if (!selectedObject || !camera || !ambientLight || !directionalLight || !pointLights || !shadowCamera || !scene) {
+    hideGizmoArrows();
+    return;
+  }
+
+  // Get the device from the scene's object parameters to ensure consistency
+  const sceneDevice = (scene as any)._objectParameters?.device || _device;
+  if (!sceneDevice) {
+    hideGizmoArrows();
+    return;
+  }
+
+  // Create arrows if they don't exist
+  const xScale =  0.4;
+  const yScale =  0.5;
+
+  if (!xAxisArrow) {
+    xAxisArrow = new GizmoArrow(sceneDevice, camera, shadowCamera);
+    xAxisArrow.color = new Color(1, 0, 0, 1); // Red for X axis
+    xAxisArrow.scale = new Vec3(xScale, yScale, xScale); // Thin arrow
+    xAxisArrow.setDirection(new Vec3(-1, 0, 0)); // Point along X axis
+  }
+  
+  if (!yAxisArrow) {
+    yAxisArrow = new GizmoArrow(sceneDevice, camera, shadowCamera);
+    yAxisArrow.color = new Color(0, 1, 0, 1); // Green for Y axis
+    yAxisArrow.scale = new Vec3(xScale, yScale, xScale);
+    yAxisArrow.setDirection(new Vec3(0, 1, 0)); // Point along Y axis
+  }
+  
+  if (!zAxisArrow) {
+    zAxisArrow = new GizmoArrow(sceneDevice, camera, shadowCamera);
+    zAxisArrow.color = new Color(0, 0, 1, 1); // Blue for Z axis
+    zAxisArrow.scale = new Vec3(xScale, yScale, xScale);
+    zAxisArrow.setDirection(new Vec3(0, 0, -1)); // Point along Z axis
+  }
+
+  // Position arrows at the selected object's position with slight offset
+  const objPos = selectedObject.position;
+  const offset = 1.0; // Distance from object center
+  
+  xAxisArrow.position = new Vec3(objPos.x + offset, objPos.y, objPos.z);
+  yAxisArrow.position = new Vec3(objPos.x, objPos.y + offset, objPos.z);
+  zAxisArrow.position = new Vec3(objPos.x, objPos.y, objPos.z + offset);
+  
+  // Make arrows visible
+  xAxisArrow.visible = true;
+  yAxisArrow.visible = true;
+  zAxisArrow.visible = true;
+}
+
+function hideGizmoArrows(): void {
+  if (xAxisArrow) xAxisArrow.visible = false;
+  if (yAxisArrow) yAxisArrow.visible = false;
+  if (zAxisArrow) zAxisArrow.visible = false;
+}
+
+function checkArrowSelection(mouseX: number, mouseY: number): 'x' | 'y' | 'z' | null {
+  if (!camera || !_canvas) return null;
+
+  const ray = createRayFromCamera(
+    (mouseX / _canvas.width) * 2 - 1,
+    -((mouseY / _canvas.height) * 2 - 1)
+  );
+
+  const intersections: { arrow: 'x' | 'y' | 'z', distance: number }[] = [];
+
+  // Test each arrow
+  if (xAxisArrow && xAxisArrow.visible) {
+    const intersection = testArrowIntersection(ray, xAxisArrow);
+    if (intersection) {
+      intersections.push({ arrow: 'x', distance: intersection.distance });
+    }
+  }
+  
+  if (yAxisArrow && yAxisArrow.visible) {
+    const intersection = testArrowIntersection(ray, yAxisArrow);
+    if (intersection) {
+      intersections.push({ arrow: 'y', distance: intersection.distance });
+    }
+  }
+  
+  if (zAxisArrow && zAxisArrow.visible) {
+    const intersection = testArrowIntersection(ray, zAxisArrow);
+    if (intersection) {
+      intersections.push({ arrow: 'z', distance: intersection.distance });
+    }
+  }
+
+  if (intersections.length > 0) {
+    intersections.sort((a, b) => a.distance - b.distance);
+    return intersections[0].arrow;
+  }
+
+  return null;
+}
+
+function testArrowIntersection(ray: { origin: Vec3; direction: Vec3 }, arrow: GizmoArrow): { distance: number; point: Vec3 } | null {
+  // Transform ray to arrow's object space
+  const objMatrix = getArrowTransformMatrix(arrow);
+  const invObjMatrix = Mat4x4.inverse(objMatrix);
+  const localRayOrigin = Vec3.transformPoint(invObjMatrix, ray.origin);
+  const localRayDirection = Vec3.transformVector(invObjMatrix, ray.direction);
+
+  // Use a cylindrical bounding box for the arrow
+  return intersectRayBox(localRayOrigin, localRayDirection, new Vec3(0.1, 0.5, 0.1));
+}
+
+function getArrowTransformMatrix(arrow: GizmoArrow): Mat4x4 {
+  const translation = Mat4x4.translation(arrow.position.x, arrow.position.y, arrow.position.z);
+  const rotation = Mat4x4.fromQuaternion(arrow.rotation);
+  const scale = Mat4x4.scale(arrow.scale.x, arrow.scale.y, arrow.scale.z);
+  return Mat4x4.multiply(Mat4x4.multiply(translation, rotation), scale);
+}
+
+function startDragging(arrowType: 'x' | 'y' | 'z', mouseX: number, mouseY: number): void {
+  if (!selectedObject) return;
+  
+  isDragging = true;
+  activeArrow = arrowType;
+  dragStartMousePos = { x: mouseX, y: mouseY };
+  dragStartObjectPos = new Vec3(selectedObject.position.x, selectedObject.position.y, selectedObject.position.z);
+  
+  console.log(`Started dragging ${arrowType} axis`);
+}
+
+function updateDragging(mouseX: number, mouseY: number): void {
+  if (!isDragging || !activeArrow || !selectedObject || !dragStartMousePos || !dragStartObjectPos || !camera || !_canvas) {
+    return;
+  }
+
+  // Calculate mouse movement
+  const deltaX = mouseX - dragStartMousePos.x;
+  const deltaY = mouseY - dragStartMousePos.y;
+  
+  // Convert screen space movement to world space movement along the active axis
+  const sensitivity = 0.01; // Adjust this value to control movement speed
+  
+  let worldDelta = new Vec3(0, 0, 0);
+  
+  switch (activeArrow) {
+    case 'x':
+      // Project screen movement to X axis in world space
+      worldDelta.x = -deltaX * sensitivity;
+      break;
+    case 'y':
+      // Y axis movement (up/down on screen)
+      worldDelta.y = -deltaY * sensitivity; // Negative because screen Y is flipped
+      break;
+    case 'z':
+      // Z axis movement (we'll use horizontal movement for now)
+      worldDelta.z = deltaX * sensitivity;
+      break;
+  }
+  // Update object position
+  selectedObject.position = Vec3.add(dragStartObjectPos, worldDelta);
+  
+  // Notify React UI of position change
+  if (onObjectPositionChanged && selectedObjectId) {
+    onObjectPositionChanged(selectedObjectId, {
+      x: selectedObject.position.x,
+      y: selectedObject.position.y,
+      z: selectedObject.position.z
+    });
+  }
+  
+  // Update gizmo arrows to follow the object
+  updateGizmoArrows();
+}
+
+function stopDragging(): void {
+  isDragging = false;
+  activeArrow = null;
+  dragStartMousePos = null;
+  dragStartObjectPos = null;
+  
+  console.log('Stopped dragging');
 }
 
 // Export functions to enable/disable object picking
@@ -492,4 +728,9 @@ export function enableObjectPicking(callback: (objectId: string | null) => void)
 export function disableObjectPicking() {
   isObjectPickingEnabled = false;
   onObjectSelected = null;
+}
+
+// Export function to set position change callback
+export function setObjectPositionCallback(callback: (objectId: string, position: { x: number, y: number, z: number }) => void) {
+  onObjectPositionChanged = callback;
 }

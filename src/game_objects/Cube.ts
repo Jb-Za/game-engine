@@ -48,21 +48,21 @@ export class Cube{
         this.shadowPipeline = new ShadowRenderPipeline(device, shadowCamera, this.transformBuffer);
     }
 
-    public update(){
-        const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
-        const rotation = this.rotation.toMatrix();
-        const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
-        
-        // Apply transformations in order: Scale -> Rotate -> Translate
-        let transform = Mat4x4.multiply(rotation, scale);
-        this.transform = Mat4x4.multiply(translate, transform);
-        this.transformBuffer.update(this.transform);
+  public update(){
+    const scale = Mat4x4.scale(this.scale.x, this.scale.y, this.scale.z);
+    const rotation = this.rotation.toMatrix();
+    const translate = Mat4x4.translation(this.position.x, this.position.y, this.position.z);
+    
+    // CORRECT ORDER: Apply transformations in order: Scale -> Rotate -> Translate
+    // But multiply matrices in REVERSE order (right to left)
+    let transform = Mat4x4.multiply(rotation, scale); // Rotation THEN scale
+    this.transform = Mat4x4.multiply(translate, transform); // Translation THEN (rotation + scale)
+    this.transformBuffer.update(this.transform);
 
-        let normalMatrix = Mat3x3.fromMat4x4(this.transform);
-        normalMatrix = Mat3x3.transpose(normalMatrix);
-        normalMatrix = Mat3x3.inverse(normalMatrix);
-        this.normalMatrixBuffer.update(Mat3x3.to16AlignedMat3x3(normalMatrix));
-    }
+    // TEMPORARY: Use identity matrix for normals to test
+    let normalMatrix = new Mat3x3();
+    this.normalMatrixBuffer.update(Mat3x3.to16AlignedMat3x3(normalMatrix));
+}
 
     public draw(renderPassEncoder: GPURenderPassEncoder){
         if(!this.visible) return;
