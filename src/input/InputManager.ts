@@ -7,11 +7,9 @@ export class InputManager {
   private keys: Map<string, boolean> = new Map<string, boolean>();
   private mouseKeys: Map<number, boolean> = new Map<number, boolean>();
   private _mouseMoved: EventEmitter<Coordinates> = new EventEmitter();
-
-
   constructor(private canvas?: HTMLCanvasElement) {
     window.addEventListener("keydown", (e) => {
-      e.preventDefault();
+      
       this.keys.set(e.code, true);
       if (e.key.length === 1) {
         this.keys.set(e.key.toLowerCase(), true);
@@ -35,7 +33,7 @@ export class InputManager {
     });
 
     window.addEventListener("mousedown", (e) => {
-      e.preventDefault();
+      
       this.mouseKeys.set(e.button, true);
     });
 

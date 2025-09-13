@@ -486,27 +486,20 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
         }
       }
     };
-  };
-
-  // Function to refresh scene data from the current scene
+  };  // Function to refresh scene data from the current scene
   const refreshFromScene = () => {
-    console.log('refreshFromScene called');
     if (onGetScene) {
       const scene = onGetScene();
-      console.log('Scene retrieved:', scene);
       if (scene) {
         isRefreshingFromScene.current = true;
         const newSceneState = extractSceneData(scene);
-        console.log('New scene state extracted:', newSceneState);
         setSceneState(newSceneState);
-        // Reset flag after state update
         setTimeout(() => {
           isRefreshingFromScene.current = false;
         }, 0);
       }
     }
   };
-  // Update parent when scene state changes
   useEffect(() => {
     // Don't update scene objects if we're currently refreshing from scene (prevents circular updates)
     if (!isRefreshingFromScene.current) {
@@ -594,7 +587,8 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
     border: '1px solid rgba(255, 255, 255, 0.3)',
     color: 'white',
     borderRadius: '3px',
-    fontSize: '11px'
+    fontSize: '11px',
+    pointerEvents: 'auto'
   };
 
   const labelStyle: React.CSSProperties = {
@@ -975,7 +969,15 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
             {isViewingSceneSettings ? 'Scene Settings' : selectedObject ? `Properties - ${selectedObject.name}` : 'Properties'}
           </h3>
         </div>        {/* Content */}
-        <div style={{ flex: 1, padding: '15px', overflowY: 'auto' }}>
+        <div 
+          style={{ 
+            flex: 1, 
+            padding: '15px', 
+            overflowY: 'auto',
+            pointerEvents: 'auto'
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {isViewingSceneSettings ? (
             <div>
               {/* Scene Settings */}
@@ -1228,21 +1230,26 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     style={inputStyle}
                     type="number"
                     step="0.1"
-                    placeholder="X"
+                    placeholder="X"                    
                     value={selectedObject.position.x.toFixed(3)}
-                    onChange={(e) => updateObject(selectedObject.id, {
-                      position: { ...selectedObject.position, x: parseFloat(e.target.value) || 0 }
-                    })}
+
+                    onChange={(e) => {
+                      updateObject(selectedObject.id, {
+                        position: { ...selectedObject.position, x: parseFloat(e.target.value) || 0 }
+                      });
+                    }}
                   />
                   <input
                     style={inputStyle}
                     type="number"
                     step="0.1"
                     placeholder="Y"
-                    value={selectedObject.position.y.toFixed(3)}
-                    onChange={(e) => updateObject(selectedObject.id, {
-                      position: { ...selectedObject.position, y: parseFloat(e.target.value) || 0 }
-                    })}
+                    value={selectedObject.position.y.toFixed(3)}                    
+                    onChange={(e) => {
+                      updateObject(selectedObject.id, {
+                        position: { ...selectedObject.position, y: parseFloat(e.target.value) || 0 }
+                      });
+                    }}
                   />
                   <input
                     style={inputStyle}
@@ -1289,13 +1296,15 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
                     type="number"
                     step="1"
                     placeholder="X"
-                    value={((selectedObject.rotation.x || 0) * (180 / Math.PI)).toFixed(0)}
-                    onChange={(e) => updateObject(selectedObject.id, { 
-                      rotation: { 
-                        ...selectedObject.rotation, 
-                        x: parseFloat(e.target.value) * (Math.PI / 180) || 0 
-                      } 
-                    })}
+                    value={((selectedObject.rotation.x || 0) * (180 / Math.PI)).toFixed(0)}                    
+                    onChange={(e) => {
+                      updateObject(selectedObject.id, { 
+                        rotation: { 
+                          ...selectedObject.rotation, 
+                          x: parseFloat(e.target.value) * (Math.PI / 180) || 0 
+                        } 
+                      });
+                    }}
                   />
                   <input
                     style={inputStyle}

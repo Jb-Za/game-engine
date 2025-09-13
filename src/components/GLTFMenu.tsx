@@ -26,10 +26,22 @@ const GLTFMenu: React.FC<GLTFMenuProps> = ({
   onSpeedChange,
 }) => {
   return (
-    <div className="gltf-menu" style={{ background: 'rgb(65, 65, 65)', padding: 12, borderRadius: 8, boxShadow: '0 2px 8px #0002', position: 'fixed', right: '10px', top: '20%' }}>
+    <div className="gltf-menu" style={{ 
+      background: 'rgb(65, 65, 65)', 
+      padding: 12, 
+      borderRadius: 8, 
+      boxShadow: '0 2px 8px #0002', 
+      position: 'fixed', 
+      right: '10px', 
+      top: '20%',
+      zIndex: 1000,
+      pointerEvents: 'auto'
+    }}>
       <div style={{ marginBottom: 8 }}>
-        <label>GLTF Model:&nbsp;</label>
-        <select value={selectedFile} onChange={e => onFileChange(e.target.value)}>
+        <label>GLTF Model:&nbsp;</label>        <select value={selectedFile} onChange={e => {
+          console.log('GLTF file select onChange called with:', e.target.value);
+          onFileChange(e.target.value);
+        }}>
           {gltfFiles.map(f => (
             <option key={f} value={f}>{f}</option>
           ))}
@@ -37,7 +49,10 @@ const GLTFMenu: React.FC<GLTFMenuProps> = ({
       </div>
       <div style={{ marginBottom: 8 }}>
         <label>
-          <input type="checkbox" checked={skinMode} onChange={e => onSkinModeChange(e.target.checked)} />
+          <input type="checkbox" checked={skinMode} onChange={e => {
+            console.log('Skin mode checkbox onChange called with:', e.target.checked);
+            onSkinModeChange(e.target.checked);
+          }} />
           &nbsp;Skin Mode
         </label>
       </div>   
@@ -58,14 +73,16 @@ const GLTFMenu: React.FC<GLTFMenuProps> = ({
         }
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: animations.length === 0 ? 0.5 : 1 }}>
-        <label>Speed: {speed.toFixed(1)}x</label>
-        <input 
+        <label>Speed: {speed.toFixed(1)}x</label>        <input 
           type="range" 
           min="0" 
           max="1" 
           step="0.1" 
           value={speed} 
-          onChange={e => onSpeedChange(parseFloat(e.target.value))} 
+          onChange={e => {
+            console.log('Speed range onChange called with:', e.target.value);
+            onSpeedChange(parseFloat(e.target.value));
+          }}
           style={{ flexGrow: 1 }} 
           disabled={animations.length === 0}
         />
