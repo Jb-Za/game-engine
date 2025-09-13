@@ -247,38 +247,54 @@ struct VertexOutput {
     const requiredBindGroups = isSkinned ? 4 : 3;
     for (let i = 0; i < Math.min(bindGroups.length, requiredBindGroups); i++) {
       renderPassEncoder.setBindGroup(i, bindGroups[i]);
-    }
-
-    // Set vertex buffers based on model type
+    }    // Set vertex buffers based on model type
     if (isSkinned) {
       // For skinned models, set position, joints, and weights buffers
       let bufferIndex = 0;
 
       // Position buffer (always first)
       if (this.attributeMap["POSITION"]) {
-        renderPassEncoder.setVertexBuffer(bufferIndex++, this.attributeMap["POSITION"].view.gpuBuffer!, this.attributeMap["POSITION"].byteOffset, this.attributeMap["POSITION"].byteLength);
+        const posAccessor = this.attributeMap["POSITION"];
+        const posBufferView = posAccessor.view;
+        const posAvailableSize = posBufferView.view.byteLength - posAccessor.byteOffset;
+        const posSafeSize = Math.min(posAccessor.byteLength, posAvailableSize);
+        renderPassEncoder.setVertexBuffer(bufferIndex++, posBufferView.gpuBuffer!, posAccessor.byteOffset, posSafeSize);
       }
 
       // Joints buffer
       if (this.attributeMap["JOINTS_0"]) {
-        renderPassEncoder.setVertexBuffer(bufferIndex++, this.attributeMap["JOINTS_0"].view.gpuBuffer!, this.attributeMap["JOINTS_0"].byteOffset, this.attributeMap["JOINTS_0"].byteLength);
+        const jointsAccessor = this.attributeMap["JOINTS_0"];
+        const jointsBufferView = jointsAccessor.view;
+        const jointsAvailableSize = jointsBufferView.view.byteLength - jointsAccessor.byteOffset;
+        const jointsSafeSize = Math.min(jointsAccessor.byteLength, jointsAvailableSize);
+        renderPassEncoder.setVertexBuffer(bufferIndex++, jointsBufferView.gpuBuffer!, jointsAccessor.byteOffset, jointsSafeSize);
       }
 
       // Weights buffer
       if (this.attributeMap["WEIGHTS_0"]) {
-        renderPassEncoder.setVertexBuffer(bufferIndex++, this.attributeMap["WEIGHTS_0"].view.gpuBuffer!, this.attributeMap["WEIGHTS_0"].byteOffset, this.attributeMap["WEIGHTS_0"].byteLength);
+        const weightsAccessor = this.attributeMap["WEIGHTS_0"];
+        const weightsBufferView = weightsAccessor.view;
+        const weightsAvailableSize = weightsBufferView.view.byteLength - weightsAccessor.byteOffset;
+        const weightsSafeSize = Math.min(weightsAccessor.byteLength, weightsAvailableSize);
+        renderPassEncoder.setVertexBuffer(bufferIndex++, weightsBufferView.gpuBuffer!, weightsAccessor.byteOffset, weightsSafeSize);
       }
     } else {
       // For rigid models, only set the position vertex buffer
       if (this.attributeMap["POSITION"]) {
-        renderPassEncoder.setVertexBuffer(0, this.attributeMap["POSITION"].view.gpuBuffer!, this.attributeMap["POSITION"].byteOffset, this.attributeMap["POSITION"].byteLength);
+        const posAccessor = this.attributeMap["POSITION"];
+        const posBufferView = posAccessor.view;
+        const posAvailableSize = posBufferView.view.byteLength - posAccessor.byteOffset;
+        const posSafeSize = Math.min(posAccessor.byteLength, posAvailableSize);
+        renderPassEncoder.setVertexBuffer(0, posBufferView.gpuBuffer!, posAccessor.byteOffset, posSafeSize);
       }
-    }
-
-    // Render with or without indices
+    }    // Render with or without indices
     if (this.attributeMap["INDICES"]) {
-      renderPassEncoder.setIndexBuffer(this.attributeMap["INDICES"].view.gpuBuffer!, this.attributeMap["INDICES"].vertexType as GPUIndexFormat, this.attributeMap["INDICES"].byteOffset, this.attributeMap["INDICES"].byteLength);
-      renderPassEncoder.drawIndexed(this.attributeMap["INDICES"].count);
+      const indicesAccessor = this.attributeMap["INDICES"];
+      const indicesBufferView = indicesAccessor.view;
+      const indicesAvailableSize = indicesBufferView.view.byteLength - indicesAccessor.byteOffset;
+      const indicesSafeSize = Math.min(indicesAccessor.byteLength, indicesAvailableSize);
+      renderPassEncoder.setIndexBuffer(indicesBufferView.gpuBuffer!, indicesAccessor.vertexType as GPUIndexFormat, indicesAccessor.byteOffset, indicesSafeSize);
+      renderPassEncoder.drawIndexed(indicesAccessor.count);
     } else {
       renderPassEncoder.draw(this.attributeMap["POSITION"].count);
     }
@@ -474,16 +490,31 @@ fn shadowVS(input: VSInput) -> VSOutput {
       } else {
         renderPassEncoder.setBindGroup(idx, bg);
       }
-    });
-
-    // Set vertex buffers
+    });    // Set vertex buffers
     this.attributes.map((attr, idx) => {
-      renderPassEncoder.setVertexBuffer(idx, this.attributeMap[attr].view.gpuBuffer!, this.attributeMap[attr].byteOffset, this.attributeMap[attr].byteLength);
-    });
+      const accessor = this.attributeMap[attr];
+      const bufferView = accessor.view;
+      
+      // Calculate the available size from the offset to the end of the buffer
+      const availableSize = bufferView.view.byteLength - accessor.byteOffset;
+      
+      // Use the minimum of the requested size and available size to prevent buffer overrun
+      const safeSize = Math.min(accessor.byteLength, availableSize);
+      
+      renderPassEncoder.setVertexBuffer(idx, bufferView.gpuBuffer!, accessor.byteOffset, safeSize);    });
 
     if (this.attributeMap["INDICES"]) {
-      renderPassEncoder.setIndexBuffer(this.attributeMap["INDICES"].view.gpuBuffer!, this.attributeMap["INDICES"].vertexType as GPUIndexFormat, this.attributeMap["INDICES"].byteOffset, this.attributeMap["INDICES"].byteLength);
-      renderPassEncoder.drawIndexed(this.attributeMap["INDICES"].count);
+      const indicesAccessor = this.attributeMap["INDICES"];
+      const bufferView = indicesAccessor.view;
+      
+      // Calculate the available size from the offset to the end of the buffer
+      const availableSize = bufferView.view.byteLength - indicesAccessor.byteOffset;
+      
+      // Use the minimum of the requested size and available size to prevent buffer overrun
+      const safeSize = Math.min(indicesAccessor.byteLength, availableSize);
+      
+      renderPassEncoder.setIndexBuffer(bufferView.gpuBuffer!, indicesAccessor.vertexType as GPUIndexFormat, indicesAccessor.byteOffset, safeSize);
+      renderPassEncoder.drawIndexed(indicesAccessor.count);
     } else {
       renderPassEncoder.draw(this.attributeMap["POSITION"].count);
     }

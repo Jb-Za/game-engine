@@ -57,19 +57,19 @@ export class AssetScanner {
           const fileName = file.split('/').pop() || file;
           const name = fileName.replace(/\.[^/.]+$/, '');
 
-          const thumbnailPath = this.THUMBNAILS_PATH + name + '.png';
-          let hasThumbnail = false;
-          try {
-            const thumbResponse = await fetch(thumbnailPath, { method: 'HEAD' });
-            hasThumbnail = thumbResponse.ok;
-          } catch {
-            hasThumbnail = false;
-          }
+          // const thumbnailPath = this.THUMBNAILS_PATH + name + '.png';
+          // let hasThumbnail = false;
+          // try {
+          //   const thumbResponse = await fetch(thumbnailPath, { method: 'HEAD' });
+          //   hasThumbnail = thumbResponse.ok;
+          // } catch (error){
+          //   hasThumbnail = false;
+          // }
 
           assets.push({
             name,
             path: assetPath,
-            thumbnailPath: hasThumbnail ? thumbnailPath : undefined,
+            thumbnailPath:  undefined,
             lastModified,
             size,
           });

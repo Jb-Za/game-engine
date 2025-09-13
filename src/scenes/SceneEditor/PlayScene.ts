@@ -2,7 +2,7 @@ import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffe
 import { Texture2D } from "../../texture/Texture2D";
 import { InputManager } from "../../input/InputManager";
 import { Scene } from "../../sceneEditor/Scene";
-import sceneDataJson from "./scene.json";
+import sceneDataJson from "./testscene.json";
 import { Camera } from "../../camera/Camera";
 import { AmbientLight } from "../../lights/AmbientLight";
 import { DirectionalLight } from "../../lights/DirectionalLight";

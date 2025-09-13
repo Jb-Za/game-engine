@@ -39,14 +39,14 @@ export const scenes: SceneInfo[] = [{
   importPath: "../scenes/SceneEditor/SceneEditor.ts",
   components: ['backButton', 'sceneEditorControls']
 },
-// {
-//   id: "Play Scene",
-//   name: "Play Scene",
-//   description: "load and play the scene that we edited in the scene editor.",
-//   thumbnail: "/thumbnails/undefined.svg",
-//   importPath: "../scenes/SceneEditor/PlayScene.ts",
-//   components: ['backButton']
-// },
+{
+  id: "Play Scene",
+  name: "Play Scene",
+  description: "load and play the scene that we edited in the scene editor.",
+  thumbnail: "/thumbnails/undefined.svg",
+  importPath: "../scenes/SceneEditor/PlayScene.ts",
+  components: ['backButton']
+},
 {
   id: "raytracing",
   name: "Ray Tracing Scene",

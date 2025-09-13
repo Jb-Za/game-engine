@@ -303,11 +303,10 @@ export class RenderPipeline {
         depthCompare: "less",
         format: "depth32float"
       }
-    });
-
+    });    
     this._diffuseTexture = Texture2D.createEmpty(device, true); // Use sRGB format for color textures
-    // this._shadowTexture = Texture2D.createShadowTexture(device, 1024, 1024);
-    // this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);
+    this._shadowTexture = Texture2D.createShadowTexture(device, 1024, 1024);
+    this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);
 
     this.vertexBindGroup = device.createBindGroup({
       layout: vertexGroupLayout,

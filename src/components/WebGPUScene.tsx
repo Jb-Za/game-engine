@@ -232,7 +232,7 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
             infoRef.current,
             gltfOptions
           );
-        }
+        }        
         else if(scene.components.includes('sceneEditorControls'))
         {
           await SceneModule.init(
@@ -242,6 +242,25 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
             presentationFormatRef.current,
             infoRef.current
           );
+            // Enable object picking and set up callback to communicate with React
+          if (typeof SceneModule.enableObjectPicking === 'function') {
+            SceneModule.enableObjectPicking((objectId: string | null) => {
+              // Update the React state through the scene editor controls
+              if (sceneEditorControlsRef.current) {
+                sceneEditorControlsRef.current.selectObject(objectId);
+              }
+            });
+          }
+            // Set up position change callback for gizmo dragging
+          if (typeof SceneModule.setObjectPositionCallback === 'function') {
+            SceneModule.setObjectPositionCallback((objectId: string, position: { x: number, y: number, z: number }) => {
+              console.log('Object position changed in WebGPU:', objectId, position);
+              // Update the React state through the scene editor controls
+              if (sceneEditorControlsRef.current) {
+                sceneEditorControlsRef.current.updateObjectPosition(objectId, position);
+              }
+            });
+          }
           
           // After initialization, refresh the scene editor with current scene data
           if (sceneEditorControlsRef.current) {
