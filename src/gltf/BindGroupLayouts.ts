@@ -62,7 +62,7 @@ export class BindGroupLayouts {
       ],
     });
 
-    // Node uniforms bind group layout (already in your code)
+    // Node uniforms bind group layout
     this.nodeUniformsBindGroupLayout = device.createBindGroupLayout({
       label: "NodeUniforms.bindGroupLayout",
       entries: [
@@ -179,19 +179,22 @@ export class BindGroupLayouts {
           binding: 5,
           visibility: GPUShaderStage.FRAGMENT,
           sampler: { type: "comparison" },
-        },
-        // Light entries (combined to stay within 4 bind group limit)
+        },        // Light entries (combined to stay within 4 bind group limit)
         {
           binding: 6,
           visibility: GPUShaderStage.FRAGMENT,
           buffer: {},
-        },
-        {
+        },        {
           binding: 7,
           visibility: GPUShaderStage.FRAGMENT,
           buffer: {},
         },        {
           binding: 8,
+          visibility: GPUShaderStage.FRAGMENT,
+          buffer: { type: "read-only-storage" },
+        },
+        {
+          binding: 9,
           visibility: GPUShaderStage.FRAGMENT,
           buffer: {},
         },
@@ -244,8 +247,7 @@ export class BindGroupLayouts {
           binding: 7,
           visibility: GPUShaderStage.FRAGMENT,
           sampler: { type: "comparison" },
-        },
-        // Light entries (combined to stay within 4 bind group limit)
+        },        // Light entries (combined to stay within 4 bind group limit)
         {
           binding: 8,
           visibility: GPUShaderStage.FRAGMENT,
@@ -255,16 +257,18 @@ export class BindGroupLayouts {
           binding: 9,
           visibility: GPUShaderStage.FRAGMENT,
           buffer: {},
+        },        {
+          binding: 10,
+          visibility: GPUShaderStage.FRAGMENT,
+          buffer: { type: "read-only-storage" },
         },
         {
-          binding: 10,
+          binding: 11,
           visibility: GPUShaderStage.FRAGMENT,
           buffer: {},
         },
       ],
-    });
-
-    // Lights bind group layout
+    });    // Lights bind group layout
     this.lightsBindGroupLayout = device.createBindGroupLayout({
       label: "Lights.bindGroupLayout",
       entries: [
@@ -281,7 +285,9 @@ export class BindGroupLayouts {
         {
           binding: 2,
           visibility: GPUShaderStage.FRAGMENT,
-          buffer: {},
+          buffer: {
+            type: "read-only-storage",
+          },
         },
       ],
     });
@@ -294,7 +300,7 @@ export class BindGroupLayouts {
         entries: [
           { binding: 0, resource: { buffer: ambientLight.buffer.buffer } },
           { binding: 1, resource: { buffer: directionalLight.buffer.buffer } },
-          { binding: 2, resource: { buffer: pointLights.buffer.buffer } },
+          { binding: 2, resource: { buffer: pointLights.buffer } },
         ],
       });
     }

@@ -6,7 +6,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
-// Paths (based on your repo layout)
 const sceneFile = path.resolve(repoRoot, 'src', 'scenes', 'SceneEditor', 'testscene.json');
 const publicRoot = path.resolve(repoRoot, 'public');
 const destFolder = path.resolve(publicRoot, 'assets', 'DungeonAssets');
@@ -66,7 +65,6 @@ for (const obj of objs) {
 
   const normalized = fp.replace(/^\/+/, '');
 
-  // Try public root first (your assets are under public/assets/testScene)
   let srcPath = path.resolve(publicRoot, normalized);
 
   // Fallback: relative to scene file directory

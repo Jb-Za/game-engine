@@ -137,7 +137,9 @@ var<uniform> ambientLight: AmbientLight;
 @group(3) @binding(1)
 var<uniform> directionalLight: DirectionalLight;
 @group(3) @binding(2)
-var<uniform> positionalLight: array<PointLight, 3>;
+var<storage, read> positionalLight: array<PointLight>;
+@group(3) @binding(3)
+var<uniform> numPointLights: f32;
 
 @fragment 
 fn waterFS(in: VSOutput) -> @location(0) vec4f

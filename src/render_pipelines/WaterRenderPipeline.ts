@@ -24,6 +24,9 @@ export class WaterRenderPipeline {
   private _diffuseTexture!: Texture2D;
   private _shadowTexture!: Texture2D;
   private _wireframeMode: boolean = false;
+  private numPointLightsBuffer: UniformBuffer;
+  private _numPointLights: number = 0;
+
 
   public set wireframeMode(value: boolean) {
     this._wireframeMode = value;
@@ -92,6 +95,13 @@ export class WaterRenderPipeline {
     directionalLight: DirectionalLight,
     pointLights: PointLightsCollection
   ) {
+    this._numPointLights = pointLights.lights.length;
+    
+    this.numPointLightsBuffer = new UniformBuffer(
+      device,
+      new Float32Array([this._numPointLights]),
+      "Num Point Lights Buffer"
+    );
 
     this.waterParamsBuffer = new UniformBuffer(
       device,
@@ -387,7 +397,14 @@ export class WaterRenderPipeline {
         {
           binding: 2,
           visibility: GPUShaderStage.FRAGMENT,
-          buffer: {},
+          buffer: {
+            type: "read-only-storage",
+          }
+        },
+        {
+            binding: 3,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: {}
         },
       ],
     });
@@ -512,9 +529,15 @@ export class WaterRenderPipeline {
         {
           binding: 2,
           resource: {
-            buffer: pointLights.buffer.buffer,
+            buffer: pointLights.buffer,
           },
         },
+        {
+            binding: 3,
+            resource: {
+                buffer: this.numPointLightsBuffer.buffer
+            }
+        }
       ],
     });
   }

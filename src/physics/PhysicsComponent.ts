@@ -5,10 +5,6 @@ import { PhysicsWorld } from "./PhysicsWorld";
 import { Vec3 } from "../math/Vec3";
 import { Quaternion } from "../math/Quaternion";
 
-/**
- * PhysicsComponent integrates physics simulation with your existing GameObject system.
- * It manages the connection between game objects and their physics representations.
- */
 export class PhysicsComponent {
     private rigidBody: RigidBody;
     private collider: Collider;

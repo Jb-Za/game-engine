@@ -13,6 +13,7 @@ export class Simple2DRenderPipeline {
     private lightingBindGroup!: GPUBindGroup;
     private materialBindGroup!: GPUBindGroup;
     private materialBuffer!: GPUBuffer; // Store reference to material buffer
+    private numPointLightsBuffer!: GPUBuffer; // Add this for dynamic point light count
     
     private camera: Camera;
     private transformBuffer: UniformBuffer;
@@ -33,9 +34,15 @@ export class Simple2DRenderPipeline {
         this.device = device;
         this.camera = camera;
         this.transformBuffer = transformBuffer;
-        this.normalMatrixBuffer = normalMatrixBuffer;
-        this.ambientLight = ambientLight;
+        this.normalMatrixBuffer = normalMatrixBuffer;        this.ambientLight = ambientLight;
         this.pointLights = pointLights;
+        
+        // Create numPointLights buffer for dynamic point light count
+        this.numPointLightsBuffer = device.createBuffer({
+            size: 4, // f32
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(this.numPointLightsBuffer, 0, new Float32Array([pointLights.lights.length]));
         
         this.createPipeline();
         this.createBindGroups();
@@ -87,13 +94,12 @@ export class Simple2DRenderPipeline {
 
             struct Material {
                 diffuseColor: vec4<f32>,
-            }
-
-            @group(0) @binding(0) var<uniform> camera: Camera;
+            }            @group(0) @binding(0) var<uniform> camera: Camera;
             @group(1) @binding(0) var<uniform> transform: Transform;
             @group(1) @binding(1) var<uniform> normalMatrix: NormalMatrix;
             @group(2) @binding(0) var<uniform> ambientLight: AmbientLight;
-            @group(2) @binding(1) var<uniform> positionalLight: array<PointLight, 3>;
+            @group(2) @binding(1) var<storage, read> positionalLight: array<PointLight>;
+            @group(2) @binding(2) var<uniform> numPointLights: f32;
             @group(3) @binding(0) var<uniform> material: Material;
 
             @vertex
@@ -120,9 +126,8 @@ export class Simple2DRenderPipeline {
                 
                 // Ambient lighting
                 var finalColor = ambientLight.color * ambientLight.intensity * baseColor.rgb;
-                
-                // Point light contributions (using MaterialShader structure)
-                for (var i: u32 = 0u; i < 3u; i++) {
+                  // Point light contributions (using MaterialShader structure)
+                for (var i: u32 = 0u; i < u32(numPointLights); i++) {
                     let light = positionalLight[i];
                     let lightDir = normalize(light.position - input.worldPosition);
                     let distance = length(light.position - input.worldPosition);
@@ -218,9 +223,7 @@ export class Simple2DRenderPipeline {
                     },
                 },
             ],
-        });
-
-        // Lighting bind group (group 2)
+        });        // Lighting bind group (group 2)
         this.lightingBindGroup = this.device.createBindGroup({
             layout: this.renderPipeline.getBindGroupLayout(2),
             entries: [
@@ -233,11 +236,17 @@ export class Simple2DRenderPipeline {
                 {
                     binding: 1,
                     resource: {
-                        buffer: this.pointLights.buffer.buffer,
+                        buffer: this.pointLights.buffer,
                     },
                 },
+                {
+                    binding: 2,
+                    resource: {
+                        buffer: this.numPointLightsBuffer
+                    }
+                }
             ],
-        });        // Material bind group (group 3)
+        });// Material bind group (group 3)
         this.materialBuffer = this.device.createBuffer({
             size: 16, // vec4<f32> for diffuse color
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,

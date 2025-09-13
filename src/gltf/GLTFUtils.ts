@@ -477,8 +477,18 @@ export const convertGLBToJSONAndBinary = async (
   for (let i = 0; i < bufferViews.length; ++i) {
     if (bufferViews[i].needsUpload) {
       bufferViews[i].upload(device);
-    }
+    }  }
+
+  // Create numPointLights buffer for dynamic point light count (shared between material and skinned bind groups)
+  let numPointLightsBuffer: GPUBuffer | undefined;
+  if (useLighting && ambientLight && directionalLight && pointLights) {
+    numPointLightsBuffer = device.createBuffer({
+      size: 4, // f32
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(numPointLightsBuffer, 0, new Float32Array([pointLights.lights.length]));
   }
+
   // Parse materials
   const materials: any[] = [];
   if (jsonChunk.materials) {
@@ -592,11 +602,10 @@ export const convertGLBToJSONAndBinary = async (
         device.queue.writeTexture({ texture: colorTexture }, new Uint8Array([r, g, b, a]), { bytesPerRow: 4 }, { width: 1, height: 1 });
 
         baseColorTexture = colorTexture;
-      }
-    }    
-    
-    // Create material bind group based on lighting mode
-    if (useLighting && ambientLight && directionalLight && pointLights) {      // Create enhanced material bind group for lit rendering
+      }    }    
+      // Create material bind group based on lighting mode
+    if (useLighting && ambientLight && directionalLight && pointLights) {
+      // Create enhanced material bind group for lit rendering
       const bindGroup = device.createBindGroup({
         layout: bindGroupLayouts.litMaterialBindGroupLayout,
         entries: [
@@ -631,10 +640,13 @@ export const convertGLBToJSONAndBinary = async (
           {
             binding: 7,
             resource: { buffer: directionalLight.buffer.buffer },
+          },          {
+            binding: 8,
+            resource: { buffer: pointLights.buffer },
           },
           {
-            binding: 8,
-            resource: { buffer: pointLights.buffer.buffer },
+            binding: 9,
+            resource: { buffer: numPointLightsBuffer! },
           },
         ],
         label: `LitMaterial_${materialBindGroups.length}_BindGroup`,
@@ -676,8 +688,7 @@ export const convertGLBToJSONAndBinary = async (
           },          {
             binding: 2,
             resource: { buffer: createDiffuseColorBuffer(device, [1, 1, 1, 1]) },
-          },
-          {
+          },          {
             binding: 3,
             resource: { buffer: createShininessBuffer(device, 32.0) },
           },
@@ -688,6 +699,22 @@ export const convertGLBToJSONAndBinary = async (
           {
             binding: 5,
             resource: shadowSampler,
+          },
+          // Light bindings for default material
+          {
+            binding: 6,
+            resource: { buffer: ambientLight.buffer.buffer },
+          },
+          {
+            binding: 7,
+            resource: { buffer: directionalLight.buffer.buffer },
+          },          {
+            binding: 8,
+            resource: { buffer: pointLights.buffer },
+          },
+          {
+            binding: 9,
+            resource: { buffer: numPointLightsBuffer! },
           },
         ],
         label: "Default_LitMaterial_BindGroup",
@@ -766,8 +793,7 @@ export const convertGLBToJSONAndBinary = async (
             {
               binding: 7,
               resource: shadowSampler,
-            },
-            // Light entries
+            },            // Light entries
             {
               binding: 8,
               resource: { buffer: ambientLight.buffer.buffer },
@@ -775,10 +801,13 @@ export const convertGLBToJSONAndBinary = async (
             {
               binding: 9,
               resource: { buffer: directionalLight.buffer.buffer },
+            },            {
+              binding: 10,
+              resource: { buffer: pointLights.buffer },
             },
             {
-              binding: 10,
-              resource: { buffer: pointLights.buffer.buffer },
+              binding: 11,
+              resource: { buffer: numPointLightsBuffer! },
             },
           ],
           label: `LitSkinnedMaterial_${skinnedBindGroups.length}_BindGroup`,

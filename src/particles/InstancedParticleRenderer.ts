@@ -69,7 +69,7 @@ private createRenderPipeline(camera: Camera) {
   });
 
   const vertexBufferLayout: GPUVertexBufferLayout[] = [
-    // Base geometry vertices - Fix: Use 3D positions since your geometry has x,y,z
+    // Base geometry vertices
     {
       arrayStride: 3 * 4, // 3 floats * 4 bytes (x,y,z positions)
       stepMode: "vertex",

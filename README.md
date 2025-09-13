@@ -10,6 +10,14 @@ Interactive Link here: [game-engine-two.vercel.app](https://game-engine-two.verc
 - **Pathtracing (Compute Shader)** : Still a WIP. Just spheres for now
 - **SPH Water Simlation (Compute Shader)**: Still 2D. Planned improvement
 - **Physics (Simple Rigidbodies)** : Still a WIP.
+- **Scene Editor**: Add and move around gltf objects into a scene, with a UI editor. Allows for saving and loading the scene configuration. 
+
+## Current Planned Roadmap:
+- Simple Particle System
+- SPH Fluid Sim efficiencies
+- 3D SPH Fluid Sim
+- GLTF Model Support with Path tracing (High effort)
+- Post Processing (Anti Aliasing, Bloom, DepthOfField, Volumetric Lighting) 
 
 ## Prerequisites
 
@@ -108,10 +116,17 @@ The basis for this project structure is continued from this awesome tutorial ser
 https://www.youtube.com/watch?v=dXPHLNovCjE
 https://github.com/luka712/youtube_webgpu_pong/tree/main
 
-The GLTF animation basis is expanded upon from this source:
+**The GLTF animation basis is expanded upon from this source:**
 https://webgpu.github.io/webgpu-samples/?sample=skinnedMesh
 https://github.com/webgpu/webgpu-samples/tree/main/sample/skinnedMesh
 
 with a lot of reading through this awesome guide:
 https://webgl2fundamentals.org/webgl/lessons/webgl-skinning.html
 
+**SPH Fluid Sim: (Sebastian Lague)**
+https://github.com/SebLague/Fluid-Sim/blob/Episode-01/
+https://youtu.be/rSKMYc1CQHE?si=ytpB35LzeGeyXEaF
+
+**Path Tracing: Ray Tracing in One Weekend**
+https://raytracing.github.io/
+https://github.com/RayTracing/raytracing.github.io.

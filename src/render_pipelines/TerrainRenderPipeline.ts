@@ -15,6 +15,8 @@ export class TerrainRenderPipeline {
   private wireframeRenderPipeline: GPURenderPipeline;
   private materialBindGroupLayout: GPUBindGroupLayout;
   private _wireframeMode: boolean = false;
+  private numPointLightsBuffer: UniformBuffer;
+  private _numPointLights: number = 0;
 
   public set wireframeMode(value: boolean) {
     this._wireframeMode = value;
@@ -71,6 +73,13 @@ export class TerrainRenderPipeline {
     directionalLight: DirectionalLight,
     pointLights: PointLightsCollection
   ) {
+    this._numPointLights = pointLights.lights.length;
+    
+    this.numPointLightsBuffer = new UniformBuffer(
+      device,
+      new Float32Array([this._numPointLights]),
+      "Num Point Lights Buffer"
+    );
 
     this.textureTilingBuffer = new UniformBuffer(
       device,
@@ -237,8 +246,15 @@ export class TerrainRenderPipeline {
             {
               binding: 2,
               visibility: GPUShaderStage.FRAGMENT,
-              buffer: {}
-          },
+              buffer: {
+                type: "read-only-storage",
+              }
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.FRAGMENT,
+                buffer: {}
+            },
         ]
     });
 
@@ -361,24 +377,30 @@ export class TerrainRenderPipeline {
         label: "Lights Bind Group",
         layout: lightsBindGroupLayout,
         entries: [
-            {
-                binding: 0,
-                resource: {
-                    buffer: ambientLight.buffer.buffer
-                }
-            },
-            {
-                binding: 1,
-                resource: {
-                    buffer: directionalLight.buffer.buffer
-                }
-            },
-            {
-                binding: 2,
-                resource: {
-                    buffer: pointLights.buffer.buffer
-                }
+          {
+              binding: 0,
+              resource: {
+                  buffer: ambientLight.buffer.buffer
+              }
           },
+          {
+              binding: 1,
+              resource: {
+                  buffer: directionalLight.buffer.buffer
+              }
+          },
+          {
+              binding: 2,
+              resource: {
+                  buffer: pointLights.buffer
+              }
+          },
+          {
+              binding: 3,
+              resource: {
+                  buffer: this.numPointLightsBuffer.buffer
+              }
+          }
       ],
     });
   }

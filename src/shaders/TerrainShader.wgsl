@@ -96,7 +96,9 @@ var<uniform> ambientLight: AmbientLight;
 @group(3) @binding(1)
 var<uniform> directionalLight: DirectionalLight;
 @group(3) @binding(2)
-var<uniform> positionalLight: array<PointLight, 3>;
+var<storage, read> positionalLight: array<PointLight>;
+@group(3) @binding(3)
+var<uniform> numPointLights: f32;
 
 // Blending data structure for smooth terrain transitions
 struct BlendingData {
@@ -144,6 +146,30 @@ fn materialFS(in : VSOutput) -> @location(0) vec4f
     var dotSpecular = max(dot(normal, halfVector), 0.0);
     dotSpecular = pow(dotSpecular, shininess);
     lightAmount += directionalLight.color * dotSpecular * directionalLight.intensity * shadow;
+
+    // Point lights
+    for(var i: u32 = 0u; i < u32(numPointLights); i = i + 1u)
+    {
+        var lightDir = normalize(positionalLight[i].position - in.fragPos);
+        var dotLight = max(dot(normal, lightDir), 0.0);
+        
+
+        var distance = length(positionalLight[i].position - in.fragPos);
+        var attenuation = positionalLight[i].attenConst + 
+        positionalLight[i].attenLin * distance + 
+        positionalLight[i].attenQuad * distance * distance;
+
+        attenuation = 1.0 / attenuation;
+
+        lightAmount += positionalLight[i].color * positionalLight[i].intensity * dotLight * attenuation * shadow;
+
+        //specular Light
+        halfVector = normalize(lightDir + toEye);
+        dotSpecular = max(dot(normal, halfVector), 0.0);
+        dotSpecular = pow(dotSpecular, shininess);
+        lightAmount += positionalLight[i].specularIntensity * dotSpecular * positionalLight[i].specularIntensity * shadow;
+
+    }
 
     // Height-based smooth terrain blending
     let height = in.fragPos.y;

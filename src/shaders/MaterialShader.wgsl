@@ -96,8 +96,9 @@ var<uniform> ambientLight: AmbientLight;
 @group(3) @binding(1)
 var<uniform> directionalLight: DirectionalLight;
 @group(3) @binding(2)
-var<uniform> positionalLight: array<PointLight, 3>;
-
+var<storage, read> positionalLight: array<PointLight>;
+@group(3) @binding(3)
+var<uniform> numPointLights: f32;
 
 @fragment
 fn materialFS(in : VSOutput) -> @location(0) vec4f
@@ -131,7 +132,7 @@ fn materialFS(in : VSOutput) -> @location(0) vec4f
     lightAmount += directionalLight.color * dotSpecular * directionalLight.intensity * shadow;
 
     // Point lights
-    for(var i = 0; i < 3; i++)
+    for(var i: u32 = 0u; i < u32(numPointLights); i = i + 1u)
     {
         var lightDir = normalize(positionalLight[i].position - in.fragPos);
         var dotLight = max(dot(normal, lightDir), 0.0);

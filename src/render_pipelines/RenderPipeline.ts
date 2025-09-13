@@ -23,6 +23,8 @@ export class RenderPipeline {
   private _diffuseTexture!: Texture2D;
   private _shadowTexture!: Texture2D;
   private _wireframeMode: boolean = false;
+  private numPointLightsBuffer: UniformBuffer;
+  private _numPointLights: number = 0;
 
   public set wireframeMode(value: boolean) {
     this._wireframeMode = value;
@@ -71,6 +73,13 @@ export class RenderPipeline {
     directionalLight: DirectionalLight,
     pointLights: PointLightsCollection
   ) {
+    this._numPointLights = pointLights.lights.length;
+    
+    this.numPointLightsBuffer = new UniformBuffer(
+      device,
+      new Float32Array([this._numPointLights]),
+      "Num Point Lights Buffer"
+    );
 
     this.textureTilingBuffer = new UniformBuffer(
       device,
@@ -237,6 +246,13 @@ export class RenderPipeline {
             {
               binding: 2,
               visibility: GPUShaderStage.FRAGMENT,
+              buffer: {
+                type: "read-only-storage",
+              }
+          },
+          {
+              binding: 3,
+              visibility: GPUShaderStage.FRAGMENT,
               buffer: {}
           },
         ]
@@ -360,24 +376,30 @@ export class RenderPipeline {
         label: "Lights Bind Group",
         layout: lightsBindGroupLayout,
         entries: [
-            {
-                binding: 0,
-                resource: {
-                    buffer: ambientLight.buffer.buffer
-                }
-            },
-            {
-                binding: 1,
-                resource: {
-                    buffer: directionalLight.buffer.buffer
-                }
-            },
-            {
-                binding: 2,
-                resource: {
-                    buffer: pointLights.buffer.buffer
-                }
-          },
+        {
+            binding: 0,
+            resource: {
+                buffer: ambientLight.buffer.buffer
+            }
+        },
+        {
+            binding: 1,
+            resource: {
+                buffer: directionalLight.buffer.buffer
+            }
+        },
+        {
+            binding: 2,
+            resource: {
+                buffer: pointLights.buffer
+            }
+        },
+        {
+            binding: 3,
+            resource: {
+                buffer: this.numPointLightsBuffer.buffer
+            }
+        }
       ],
     });
   }

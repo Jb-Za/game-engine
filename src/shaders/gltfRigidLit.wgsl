@@ -48,7 +48,8 @@ struct PointLight{
 @group(3) @binding(5) var shadowSampler: sampler_comparison;
 @group(3) @binding(6) var<uniform> ambientLight: AmbientLight;
 @group(3) @binding(7) var<uniform> directionalLight: DirectionalLight;
-@group(3) @binding(8) var<uniform> positionalLight: array<PointLight, 3>;
+@group(3) @binding(8) var<storage, read> positionalLight: array<PointLight>;
+@group(3) @binding(9) var<uniform> numPointLights: f32;
 
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
@@ -84,10 +85,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
             var halfVector = normalize(lightDir + toEye);
             var dotSpecular = max(dot(normal, halfVector), 0.0);
             dotSpecular = pow(dotSpecular, shininess);
-            lightAmount += directionalLight.specularColor * dotSpecular * directionalLight.specularIntensity * shadowFactor;
-
-            // Point lights
-            for(var i = 0; i < 3; i++) {
+            lightAmount += directionalLight.specularColor * dotSpecular * directionalLight.specularIntensity * shadowFactor;            // Point lights
+            for(var i: u32 = 0u; i < u32(numPointLights); i = i + 1u) {
                 var pointLightDir = normalize(positionalLight[i].position - input.fragPos);
                 var pointDotLight = max(dot(normal, pointLightDir), 0.0);
                 
@@ -95,7 +94,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
                 var attenuation = positionalLight[i].attenConst + 
                     positionalLight[i].attenLin * distance + 
                     positionalLight[i].attenQuad * distance * distance;
-                attenuation = 1.0 / attenuation;                lightAmount += positionalLight[i].color * positionalLight[i].intensity * pointDotLight * attenuation * shadowFactor;
+                attenuation = 1.0 / attenuation;
+
+                lightAmount += positionalLight[i].color * positionalLight[i].intensity * pointDotLight * attenuation * shadowFactor;
 
                 // Specular Light for point lights
                 var pointHalfVector = normalize(pointLightDir + toEye);

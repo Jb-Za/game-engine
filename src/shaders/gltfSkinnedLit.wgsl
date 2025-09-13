@@ -51,7 +51,8 @@ struct PointLight{
 @group(3) @binding(7) var shadowSampler: sampler_comparison;
 @group(3) @binding(8) var<uniform> ambientLight: AmbientLight;
 @group(3) @binding(9) var<uniform> directionalLight: DirectionalLight;
-@group(3) @binding(10) var<uniform> positionalLight: array<PointLight, 3>;
+@group(3) @binding(10) var<storage, read> positionalLight: array<PointLight>;
+@group(3) @binding(11) var<uniform> numPointLights: f32;
 
 const MAX_JOINTS_PER_VERTEX = 4u;
 
@@ -97,10 +98,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
             var halfVector = normalize(lightDir + toEye);
             var dotSpecular = max(dot(normal, halfVector), 0.0);
             dotSpecular = pow(dotSpecular, shininess);
-            lightAmount += directionalLight.color * dotSpecular * directionalLight.specularIntensity * shadow;
-
-            // Point lights
-            for(var i = 0; i < 3; i++) {
+            lightAmount += directionalLight.color * dotSpecular * directionalLight.specularIntensity * shadow;            // Point lights
+            for(var i: u32 = 0u; i < u32(numPointLights); i = i + 1u) {
                 var lightDir = normalize(positionalLight[i].position - input.fragPos);
                 var dotLight = max(dot(normal, lightDir), 0.0);
                 

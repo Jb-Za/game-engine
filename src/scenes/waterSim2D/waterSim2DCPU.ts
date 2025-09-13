@@ -50,13 +50,9 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
   ambientLight.color = new Color(1, 1, 1, 1);
   ambientLight.intensity = 1; // Ambient lighting for 2D
 
-  const pointLights = new PointLightsCollection(device, 3);
+  const pointLights = new PointLightsCollection(device, 1);
   pointLights.lights[0].color = new Color(0, 0, 0, 1);
   pointLights.lights[0].intensity = 0;
-  pointLights.lights[1].color = new Color(0, 0, 0, 1);
-  pointLights.lights[1].intensity = 0;
-  pointLights.lights[2].color = new Color(0, 0, 0, 1);
-  pointLights.lights[2].intensity = 0;
 
   // 2D CAMERA
   const camera = new Camera(device, canvas.width / canvas.height, inputManager);
