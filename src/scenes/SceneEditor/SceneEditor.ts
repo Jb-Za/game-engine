@@ -349,7 +349,7 @@ function loadScene(sceneJson: any): void {
 
   // Create/replace the scene instance
   try {
-    scene = new Scene(sceneJson, _device!, _canvas!.width / _canvas!.height, _inputManager!, _shadowTexture!, _presentationFormat!, _depthTexture!.texture);
+    scene = new Scene(sceneJson, _device!, _canvas!.width / _canvas!.height, _inputManager!, _shadowTexture!, _presentationFormat!, _depthTexture!.texture, false);
     console.log("Scene loaded");
   } catch (e) {
     console.error("Failed to load scene:", e);

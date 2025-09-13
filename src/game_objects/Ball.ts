@@ -43,11 +43,11 @@ export class Ball implements GameObject{
     public orbitDirection: number = 1;
     public orbitInitialPosition: Vec3 = new Vec3(0,0,0);
 
-    constructor(device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight,  pointLights: PointLightsCollection){
+    constructor(device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight,  pointLights: PointLightsCollection, multipleRenderTargets: boolean = false){
         this.transformBuffer = new UniformBuffer(device, this.transform, "Paddle Transform");
 
         this.normalMatrixBuffer = new UniformBuffer(device, 16 * Float32Array.BYTES_PER_ELEMENT, "Paddle Normal Matrix");
-        this.pipeline = new RenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, ambientLight, directionalLight, pointLights);
+        this.pipeline = new RenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, ambientLight, directionalLight, pointLights, multipleRenderTargets);
         this.shadowPipeline = new ShadowRenderPipeline(device, shadowCamera, this.transformBuffer);
     }
 

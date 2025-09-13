@@ -258,7 +258,8 @@ export const convertGLBToJSONAndBinary = async (
   directionalLight?: DirectionalLight,
   pointLights?: PointLightsCollection,
   useLighting: boolean = false,
-  _shadowTexture?: any
+  _shadowTexture?: any,
+  multipleRenderTargets: boolean = false
 ): Promise<TempReturn> => {  // Binary GLTF layout: https://cdn.willusher.io/webgpu-0-to-gltf/glb-layout.svg
   
   // Use actual shadow texture if provided, otherwise use default
@@ -853,10 +854,9 @@ struct NodeUniforms {
 @group(3) @binding(3) var<storage, read> inverse_bind_matrices: array<mat4x4f>;
 
 const MAX_JOINTS_PER_VERTEX = 4u;
-`;
-          primitive.buildRenderPipeline(device, skinnedUniforms, gltfSkinnedLitWGSL, presentationFormat, depthTexture.format, litSkinLayouts, `PrimitivePipeline_Skinned_Lit_${mesh.name}_${primitive.materialIndex || 0}`);
+`;          primitive.buildRenderPipeline(device, skinnedUniforms, gltfSkinnedLitWGSL, presentationFormat, depthTexture.format, litSkinLayouts, `PrimitivePipeline_Skinned_Lit_${mesh.name}_${primitive.materialIndex || 0}`, multipleRenderTargets);
         } else {
-          primitive.buildRenderPipeline(device, gltfSkinnedWGSL, gltfSkinnedWGSL, presentationFormat, depthTexture.format, skinLayouts, `PrimitivePipeline_Skinned_${mesh.name}_${primitive.materialIndex || 0}`);
+          primitive.buildRenderPipeline(device, gltfSkinnedWGSL, gltfSkinnedWGSL, presentationFormat, depthTexture.format, skinLayouts, `PrimitivePipeline_Skinned_${mesh.name}_${primitive.materialIndex || 0}`, multipleRenderTargets);
         }
       } else {
         // This primitive needs rigid shader
@@ -877,9 +877,9 @@ struct NodeUniforms {
 @group(1) @binding(0) var<uniform> general_uniforms: GeneralUniforms;
 @group(2) @binding(0) var<uniform> node_uniforms: NodeUniforms;
 `;
-          primitive.buildRenderPipeline(device, rigidUniforms, gltfRigidLitWGSL, presentationFormat, depthTexture.format, litStaticLayouts, `PrimitivePipeline_Rigid_Lit_${mesh.name}_${primitive.materialIndex || 0}`);
+          primitive.buildRenderPipeline(device, rigidUniforms, gltfRigidLitWGSL, presentationFormat, depthTexture.format, litStaticLayouts, `PrimitivePipeline_Rigid_Lit_${mesh.name}_${primitive.materialIndex || 0}`, multipleRenderTargets);
         } else {
-          primitive.buildRenderPipeline(device, gltfRigidWGSL, gltfRigidWGSL, presentationFormat, depthTexture.format, staticLayouts, `PrimitivePipeline_Rigid_${mesh.name}_${primitive.materialIndex || 0}`);
+          primitive.buildRenderPipeline(device, gltfRigidWGSL, gltfRigidWGSL, presentationFormat, depthTexture.format, staticLayouts, `PrimitivePipeline_Rigid_${mesh.name}_${primitive.materialIndex || 0}`, multipleRenderTargets);
         }
       }    });
   });

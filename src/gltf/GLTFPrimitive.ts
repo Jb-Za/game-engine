@@ -37,7 +37,7 @@ export class GLTFPrimitive {
     }
   }
 
-  buildRenderPipeline(device: GPUDevice, vertexShader: string, fragmentShader: string, colorFormat: GPUTextureFormat, depthFormat: GPUTextureFormat, bgLayouts: GPUBindGroupLayout[], label: string) {
+  buildRenderPipeline(device: GPUDevice, vertexShader: string, fragmentShader: string, colorFormat: GPUTextureFormat, depthFormat: GPUTextureFormat, bgLayouts: GPUBindGroupLayout[], label: string, multipleRenderTargets: boolean = false) {
     // For now, just check if the attributeMap contains a given attribute using map.has(), and add it if it does
     // POSITION, NORMAL, TEXCOORD_0, JOINTS_0, WEIGHTS_0 for order
     // Vertex attribute state and shader stage
@@ -187,14 +187,21 @@ struct VertexOutput {
       }),
       buffers: vertexBuffers,
       entryPoint: "vertexMain",
-    };
+    };    
+    
     const fragmentState: GPUFragmentState = {
       // Shader info
       module: device.createShaderModule({
         code: VertexOutputShaderString + fragmentShader,
       }),
-      // Output render target info
-      targets: [{ format: colorFormat }],
+      // Output render target info - conditionally support multiple render targets for post-processing
+      targets: multipleRenderTargets ? [
+        { format: colorFormat }, // Color output
+        { format: "rgba8unorm" }, // Normal output
+        { format: "rgba8unorm" }, // Depth output
+      ] : [
+        { format: colorFormat }, // Single color output
+      ],
       entryPoint: "fragmentMain",
     };
     // This loader only supports triangle lists and strips, so by default we set

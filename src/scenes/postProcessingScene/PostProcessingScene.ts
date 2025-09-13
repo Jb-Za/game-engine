@@ -2,12 +2,15 @@ import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffe
 import { Texture2D } from "../../texture/Texture2D";
 import { InputManager } from "../../input/InputManager";
 import { Scene } from "../../sceneEditor/Scene";
-import sceneDataJson from "./testscene.json";
+import sceneDataJson from "./scene.json";
 import { Camera } from "../../camera/Camera";
 import { AmbientLight } from "../../lights/AmbientLight";
 import { DirectionalLight } from "../../lights/DirectionalLight";
 import { PointLightsCollection } from "../../lights/PointLight";
 import { ShadowCamera } from "../../camera/ShadowCamera";
+import { PostProcessing } from "../../post_processing/PostProcessing";
+import { PostProcessingEffects } from "../../post_processing/PostProcessingEffects";
+import { Vec2 } from "../../math/Vec2";
 
 let scene: Scene | null = null;
 let animationFrameId: number | null = null;
@@ -21,12 +24,32 @@ let _infoElem: HTMLPreElement | null = null;
 let _inputManager: InputManager | null = null;
 let _depthTexture: Texture2D | null = null;
 let _shadowTexture: Texture2D | null = null;
+let _postProcessing: PostProcessing | null = null;
 
 let camera: Camera | null = null;
 let ambientLight: AmbientLight | null = null;
 let directionalLight: DirectionalLight | null = null;
 let pointLights: PointLightsCollection | null = null;
 let shadowCamera: ShadowCamera | null = null;
+
+// Effect control variables
+let currentEffectIndex = 0;
+
+const getEffectDescription = (index: number): string => {
+    const descriptions = [
+        'Passthrough',
+        'Grayscale', 
+        'Sepia',
+        'Invert',
+        'Color Tint',
+        'Brightness',
+        'Vignette',
+        'Blur',
+        'Edge Detection',
+        'blur + vignette'
+    ];
+    return descriptions[index] || 'Unknown';
+};
 
 async function init(
     canvas: HTMLCanvasElement,
@@ -51,11 +74,12 @@ async function init(
 
     // Input Manager for game controls
     _inputManager = new InputManager(canvas);
-    GeometryBuffersCollection.initialize(device);
-
-    // Create shared depth and shadow textures
+    GeometryBuffersCollection.initialize(device);    // Create shared depth and shadow textures
     _depthTexture = Texture2D.createDepthTexture(device, canvas.width, canvas.height);
     _shadowTexture = Texture2D.createShadowTexture(device, 4096, 4096);
+
+    // Initialize post-processing with multiple effects
+    initPostProcessing();
 
     // Load the scene
     loadScene(sceneData);
@@ -76,18 +100,39 @@ async function init(
             }
         }
 
-        // Toggle fullscreen with F key
-        if (_inputManager.isKeyDown('f') || _inputManager.isKeyDown('F')) {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        // Exit pointer lock with Escape
-        if (_inputManager.isKeyDown('Escape')) {
-            document.exitPointerLock();
+         // Cycle through post-processing effects with number keys
+        if (_inputManager.isKeyDown('1')) {
+            _postProcessing?.setEffect('passthrough');
+            currentEffectIndex = 0;
+        } else if (_inputManager.isKeyDown('2')) {
+            _postProcessing?.setEffect('grayscale');
+            currentEffectIndex = 1;
+        } else if (_inputManager.isKeyDown('3')) {
+            _postProcessing?.setEffect('sepia');
+            currentEffectIndex = 2;
+        } else if (_inputManager.isKeyDown('4')) {
+            _postProcessing?.setEffect('invert');
+            currentEffectIndex = 3;
+        } else if (_inputManager.isKeyDown('5')) {
+            _postProcessing?.setEffect('colorTint');
+            currentEffectIndex = 4;
+        } else if (_inputManager.isKeyDown('6')) {
+            _postProcessing?.setEffect('brightness');
+            currentEffectIndex = 5;
+        } else if (_inputManager.isKeyDown('7')) {
+            _postProcessing?.setEffect('vignette');
+            currentEffectIndex = 6;
+        } else if (_inputManager.isKeyDown('8')) {
+            _postProcessing?.setEffect('blur');
+            currentEffectIndex = 7;
+        } else if (_inputManager.isKeyDown('9')) {
+            _postProcessing?.setEffect('differenceOfGaussians');
+            currentEffectIndex = 8;
+        }        
+        // Example of parallel processing with 0 key
+        if (_inputManager.isKeyDown('0')) {
+            _postProcessing?.setEffect(['blur', 'vignette']); // Apply blur and vignette together
+            currentEffectIndex = 9;
         }
 
         // Example: Sprint mode with Shift
@@ -100,17 +145,17 @@ async function init(
     let lastTime = performance.now();
     function renderLoop(currentTime: number) {
         const deltaTime = (currentTime - lastTime) / 1000;
-        lastTime = currentTime;
-
-        // Display FPS
+        lastTime = currentTime;        // Display FPS
         if (_infoElem != null) {
             _infoElem.textContent = `FPS: ${(1 / deltaTime).toFixed(1)}\n`;
             
-            // Show game controls
-            _infoElem.textContent += `Controls:\n`;
+            // Show game controls            _infoElem.textContent += `Controls:\n`;
             _infoElem.textContent += `WASD - Move camera\n`;
             _infoElem.textContent += `Mouse - Look around\n`;
             _infoElem.textContent += `R - Reset camera\n`;
+            _infoElem.textContent += `1-9 - Post-processing effects\n`;
+            _infoElem.textContent += `0 - Parallel effects demo\n`;
+            _infoElem.textContent += `Current effect: ${getEffectDescription(currentEffectIndex)}\n`;
         }
 
         handleInput();
@@ -164,11 +209,24 @@ async function init(
 
         // === MAIN RENDER PASS ===
         const commandEncoder = _device!.createCommandEncoder();
-        const textureView = _gpuContext!.getCurrentTexture().createView();
-        const renderPass = commandEncoder.beginRenderPass({
+      
+        // First pass: Render scene to offscreen texture
+        const offscreenRenderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
-                view: textureView,
+                view: _postProcessing!.getColorTexture().texture.createView(),
                 clearValue: { r: 0.2, g: 0.2, b: 0.25, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            },
+            {
+                view: _postProcessing!.getNormalTexture().texture.createView(), // normals
+                clearValue: { r: 0.5, g: 0.5, b: 1.0, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            },
+            {
+                view: _postProcessing!.getDepthTextureAsColor().texture.createView(), // linear depth
+                clearValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
                 loadOp: 'clear',
                 storeOp: 'store'
             }],
@@ -180,14 +238,30 @@ async function init(
             }
         });
 
-        // Render game objects
+        // Render game objects to offscreen texture
         sceneObjects.objects.forEach(obj => {
             if (obj && typeof obj.draw === 'function' && obj.visible !== false) {
-                obj.draw(renderPass);
-            }
+                obj.draw(offscreenRenderPass);
+            }        });
+        offscreenRenderPass.end();
+
+        // === POST-PROCESSING PASS ===
+        const textureView = _gpuContext!.getCurrentTexture().createView();
+        const postProcessRenderPass = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: textureView,
+                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store'
+            }]
         });
 
-        renderPass.end();
+        if (_postProcessing) {
+            _postProcessing.render(postProcessRenderPass);
+        }
+        
+        postProcessRenderPass.end();
+
         _device!.queue.submit([commandEncoder.finish()]);
         animationFrameId = requestAnimationFrame(renderLoop);
     }
@@ -199,6 +273,12 @@ export function dispose() {
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
+    }
+
+    // Clean up post-processing resources
+    if (_postProcessing) {
+        _postProcessing.dispose();
+        _postProcessing = null;
     }
 }
 
@@ -215,6 +295,7 @@ function disposeScene(): void {
 
 function loadScene(sceneJson: any): void {
     disposeScene();
+
     // Create the scene instance
     try {
         scene = new Scene(
@@ -225,10 +306,37 @@ function loadScene(sceneJson: any): void {
             _shadowTexture!, 
             _presentationFormat!, 
             _depthTexture!.texture,
-            false // usesPostProcessing = false for PlayScene
+            true // usesPostProcessing = true for PostProcessingScene
         );
-        console.log('Play scene loaded successfully');
     } catch (e) {
-        console.error('Failed to load play scene:', e);
+        console.error('Failed to load post-processing scene:', e);
     }
+}
+
+function initPostProcessing() {
+    if (!_device || !_canvas || !_presentationFormat) return;
+
+    // Initialize PostProcessing with just passthrough
+    _postProcessing = new PostProcessing(_device, {
+        width: _canvas.width,
+        height: _canvas.height,
+        format: _presentationFormat
+    });
+
+    // Add all available effects (they can be used later)
+    _postProcessing.addEffect(PostProcessingEffects.getGrayscale());
+    _postProcessing.addEffect(PostProcessingEffects.getSepia());
+    _postProcessing.addEffect(PostProcessingEffects.getInvert());
+    _postProcessing.addEffect(PostProcessingEffects.getColorTint());
+    _postProcessing.addEffect(PostProcessingEffects.getBrightness());
+    _postProcessing.addEffect(PostProcessingEffects.getVignette());
+    _postProcessing.addEffect(PostProcessingEffects.getBlur());
+    _postProcessing.addEffect(PostProcessingEffects.getDifferenceOfGaussians());
+
+    // Update uniforms for effects that need them
+    _postProcessing.updateUniform('blur', 'texelSize', new Vec2(1.0 / _canvas.width, 1.0 / _canvas.height));
+    _postProcessing.updateUniform('differenceOfGaussians', 'texelSize', new Vec2(1.0 / _canvas.width, 1.0 / _canvas.height));
+    _postProcessing.updateUniform('differenceOfGaussians', 'sigma', new Float32Array([1.0]));
+    _postProcessing.updateUniform('differenceOfGaussians', 'scale', new Float32Array([2.0]));
+    _postProcessing.updateUniform('differenceOfGaussians', 'radius', new Float32Array([3.0]));
 }

@@ -10,14 +10,16 @@ export class GLTFMesh {
   constructor(name: string, primitives: GLTFPrimitive[]) {
     this.name = name;
     this.primitives = primitives;
-  }
+  }  
+  
   buildRenderPipeline(
     device: GPUDevice,
     vertexShader: string,
     fragmentShader: string,
     colorFormat: GPUTextureFormat,
     depthFormat: GPUTextureFormat,
-    bgLayouts: GPUBindGroupLayout[]
+    bgLayouts: GPUBindGroupLayout[],
+    multipleRenderTargets: boolean = false
   ) {
     // We take a pretty simple approach to start. Just loop through all the primitives and
     // build their respective render pipelines
@@ -29,7 +31,8 @@ export class GLTFMesh {
         colorFormat,
         depthFormat,
         bgLayouts,
-        `PrimitivePipeline${i}`
+        `PrimitivePipeline${i}`,
+        multipleRenderTargets
       );
     }
   }

@@ -67,11 +67,11 @@ export class RenderPipeline {
     this._shininess = value;
     this.shininessBuffer.update(new Float32Array([value]));
   }
-
   constructor(private device: GPUDevice, camera: Camera, shadowCamera: ShadowCamera, transformsBuffer: UniformBuffer, normalmatrixBuffer: UniformBuffer,
     ambientLight: AmbientLight,
     directionalLight: DirectionalLight,
-    pointLights: PointLightsCollection
+    pointLights: PointLightsCollection,
+    multipleRenderTargets: boolean = false
   ) {
     this._numPointLights = pointLights.lights.length;
     
@@ -264,8 +264,24 @@ export class RenderPipeline {
         projectionViewGroupLayout, // group 1
         this.materialBindGroupLayout, // group 2
         lightsBindGroupLayout // group 3
-      ],
-    });
+      ],    });
+
+    // Configure color targets based on multipleRenderTargets parameter
+    const colorTargets: GPUColorTargetState[] = multipleRenderTargets ? [
+      {
+        format: "bgra8unorm", // Color output
+      },
+      {
+        format: "rgba8unorm", // Normal output
+      },
+      {
+        format: "rgba8unorm", // Depth output
+      },
+    ] : [
+      {
+        format: "bgra8unorm", // Color output only
+      }
+    ];
 
     this.renderPipeline = device.createRenderPipeline({
       layout: layout,
@@ -278,11 +294,7 @@ export class RenderPipeline {
       fragment: {
         module: shaderModule,
         entryPoint: "materialFS",
-        targets: [
-          {
-            format: "bgra8unorm",
-          },
-        ],
+        targets: colorTargets,
       },
       // CONFIGURE DEPTH
       depthStencil: {
@@ -290,9 +302,7 @@ export class RenderPipeline {
         depthCompare: "less",
         format: "depth32float"
       }
-    });
-
-        // Create wireframe pipeline
+    });        // Create wireframe pipeline
     this.wireframeRenderPipeline = device.createRenderPipeline({
       layout: layout,
       label: "Wireframe Render Pipeline",
@@ -304,11 +314,7 @@ export class RenderPipeline {
       fragment: {
         module: shaderModule,
         entryPoint: "materialFS",
-        targets: [
-          {
-            format: "bgra8unorm",
-          },
-        ],
+        targets: colorTargets,
       },
       primitive: {
         topology: "line-list",
@@ -319,7 +325,7 @@ export class RenderPipeline {
         depthCompare: "less",
         format: "depth32float"
       }
-    });    
+    });
     this._diffuseTexture = Texture2D.createEmpty(device, true); // Use sRGB format for color textures
     this._shadowTexture = Texture2D.createShadowTexture(device, 1024, 1024);
     this.materialBindGroup = this.createMaterialBindGroup(this._diffuseTexture, this._shadowTexture);

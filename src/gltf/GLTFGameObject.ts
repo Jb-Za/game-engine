@@ -40,7 +40,8 @@ export class GLTFGameObject implements GameObject {
 
   public get gltfScene(): any {
     return this._gltfScene;
-  }
+  }  
+  
   public skinMode = 0; // 0=skinned, 1=non-skinned
   constructor(
     private device: GPUDevice,
@@ -54,7 +55,8 @@ export class GLTFGameObject implements GameObject {
     public scale: Vec3 = new Vec3(1, 1, 1),
     public position: Vec3 = new Vec3(0, 0, 0),
     public rotation: Quaternion = new Quaternion(), // quaternion [x, y, z, w]
-    public useLighting: boolean = false // Enable lighting support
+    public useLighting: boolean = false, // Enable lighting support
+    public multipleRenderTargets: boolean = false // Enable multiple render targets for post-processing
   ) {
    
   }
@@ -152,8 +154,7 @@ export class GLTFGameObject implements GameObject {
         throw new Error(`Empty GLB file from ${assetLocation}`);
       }
       
-      console.log(`Successfully loaded GLB file from ${assetLocation}, size: ${buffer.byteLength} bytes`);        
-      this._gltfScene = await convertGLBToJSONAndBinary(
+      console.log(`Successfully loaded GLB file from ${assetLocation}, size: ${buffer.byteLength} bytes`);          this._gltfScene = await convertGLBToJSONAndBinary(
         buffer, 
         this.device, 
         this.camera, 
@@ -164,7 +165,8 @@ export class GLTFGameObject implements GameObject {
         this._directionalLight,
         this._pointLights,
         this.useLighting,
-        shadowTexture
+        shadowTexture,
+        this.multipleRenderTargets
       );
     } catch (error) {
       console.error(`Error initializing GLTFGameObject with ${assetLocation}:`, error);

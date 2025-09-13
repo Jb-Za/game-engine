@@ -70,6 +70,14 @@ export const scenes: SceneInfo[] = [{
   thumbnail: "/thumbnails/undefined.svg",
   importPath: "../scenes/shadowDemoScene.ts",
   components: ['backButton']
+},
+{
+  id: "postProcessing",
+  name: "Post Processing",
+  description: "A demonstration of post-processing effects.",
+  thumbnail: "/thumbnails/undefined.svg",
+  importPath: "../scenes/postProcessingScene/PostProcessingScene.ts",
+  components: ['backButton']
 }
 ];
 

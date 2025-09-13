@@ -100,8 +100,14 @@ var<storage, read> positionalLight: array<PointLight>;
 @group(3) @binding(3)
 var<uniform> numPointLights: f32;
 
+struct FragOutput {
+    @location(0) color: vec4f,
+    @location(1) normal: vec4f,
+    @location(2) depth: vec4f,
+}
+
 @fragment
-fn materialFS(in : VSOutput) -> @location(0) vec4f
+fn materialFS(in : VSOutput) -> FragOutput
 {
     //Shadows
     // do perspective divide. divide by w to allow for perspective.... closer = bigger. w can = 0.1. so the fragment scales up.
@@ -159,5 +165,13 @@ fn materialFS(in : VSOutput) -> @location(0) vec4f
 
     color = color * vec4f(lightAmount, 1.0);
 
-    return color;
+    // Calculate linear depth (for post-processing)
+    var linearDepth = length(in.fragPos - in.eye) / 100.0; // Normalize by far plane distance
+    linearDepth = clamp(linearDepth, 0.0, 1.0);
+
+    var output: FragOutput;
+    output.color = color;
+    output.normal = vec4f(normal * 0.5 + 0.5, 1.0); // Encode normal to 0-1 range
+    output.depth = vec4f(linearDepth, 0.0, 0.0, 1.0); // Linear depth in red channel
+    return output;
 }

@@ -63,6 +63,7 @@ export class Scene {
     private _sceneObjects: ObjectMap;
     private _objectParameters: ObjectParameters;
     private _shadowTexture: Texture2D;
+    private _usesPostProcessing: boolean;
 
 
     public getCamera(): Camera {
@@ -179,27 +180,27 @@ export class Scene {
             const objectType = object.id.split('_')[0].toLowerCase(); // Extract type from ID like "cube_123456789"
             switch (objectType) {
                 case "cube":
-                    const cube = this._sceneObjects.createCube(this._objectParameters, this._shadowTexture, false);
+                    const cube = this._sceneObjects.createCube(this._objectParameters, this._shadowTexture, false, this._usesPostProcessing);
                     cube.position = position;
                     cube.rotation = rotation;
                     cube.color = color;
                     cube.scale = scale;
                     break;                
                 case "sphere":
-                    const sphere = this._sceneObjects.createSphere(this._objectParameters, this._shadowTexture, false);
+                    const sphere = this._sceneObjects.createSphere(this._objectParameters, this._shadowTexture, false, this._usesPostProcessing);
                     sphere.position = position;
                     sphere.rotation = rotation;
                     sphere.color = color;
                     sphere.scale = scale;
-                    break;
-                case "gltf":
+                    break;case "gltf":
                     // Create GLTF object using the provided data
                     if (object.filePath) {
                         const gltfObject = this._sceneObjects.createGLTF(
                             this._objectParameters, 
                             this._shadowTexture, 
                             object.filePath, 
-                            object.name
+                            object.name,
+                            this._usesPostProcessing // Pass the post-processing flag
                         );
                         gltfObject.position = position;
                         gltfObject.rotation = rotation;
@@ -262,8 +263,7 @@ export class Scene {
         // Return the entire scene for re-parsing
         return this;
     }    
-    
-    constructor(SceneData: SceneConfiguration, device: GPUDevice, aspectRatio: number, inputManager: InputManager, shadowTexture: Texture2D, presentationFormat: GPUTextureFormat, depthTexture: GPUTexture) {
+      constructor(SceneData: SceneConfiguration, device: GPUDevice, aspectRatio: number, inputManager: InputManager, shadowTexture: Texture2D, presentationFormat: GPUTextureFormat, depthTexture: GPUTexture, usesPostProcessing: boolean = false) {
         this._camera = this.setupCamera(device, aspectRatio, inputManager, SceneData.Camera ?? null);
         this._ambientLight = this.setupAmbientLight(device, SceneData.AmbientLight ?? null);
         this._directionalLight = this.setupDirectionalLight(device, SceneData.DirectionalLight ?? null);
@@ -282,6 +282,10 @@ export class Scene {
             depthTexture: depthTexture,
         };
         this._sceneObjects = new ObjectMap();
+        
+        // Store the post-processing flag for use in GLTF object creation
+        this._usesPostProcessing = usesPostProcessing;
+        
         this.setupSceneObjects(device, SceneData.sceneObjects ?? null);
     }
 

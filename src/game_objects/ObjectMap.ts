@@ -38,16 +38,16 @@ export class ObjectMap {
   public createObjectId(string: string): string {
     return `${string}_${this.objectIdCounter}`;
   }
-
   // Function to spawn a game object. TODO, Create optional light/shadow passing in
-  public createCube(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean) {
+  public createCube(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, multipleRenderTargets: boolean = false) {
     const cube = new Cube(
       objectParameters.device,
       objectParameters.camera,
       objectParameters.shadowCamera,
       objectParameters.ambientLight,
       objectParameters.directionalLight,
-      objectParameters.pointLights
+      objectParameters.pointLights,
+      multipleRenderTargets
     );
     cube.pipeline.shadowTexture = shadowTexture;
     if(randomColor === true){
@@ -58,15 +58,15 @@ export class ObjectMap {
     this._objects.set(this.createObjectId('Cube'), cube);
     return cube;
   }
-
-  public createGridPlane(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean) {
+  public createGridPlane(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, multipleRenderTargets: boolean = false) {
     const gridPlane = new GridPlane(
       objectParameters.device,
       objectParameters.camera,
       objectParameters.shadowCamera,
       objectParameters.ambientLight,
       objectParameters.directionalLight,
-      objectParameters.pointLights
+      objectParameters.pointLights,
+      multipleRenderTargets
     );
     gridPlane.pipeline.shadowTexture = shadowTexture;
     if(randomColor === true){
@@ -76,9 +76,9 @@ export class ObjectMap {
     this.objectIdCounter++;
     this._objects.set(this.createObjectId('GridPlane'), gridPlane);
     return gridPlane;
-  }
-
-    public createGridPlaneTerrain(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, terrainParams?: TerrainParameters) {
+  }    
+  
+  public createGridPlaneTerrain(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, terrainParams?: TerrainParameters) {
     const gridPlane = new GridPlaneTerrain(
       objectParameters.device,
       objectParameters.camera,
@@ -97,15 +97,15 @@ export class ObjectMap {
     this._objects.set(this.createObjectId('GridPlaneTerrain'), gridPlane);
     return gridPlane;
   }
-
-  public createSphere(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean) {
+  public createSphere(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, multipleRenderTargets: boolean = false) {
     const sphere = new Ball(
       objectParameters.device,
       objectParameters.camera,
       objectParameters.shadowCamera,
       objectParameters.ambientLight,
       objectParameters.directionalLight,
-      objectParameters.pointLights
+      objectParameters.pointLights,
+      multipleRenderTargets
     );
     sphere.pipeline.shadowTexture = shadowTexture;
     if(randomColor === true){
@@ -116,15 +116,15 @@ export class ObjectMap {
     this._objects.set(this.createObjectId('Sphere'), sphere);
     return sphere;
   }
-
-  public createArrow(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, color?: Color) {
+  public createArrow(objectParameters: ObjectParameters, shadowTexture: Texture2D, randomColor: boolean, color?: Color, multipleRenderTargets: boolean = false) {
     const arrow = new Arrow(
       objectParameters.device,
       objectParameters.camera,
       objectParameters.shadowCamera,
       objectParameters.ambientLight,
       objectParameters.directionalLight,
-      objectParameters.pointLights
+      objectParameters.pointLights,
+      multipleRenderTargets
     );
     arrow.pipeline.shadowTexture = shadowTexture;
     if(randomColor === true){
@@ -154,8 +154,8 @@ export class ObjectMap {
     this._objects.set(this.createObjectId('PlaneWater'), planeWater);
     return planeWater;
   }  
-  
-  public createGLTF(objectParameters: ObjectParameters, shadowTexture: Texture2D, filePath: string, name?: string) {
+
+  public createGLTF(objectParameters: ObjectParameters, shadowTexture: Texture2D, filePath: string, name?: string, multipleRenderTargets: boolean = false) {
     const gltfObject = new GLTFGameObject(
       objectParameters.device,
       objectParameters.camera,
@@ -172,7 +172,8 @@ export class ObjectMap {
       new Vec3(1, 1, 1), // Default scale
       new Vec3(0, 0, 0), // Default position
       new Quaternion(), // Default rotation
-      true // Enable lighting
+      true, // Enable lighting
+      multipleRenderTargets
     );
     
     // Initialize the GLTF object asynchronously

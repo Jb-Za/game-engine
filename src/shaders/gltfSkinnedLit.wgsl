@@ -56,16 +56,31 @@ struct PointLight{
 
 const MAX_JOINTS_PER_VERTEX = 4u;
 
+struct FragOutput {
+    @location(0) color: vec4f,
+    @location(1) normal: vec4f,
+    @location(2) depth: vec4f,
+}
+
 @fragment
-fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
+fn fragmentMain(input: VertexOutput) -> FragOutput {
+    var output: FragOutput;
+    
+    // Calculate linear depth
+    let linearDepth = length(input.fragPos - input.eye) / 100.0; // Normalize by far plane distance
+    let clampedDepth = clamp(linearDepth, 0.0, 1.0);
+    
+    // Normalize and encode normal
+    let normalizedNormal = normalize(input.normal);
+    
     // Handle different render modes
     switch general_uniforms.render_mode {        case 1: {
             // UV coordinates or joint indices visualization for skinned models
-            return input.joints;
+            output.color = input.joints;
         }
         case 2: {
             // Texture rendering or weights visualization for skinned models
-            return textureSample(baseColorTexture, baseColorSampler, input.texcoord);
+            output.color = textureSample(baseColorTexture, baseColorSampler, input.texcoord);
         }
         case 3: {
             // Full lighting calculation for lit skinned models
@@ -80,7 +95,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
             var lightAmount = ambientLight.color * ambientLight.intensity;
 
             // Diffuse Light
-            var normal = normalize(input.normal);
+            var normal = normalizedNormal;
             var lightDir = normalize(-directionalLight.direction);
             var dotLight = max(dot(normal, lightDir), 0.0);
             
@@ -92,7 +107,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
             }
             
             lightAmount += directionalLight.color * directionalLight.intensity * dotLight * shadowFactor;
-
 
             // Specular Light
             var halfVector = normalize(lightDir + toEye);
@@ -120,11 +134,16 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4f {
 
             var color = textureSample(baseColorTexture, baseColorSampler, input.texcoord) * diffuseColor;
             color = color * vec4f(lightAmount, 1.0);
-            return color;
+            output.color = color;
         }
         default: {
             // Normal visualization (default)
-            return vec4f(input.normal * 0.5 + 0.5, 1.0);
+            output.color = vec4f(normalizedNormal * 0.5 + 0.5, 1.0);
         }
     }
+    
+    output.normal = vec4f(normalizedNormal * 0.5 + 0.5, 1.0); // Encode normal to 0-1 range
+    output.depth = vec4f(clampedDepth, 0.0, 0.0, 1.0); // Linear depth in red channel
+    
+    return output;
 }

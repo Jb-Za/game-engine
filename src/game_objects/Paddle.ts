@@ -36,12 +36,11 @@ export class Paddle{
     public playerOne = false;
 
     public collider = new RectCollider();
-
-    constructor(device: GPUDevice, private inputmanager: InputManager, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight, pointLights: PointLightsCollection){
+    constructor(device: GPUDevice, private inputmanager: InputManager, camera: Camera, shadowCamera: ShadowCamera, ambientLight: AmbientLight, directionalLight: DirectionalLight, pointLights: PointLightsCollection, multipleRenderTargets: boolean = false){
         this.transformBuffer = new UniformBuffer(device, this.transform, "Paddle Transform");
 
         this.normalMatrixBuffer = new UniformBuffer(device, 16 * Float32Array.BYTES_PER_ELEMENT, "Paddle Normal Matrix");
-        this.pipeline = new RenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, ambientLight, directionalLight, pointLights);
+        this.pipeline = new RenderPipeline(device, camera, shadowCamera, this.transformBuffer, this.normalMatrixBuffer, ambientLight, directionalLight, pointLights, multipleRenderTargets);
     
         this.pipeline.shininess = 128;
 
