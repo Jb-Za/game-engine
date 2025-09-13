@@ -2,7 +2,8 @@ import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffe
 import { Texture2D } from "../../texture/Texture2D";
 import { InputManager } from "../../input/InputManager";
 import { Scene } from "../../sceneEditor/Scene";
-import sceneDataJson from "./scene.json";
+//import sceneDataJson from "./scene.json";
+import sceneDataJson from './testscene.json';
 import { Camera } from "../../camera/Camera";
 import { AmbientLight } from "../../lights/AmbientLight";
 import { DirectionalLight } from "../../lights/DirectionalLight";
@@ -92,22 +93,53 @@ interface RayIntersection {
 }
 
 async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement) {
+  let isMiddlePanning = false;
+  let lastPanPos: { x: number; y: number } | null = null;
+  
   canvas?.addEventListener("mousedown", async (event: MouseEvent) => {
     if (isObjectPickingEnabled && !document.pointerLockElement) {
       const rect = canvas.getBoundingClientRect();
       const mouseX = event.clientX - rect.left;
       const mouseY = event.clientY - rect.top;
-      
-      // First check if we're clicking on a gizmo arrow
-      const clickedArrow = checkArrowSelection(mouseX, mouseY);
-      if (clickedArrow && selectedObject) {
-        startDragging(clickedArrow, mouseX, mouseY);
-        return;
+
+
+      if(event.button === 0){
+        // First check if we're clicking on a gizmo arrow
+        const clickedArrow = checkArrowSelection(mouseX, mouseY);
+        if (clickedArrow && selectedObject) {
+          startDragging(clickedArrow, mouseX, mouseY);
+          return;
+        }
+        
+        // Otherwise, perform regular object selection
+        const selectedObjectIdResult = performRayPicking(mouseX, mouseY);
+        selectObject(selectedObjectIdResult);
       }
-      
-      // Otherwise, perform regular object selection
-      const selectedObjectIdResult = performRayPicking(mouseX, mouseY);
-      selectObject(selectedObjectIdResult);
+
+      if (event.button === 1) {
+        // Try to request pointer lock for rotation
+        if (canvas.requestPointerLock) {
+          canvas.requestPointerLock();
+        }
+        // start fallback pan (if pointer lock isn't available)
+        isMiddlePanning = true;
+        lastPanPos = { x: event.clientX, y: event.clientY };
+        // prevent default to avoid scrolling / autoselect
+        event.preventDefault();
+      }
+    }
+  });
+
+    window.addEventListener("mouseup", (event: MouseEvent) => {
+    if (event.button === 1) {
+      isMiddlePanning = false;
+      lastPanPos = null;
+      if (document.exitPointerLock) {
+        // only exit if pointer is locked to our canvas
+        if (document.pointerLockElement === canvas) {
+          document.exitPointerLock();
+        }
+      }
     }
   });
 
@@ -179,6 +211,7 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
     const sceneObjects = scene.getSceneObjects();
 
     camera = scene.getCamera();
+    camera.controlScheme = "sceneEditor";
     ambientLight = scene.getAmbientLight();
     directionalLight = scene.getDirectionalLight();
     pointLights = scene.getPointLights();
@@ -332,8 +365,6 @@ function saveScene(): void {
 }
 
 function selectObject(objectId: string | null): void {
-  console.log('SceneEditor.selectObject called with:', objectId);
-  
   selectedObjectId = objectId;
   selectedObject = objectId ? scene?.getSceneObjects().objects.get(objectId) : null;
   
@@ -374,7 +405,7 @@ function performRayPicking(mouseX: number, mouseY: number): string | null {
     
     const closest = intersections[0];
 
-    console.log(`Selected object: ${closest.objectId}`);
+    // console.log(`Selected object: ${closest.objectId}`);
     return closest.objectId;
   }
 
@@ -438,12 +469,10 @@ function testRayObjectIntersection(ray: { origin: Vec3; direction: Vec3 }, obj: 
       if (obj.gltfScene && obj.gltfScene.boundingBox && obj.gltfScene.boundingBox.min && obj.gltfScene.boundingBox.max) {
         // Use the original GLTF bounding box directly (transformation is already handled by object space conversion)
         const gltfBounds = obj.gltfScene.boundingBox;
-        console.log(`GLTF using original bounds - min: (${gltfBounds.min.x.toFixed(3)}, ${gltfBounds.min.y.toFixed(3)}, ${gltfBounds.min.z.toFixed(3)}), max: (${gltfBounds.max.x.toFixed(3)}, ${gltfBounds.max.y.toFixed(3)}, ${gltfBounds.max.z.toFixed(3)})`);
         intersection = intersectRayGltf(localRayOrigin, localRayDirection, gltfBounds);
       } else {
         // Fall back to a reasonable default size in object space
         const defaultBounds = new Vec3(1.0, 1.0, 1.0);
-        console.log(`GLTF using default bounds: (${defaultBounds.x.toFixed(3)}, ${defaultBounds.y.toFixed(3)}, ${defaultBounds.z.toFixed(3)})`);
         intersection = intersectRayBox(localRayOrigin, localRayDirection, defaultBounds);
       }
       break;
@@ -511,8 +540,6 @@ function intersectRayGltf(rayOrigin: Vec3, rayDirection: Vec3, boxMinMax: { min:
 
   return { distance, point };
 }
-
-
 
 function intersectRaySphere(rayOrigin: Vec3, rayDirection: Vec3, radius: number): { distance: number; point: Vec3 } | null {
   const oc = Vec3.subtract(rayOrigin, new Vec3(0, 0, 0)); // Sphere centered at origin
@@ -662,8 +689,6 @@ function startDragging(arrowType: 'x' | 'y' | 'z', mouseX: number, mouseY: numbe
   activeArrow = arrowType;
   dragStartMousePos = { x: mouseX, y: mouseY };
   dragStartObjectPos = new Vec3(selectedObject.position.x, selectedObject.position.y, selectedObject.position.z);
-  
-  console.log(`Started dragging ${arrowType} axis`);
 }
 
 function updateDragging(mouseX: number, mouseY: number): void {
@@ -675,25 +700,40 @@ function updateDragging(mouseX: number, mouseY: number): void {
   const deltaX = mouseX - dragStartMousePos.x;
   const deltaY = mouseY - dragStartMousePos.y;
   
-  // Convert screen space movement to world space movement along the active axis
-  const sensitivity = 0.01; // Adjust this value to control movement speed
+  const camToObj = Vec3.subtract(selectedObject.position, camera.eye);
+  const distance = Vec3.length(camToObj);
+  const sensitivity = 0.001 * distance; // scale with distance
   
   let worldDelta = new Vec3(0, 0, 0);
   
   switch (activeArrow) {
-    case 'x':
-      // Project screen movement to X axis in world space
-      worldDelta.x = -deltaX * sensitivity;
+    case 'x': {
+      // Project world X axis to screen space
+      const worldAxis = new Vec3(1, 0, 0);
+      const screenAxis = projectAxisToScreen(worldAxis, camera);
+      
+      // Calculate movement along the projected axis
+      const mouseDelta = new Vec3(deltaX, deltaY, 0);
+      const axisMovement = Vec3.dot(mouseDelta, screenAxis);
+      
+      worldDelta.x = axisMovement * sensitivity;
       break;
-    case 'y':
-      // Y axis movement (up/down on screen)
-      worldDelta.y = -deltaY * sensitivity; // Negative because screen Y is flipped
+    }
+    case 'y': {
+      worldDelta.y = -deltaY * sensitivity;
       break;
-    case 'z':
-      // Z axis movement (we'll use horizontal movement for now)
-      worldDelta.z = deltaX * sensitivity;
+    }
+    case 'z': {
+      const worldAxis = new Vec3(0, 0, 1);
+      const screenAxis = projectAxisToScreen(worldAxis, camera);
+      
+      const mouseDelta = new Vec3(deltaX, deltaY, 0);
+      const axisMovement = Vec3.dot(mouseDelta, screenAxis);
+      
+      worldDelta.z = axisMovement * sensitivity;
       break;
-  }
+    }
+}
   // Update object position
   selectedObject.position = Vec3.add(dragStartObjectPos, worldDelta);
   
@@ -710,13 +750,23 @@ function updateDragging(mouseX: number, mouseY: number): void {
   updateGizmoArrows();
 }
 
+function projectAxisToScreen(worldAxis: Vec3, camera: Camera): Vec3 {
+  // Transform world axis to view space
+  const viewAxis = Mat4x4.multiplyVec(camera.view, worldAxis);
+  
+  // Project to screen (just use x,y components, ignore z)
+  let screenAxis = Vec3.normalize(new Vec3(viewAxis.x, -viewAxis.y, 0));
+  
+  return screenAxis;
+}
+
 function stopDragging(): void {
   isDragging = false;
   activeArrow = null;
   dragStartMousePos = null;
   dragStartObjectPos = null;
   
-  console.log('Stopped dragging');
+  // console.log('Stopped dragging');
 }
 
 // Export functions to enable/disable object picking

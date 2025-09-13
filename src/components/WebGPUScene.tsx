@@ -245,7 +245,6 @@ const WebGPUScene: React.FC<WebGPUSceneProps> = ({ scene, onBack }) => {
             // Enable object picking and set up callback to communicate with React
           if (typeof SceneModule.enableObjectPicking === 'function') {
             SceneModule.enableObjectPicking((objectId: string | null) => {
-              console.log('Object selected in WebGPU:', objectId);
               // Update the React state through the scene editor controls
               if (sceneEditorControlsRef.current) {
                 sceneEditorControlsRef.current.selectObject(objectId);

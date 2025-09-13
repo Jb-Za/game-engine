@@ -28,7 +28,7 @@ export class GizmoArrow implements GameObject {
     private camera: Camera;
 
     constructor(
-        device: GPUDevice, 
+        device: GPUDevice,
         camera: Camera,
         shadowCamera: ShadowCamera
     ) {

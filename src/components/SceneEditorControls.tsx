@@ -313,7 +313,6 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
 
   // Function to handle adding GLTF object to scene
   const handleAddGLTF = async (asset: GLTFAssetInfo) => {
-    console.log('Adding GLTF object to scene:', asset);
     onAddObject('gltf', { filePath: asset.path, name: asset.name });
   };
 
@@ -410,8 +409,6 @@ export const SceneEditorControls = forwardRef<SceneEditorControlsRef, SceneEdito
           sceneObj.visible = stateObj.visible;
         }
       });
-
-      console.log('Scene updated from controls');
     } catch (error) {
       console.error('Error updating scene from state:', error);
     }

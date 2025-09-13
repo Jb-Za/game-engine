@@ -23,7 +23,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/wall_corner_small.glb"
+      "filePath": "assets/testScene/Dungeon/wall_corner_small.glb"
     },
     {
       "id": "GLTF_2",
@@ -48,7 +48,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/wall_scaffold.glb"
+      "filePath": "assets/testScene/Dungeon/wall_scaffold.glb"
     },
     {
       "id": "GLTF_3",
@@ -73,7 +73,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/wall_window_open.glb"
+      "filePath": "assets/testScene/Dungeon/wall_window_open.glb"
     },
     {
       "id": "GLTF_4",
@@ -123,7 +123,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/candle_melted.glb"
+      "filePath": "assets/testScene/Dungeon/candle_melted.glb"
     },
     {
       "id": "GLTF_6",
@@ -148,7 +148,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/candle_lit.glb"
+      "filePath": "assets/testScene/Dungeon/candle_lit.glb"
     },
     {
       "id": "GLTF_7",
@@ -173,7 +173,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_large_rocks.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_large_rocks.glb"
     },
     {
       "id": "GLTF_8",
@@ -198,7 +198,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_large.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_large.glb"
     },
     {
       "id": "GLTF_9",
@@ -223,7 +223,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_large.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_large.glb"
     },
     {
       "id": "GLTF_10",
@@ -248,7 +248,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_extralarge_grates_open.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_extralarge_grates_open.glb"
     },
     {
       "id": "GLTF_11",
@@ -273,7 +273,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_large.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_large.glb"
     },
     {
       "id": "GLTF_12",
@@ -298,7 +298,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_large.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_large.glb"
     },
     {
       "id": "GLTF_13",
@@ -323,7 +323,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/stairs_wall_left.glb"
+      "filePath": "assets/testScene/Dungeon/stairs_wall_left.glb"
     },
     {
       "id": "GLTF_14",
@@ -348,7 +348,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/shelf_large.glb"
+      "filePath": "assets/testScene/Dungeon/shelf_large.glb"
     },
     {
       "id": "GLTF_15",
@@ -373,7 +373,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/sword_shield_gold.glb"
+      "filePath": "assets/testScene/Dungeon/sword_shield_gold.glb"
     },
     {
       "id": "GLTF_16",
@@ -398,7 +398,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/table_long_tablecloth_decorated_A.glb"
+      "filePath": "assets/testScene/Dungeon/table_long_tablecloth_decorated_A.glb"
     },
     {
       "id": "GLTF_17",
@@ -423,7 +423,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/torch_lit.glb"
+      "filePath": "assets/testScene/Dungeon/torch_lit.glb"
     },
     {
       "id": "GLTF_18",
@@ -448,7 +448,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/trunk_large_C.glb"
+      "filePath": "assets/testScene/Dungeon/trunk_large_C.glb"
     },
     {
       "id": "GLTF_19",
@@ -473,7 +473,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/wall_corner.glb"
+      "filePath": "assets/testScene/Dungeon/wall_corner.glb"
     },
     {
       "id": "GLTF_20",
@@ -498,7 +498,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/wall_shelves.glb"
+      "filePath": "assets/testScene/Dungeon/wall_shelves.glb"
     },
     {
       "id": "GLTF_21",
@@ -523,7 +523,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/barrel_large_decorated.glb"
+      "filePath": "assets/testScene/Dungeon/barrel_large_decorated.glb"
     },
     {
       "id": "gltf_bottle_C_brown_22",
@@ -548,7 +548,7 @@
         0.5,
         0.5
       ],
-      "filePath": "assets/DungeonAssets/bottle_C_brown.glb"
+      "filePath": "assets/testScene/Dungeon/bottle_C_brown.glb"
     },
     {
       "id": "gltf_floor_tile_small_30",
@@ -573,7 +573,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_small.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_small.glb"
     },
     {
       "id": "gltf_floor_tile_small_31",
@@ -598,7 +598,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_small.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_small.glb"
     },
     {
       "id": "gltf_floor_tile_small_broken_A_32",
@@ -623,7 +623,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_tile_small_broken_A.glb"
+      "filePath": "assets/testScene/Dungeon/floor_tile_small_broken_A.glb"
     },
     {
       "id": "gltf_floor_wood_large_dark_34",
@@ -648,7 +648,7 @@
         1,
         1
       ],
-      "filePath": "assets/DungeonAssets/floor_wood_large_dark.glb"
+      "filePath": "assets/testScene/Dungeon/floor_wood_large_dark.glb"
     }
   ],
   "ShadowCamera": {

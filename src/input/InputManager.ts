@@ -11,6 +11,7 @@ export class InputManager {
 
   constructor(private canvas?: HTMLCanvasElement) {
     window.addEventListener("keydown", (e) => {
+      e.preventDefault();
       this.keys.set(e.code, true);
       if (e.key.length === 1) {
         this.keys.set(e.key.toLowerCase(), true);
@@ -34,6 +35,7 @@ export class InputManager {
     });
 
     window.addEventListener("mousedown", (e) => {
+      e.preventDefault();
       this.mouseKeys.set(e.button, true);
     });
 
@@ -103,6 +105,10 @@ export class InputManager {
 
   public isMouseDown(button: number): boolean {
     return this.mouseKeys.get(button) ?? false;
+  }
+
+  public isMouseUp(button: number): boolean {
+    return !(this.mouseKeys.get(button) ?? false);
   }
 
   // public getMousePosition(): { x: number; y: number } {
