@@ -3,7 +3,7 @@ import { Color } from "../math/Color";
 import { UniformBuffer } from "../uniform_buffers/UniformBuffer";
 
 export class GizmoRenderPipeline {
-  private device: GPUDevice;
+  //private device: GPUDevice;
   private renderPipeline!: GPURenderPipeline;
   private vertexBindGroup!: GPUBindGroup;
   private materialBindGroup!: GPUBindGroup;
@@ -14,7 +14,7 @@ export class GizmoRenderPipeline {
     device: GPUDevice,
     transformsBuffer: UniformBuffer
   ) {
-    this.device = device;
+    //this.device = device;
 
     // Create uniform buffer for diffuse color
     this.diffuseColorBuffer = new UniformBuffer(device, 4 * Float32Array.BYTES_PER_ELEMENT, "Gizmo Diffuse Color");

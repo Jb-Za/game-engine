@@ -93,8 +93,8 @@ interface RayIntersection {
 }
 
 async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GPUCanvasContext, presentationFormat: GPUTextureFormat, infoElem: HTMLPreElement) {
-  let isMiddlePanning = false;
-  let lastPanPos: { x: number; y: number } | null = null;
+  //let isMiddlePanning = false;
+  //let lastPanPos: { x: number; y: number } | null = null;
   
   canvas?.addEventListener("mousedown", async (event: MouseEvent) => {
     if (isObjectPickingEnabled && !document.pointerLockElement) {
@@ -122,8 +122,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
           canvas.requestPointerLock();
         }
         // start fallback pan (if pointer lock isn't available)
-        isMiddlePanning = true;
-        lastPanPos = { x: event.clientX, y: event.clientY };
+        //isMiddlePanning = true;
+        //lastPanPos = { x: event.clientX, y: event.clientY };
         // prevent default to avoid scrolling / autoselect
         event.preventDefault();
       }
@@ -132,8 +132,8 @@ async function init(canvas: HTMLCanvasElement, device: GPUDevice, gpuContext: GP
 
     window.addEventListener("mouseup", (event: MouseEvent) => {
     if (event.button === 1) {
-      isMiddlePanning = false;
-      lastPanPos = null;
+      //isMiddlePanning = false;
+      //lastPanPos = null;
       if (document.exitPointerLock) {
         // only exit if pointer is locked to our canvas
         if (document.pointerLockElement === canvas) {
