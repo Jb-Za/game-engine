@@ -15,6 +15,26 @@ export class Texture2D {
         return texture;
     }
 
+    public static async createFromPath(device: GPUDevice, texturePath: string, isColorTexture: boolean = true): Promise<Texture2D> {
+        const response = await fetch(texturePath);
+        const blob = await response.blob();
+        const imageBitmap = await createImageBitmap(blob);
+
+        const format = isColorTexture ? "rgba8unorm-srgb" : "rgba8unorm";
+        const texture = new Texture2D(device);
+        
+        texture.createTextureAndSampler(imageBitmap.width, imageBitmap.height, format);
+
+        device.queue.copyExternalImageToTexture(
+            { source: imageBitmap },
+            { texture: texture.texture },
+            { width: imageBitmap.width, height: imageBitmap.height }
+        );
+
+        imageBitmap.close();
+        return texture;
+    }
+
     public static createEmpty(device: GPUDevice, isColorTexture: boolean = true): Texture2D {
         const texture = new Texture2D(device);
         // Use sRGB format for color textures, linear format for non-color data

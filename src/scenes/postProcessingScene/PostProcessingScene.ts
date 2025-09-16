@@ -2,7 +2,7 @@ import { GeometryBuffersCollection } from "../../attribute_buffers/GeometryBuffe
 import { Texture2D } from "../../texture/Texture2D";
 import { InputManager } from "../../input/InputManager";
 import { Scene } from "../../sceneEditor/Scene";
-import sceneDataJson from "./scene.json";
+import sceneDataJson from "./testscene.json";
 import { Camera } from "../../camera/Camera";
 import { AmbientLight } from "../../lights/AmbientLight";
 import { DirectionalLight } from "../../lights/DirectionalLight";
@@ -38,15 +38,12 @@ let currentEffectIndex = 0;
 const getEffectDescription = (index: number): string => {
     const descriptions = [
         'Passthrough',
-        'Grayscale', 
-        'Sepia',
-        'Invert',
-        'Color Tint',
-        'Brightness',
-        'Vignette',
-        'Blur',
         'Edge Detection',
-        'blur + vignette'
+        'DoG Mask Only',
+        'Posterize Only',
+        'Cartoon (Full NPR)',
+        'Outline Only',
+        'DoG Hatching',
     ];
     return descriptions[index] || 'Unknown';
 };
@@ -77,9 +74,10 @@ async function init(
     GeometryBuffersCollection.initialize(device);    // Create shared depth and shadow textures
     _depthTexture = Texture2D.createDepthTexture(device, canvas.width, canvas.height);
     _shadowTexture = Texture2D.createShadowTexture(device, 4096, 4096);
+    const hatchTexture = await Texture2D.createFromPath(device, 'assets/Textures/hatch.png', false);
 
     // Initialize post-processing with multiple effects
-    initPostProcessing();
+    initPostProcessing(hatchTexture);
 
     // Load the scene
     loadScene(sceneData);
@@ -104,41 +102,30 @@ async function init(
         if (_inputManager.isKeyDown('1')) {
             _postProcessing?.setEffect('passthrough');
             currentEffectIndex = 0;
-        } else if (_inputManager.isKeyDown('2')) {
-            _postProcessing?.setEffect('grayscale');
-            currentEffectIndex = 1;
-        } else if (_inputManager.isKeyDown('3')) {
-            _postProcessing?.setEffect('sepia');
-            currentEffectIndex = 2;
-        } else if (_inputManager.isKeyDown('4')) {
-            _postProcessing?.setEffect('invert');
-            currentEffectIndex = 3;
-        } else if (_inputManager.isKeyDown('5')) {
-            _postProcessing?.setEffect('colorTint');
-            currentEffectIndex = 4;
-        } else if (_inputManager.isKeyDown('6')) {
-            _postProcessing?.setEffect('brightness');
-            currentEffectIndex = 5;
-        } else if (_inputManager.isKeyDown('7')) {
-            _postProcessing?.setEffect('vignette');
-            currentEffectIndex = 6;
-        } else if (_inputManager.isKeyDown('8')) {
-            _postProcessing?.setEffect('blur');
-            currentEffectIndex = 7;
-        } else if (_inputManager.isKeyDown('9')) {
+        }else if (_inputManager.isKeyDown('2')) {
             _postProcessing?.setEffect('differenceOfGaussians');
-            currentEffectIndex = 8;
-        }        
-        // Example of parallel processing with 0 key
-        if (_inputManager.isKeyDown('0')) {
-            _postProcessing?.setEffect(['blur', 'vignette']); // Apply blur and vignette together
-            currentEffectIndex = 9;
+            currentEffectIndex = 1;
+        } else if (_inputManager.isKeyDown('3') ) {
+            _postProcessing?.setEffect('dogMask'); // DoG mask only
+            currentEffectIndex = 2;
+        } else if (_inputManager.isKeyDown('4') ) {
+            _postProcessing?.setEffect('posterize'); // Posterize only
+            currentEffectIndex = 3;
+        } else if (_inputManager.isKeyDown('5') ) {
+            // Full cartoon effect: posterize + dogMask + composite
+            _postProcessing?.setEffect(['posterize', 'dogMask', 'cartoonComposite']);
+            currentEffectIndex = 4;
+        } else if (_inputManager.isKeyDown('6') ) {
+            // Outline only: dogMask + composite (no posterize)
+            _postProcessing?.setEffect(['dogMask', 'cartoonComposite']);
+            // Adjust composite to use original image with outlines
+            _postProcessing?.updateUniform('cartoonComposite', 'mixRatio', new Float32Array([0.0]));
+            currentEffectIndex = 5;
+        } else if (_inputManager.isKeyDown('7') ) {
+            _postProcessing?.setEffect('doGHatching');
+            currentEffectIndex = 6;
         }
 
-        // Example: Sprint mode with Shift
-        if (_inputManager.isKeyDown('Shift')) {
-            // You could modify camera movement speed here
-        }
     }
 
     // === RENDER LOOP ===
@@ -155,6 +142,10 @@ async function init(
             _infoElem.textContent += `R - Reset camera\n`;
             _infoElem.textContent += `1-9 - Post-processing effects\n`;
             _infoElem.textContent += `0 - Parallel effects demo\n`;
+            _infoElem.textContent += `Q - DoG mask only\n`;
+            _infoElem.textContent += `W - Posterize only\n`;
+            _infoElem.textContent += `E - Full cartoon NPR\n`;
+            _infoElem.textContent += `T - Outline only\n`;
             _infoElem.textContent += `Current effect: ${getEffectDescription(currentEffectIndex)}\n`;
         }
 
@@ -313,7 +304,7 @@ function loadScene(sceneJson: any): void {
     }
 }
 
-function initPostProcessing() {
+function initPostProcessing(hatch?: Texture2D) {
     if (!_device || !_canvas || !_presentationFormat) return;
 
     // Initialize PostProcessing with just passthrough
@@ -331,7 +322,13 @@ function initPostProcessing() {
     _postProcessing.addEffect(PostProcessingEffects.getBrightness());
     _postProcessing.addEffect(PostProcessingEffects.getVignette());
     _postProcessing.addEffect(PostProcessingEffects.getBlur());
-    _postProcessing.addEffect(PostProcessingEffects.getDifferenceOfGaussians());
+    _postProcessing.addEffect(PostProcessingEffects.getDifferenceOfGaussians());    // Add NPR/Cartoon effects
+    _postProcessing.addEffect(PostProcessingEffects.getDoGMask());
+    _postProcessing.addEffect(PostProcessingEffects.getPosterize());
+    _postProcessing.addEffect(PostProcessingEffects.getCartoonComposite());
+    if(hatch){
+        _postProcessing.addEffect(PostProcessingEffects.getDoGHatching(hatch));
+    }
 
     // Update uniforms for effects that need them
     _postProcessing.updateUniform('blur', 'texelSize', new Vec2(1.0 / _canvas.width, 1.0 / _canvas.height));
@@ -339,4 +336,18 @@ function initPostProcessing() {
     _postProcessing.updateUniform('differenceOfGaussians', 'sigma', new Float32Array([1.0]));
     _postProcessing.updateUniform('differenceOfGaussians', 'scale', new Float32Array([2.0]));
     _postProcessing.updateUniform('differenceOfGaussians', 'radius', new Float32Array([3.0]));
+
+    // Setup NPR effects
+    _postProcessing.updateUniform('dogMask', 'texelSize', new Vec2(1.0 / _canvas.width, 1.0 / _canvas.height));
+    _postProcessing.updateUniform('dogMask', 'sigma', new Float32Array([1.0]));
+    _postProcessing.updateUniform('dogMask', 'scale', new Float32Array([2.0]));
+    _postProcessing.updateUniform('dogMask', 'radius', new Float32Array([3.0]));
+    _postProcessing.updateUniform('dogMask', 'threshold', new Float32Array([0.03]));
+    _postProcessing.updateUniform('dogMask', 'edgeSharpness', new Float32Array([20.0]));
+
+    _postProcessing.updateUniform('doGHatching', 'texelSize', new Vec2(1.0 / _canvas.width, 1.0 / _canvas.height));
+    _postProcessing.updateUniform('doGHatching', 'sigma', new Float32Array([1.0]));
+    _postProcessing.updateUniform('doGHatching', 'scale', new Float32Array([2.0]));
+    _postProcessing.updateUniform('doGHatching', 'radius', new Float32Array([3.0]));
+    _postProcessing.updateUniform('doGHatching', 'threshold', new Float32Array([0.01]));
 }
