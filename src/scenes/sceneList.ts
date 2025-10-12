@@ -20,7 +20,15 @@ export const scenes: SceneInfo[] = [{
   name: "Plinko Physics",
   description: "Classic Plinko game demonstrating sphere-sphere and sphere-box collisions with bouncing physics.",
   thumbnail: "/thumbnails/undefined.svg",
-  importPath: "../scenes/plinkoScene/plinkoScene.ts",
+  importPath: "../scenes/Physics/plinkoScene/plinkoScene.ts",
+  components: ['backButton']
+},
+{
+  id: "randomBlocks",
+  name: "randomBlocks",
+  description: "",
+  thumbnail: "/thumbnails/undefined.svg",
+  importPath: "../scenes/Physics/physicsRandomBlocksScene/physicsRandomBlocksScene.ts",
   components: ['backButton']
 },
 {

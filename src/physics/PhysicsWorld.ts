@@ -89,8 +89,7 @@ export class PhysicsWorld {
         this.synchronizeColliders();
         
         // Multiple collision detection and resolution iterations for stability
-        // Reduced from 5 to 3 iterations for better performance
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 3; i++) { // was 5
             // Detect collisions
             this.detectCollisions();
             

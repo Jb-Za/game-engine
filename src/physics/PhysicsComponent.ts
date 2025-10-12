@@ -8,7 +8,7 @@ import { Quaternion } from "../math/Quaternion";
 export class PhysicsComponent {
     private rigidBody: RigidBody;
     private collider: Collider;
-    private gameObject: GameObject;
+    private _gameObject: GameObject;
     private physicsWorld: PhysicsWorld;
     private physicsId: number = -1;
     
@@ -22,7 +22,7 @@ export class PhysicsComponent {
         colliderType: 'box' | 'sphere' = 'box',
         mass: number = 1.0
     ) {
-        this.gameObject = gameObject;
+        this._gameObject = gameObject;
         this.physicsWorld = physicsWorld;
         
         // Create rigid body using GameObject's current transform
@@ -81,7 +81,11 @@ export class PhysicsComponent {
     public getAngularVelocity(): Vec3 {
         return this.rigidBody.angularVelocity;
     }
-    
+
+    public get gameObject(): GameObject {
+        return this._gameObject;
+    }
+
     // Collider control methods
     public setIsTrigger(isTrigger: boolean): void {
         this.collider.isTrigger = isTrigger;
@@ -121,19 +125,19 @@ export class PhysicsComponent {
         let needsUpdate = false;
         
         if (this.syncPosition) {
-            if (this.rigidBody.position.x !== this.gameObject.position.x ||
-                this.rigidBody.position.y !== this.gameObject.position.y ||
-                this.rigidBody.position.z !== this.gameObject.position.z) {
-                this.rigidBody.position = this.gameObject.position;
+            if (this.rigidBody.position.x !== this._gameObject.position.x ||
+                this.rigidBody.position.y !== this._gameObject.position.y ||
+                this.rigidBody.position.z !== this._gameObject.position.z) {
+                this.rigidBody.position = this._gameObject.position;
                 needsUpdate = true;
             }
         }
         if (this.syncRotation) {
-            if (this.rigidBody.rotation.x !== this.gameObject.rotation.x ||
-                this.rigidBody.rotation.y !== this.gameObject.rotation.y ||
-                this.rigidBody.rotation.z !== this.gameObject.rotation.z ||
-                this.rigidBody.rotation.w !== this.gameObject.rotation.w) {
-                this.rigidBody.rotation = this.gameObject.rotation;
+            if (this.rigidBody.rotation.x !== this._gameObject.rotation.x ||
+                this.rigidBody.rotation.y !== this._gameObject.rotation.y ||
+                this.rigidBody.rotation.z !== this._gameObject.rotation.z ||
+                this.rigidBody.rotation.w !== this._gameObject.rotation.w) {
+                this.rigidBody.rotation = this._gameObject.rotation;
                 needsUpdate = true;
             }
         }
@@ -146,10 +150,10 @@ export class PhysicsComponent {
     
     private syncGameObjectFromPhysics(): void {
         if (this.syncPosition) {
-            this.gameObject.position = this.rigidBody.position;
+            this._gameObject.position = this.rigidBody.position;
         }
         if (this.syncRotation) {
-            this.gameObject.rotation = this.rigidBody.rotation;
+            this._gameObject.rotation = this.rigidBody.rotation;
         }
         // Scale is typically not affected by physics
     }
@@ -159,7 +163,7 @@ export class PhysicsComponent {
      */
     public setPosition(position: Vec3): void {
         this.rigidBody.position = position;
-        this.gameObject.position = position;
+        this._gameObject.position = position;
         this.rigidBody.wakeUp();
         this.collider.markDirty();
     }
@@ -169,7 +173,7 @@ export class PhysicsComponent {
      */
     public setRotation(rotation: Quaternion): void {
         this.rigidBody.rotation = rotation;
-        this.gameObject.rotation = rotation;
+        this._gameObject.rotation = rotation;
         this.rigidBody.wakeUp();
         this.collider.markDirty();
     }

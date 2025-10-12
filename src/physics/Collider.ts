@@ -193,14 +193,10 @@ export class BoxCollider extends Collider {
         }
         
         return result;
-    }
+    }    
     
     private checkBoxBox(other: BoxCollider): CollisionInfo {
-        // Simplified AABB vs AABB collision for now
-        // TODO: Implement full OBB vs OBB collision detection
-        const aabb1 = this.getAABB();
-        const aabb2 = other.getAABB();
-        
+        // OBB vs OBB collision using Separating Axis Theorem (SAT)
         const result: CollisionInfo = {
             isColliding: false,
             contactPoint: new Vec3(0, 0, 0),
@@ -210,37 +206,124 @@ export class BoxCollider extends Collider {
             colliderB: other
         };
         
-        if (aabb1.intersects(aabb2)) {
-            result.isColliding = true;
-            
-            // Calculate overlap on each axis
-            const overlapX = Math.min(aabb1.max.x, aabb2.max.x) - Math.max(aabb1.min.x, aabb2.min.x);
-            const overlapY = Math.min(aabb1.max.y, aabb2.max.y) - Math.max(aabb1.min.y, aabb2.min.y);
-            const overlapZ = Math.min(aabb1.max.z, aabb2.max.z) - Math.max(aabb1.min.z, aabb2.min.z);
-            
-            // Add minimum penetration tolerance to prevent micro-collisions
-            const minPenetration = 0.001;
-            
-            // Find the axis with minimum overlap (separation axis)
-            if (overlapX <= overlapY && overlapX <= overlapZ) {
-                result.penetrationDepth = Math.max(overlapX, minPenetration);
-                // Normal points from colliderA toward colliderB for proper separation
-                result.normal = this.position.x < other.position.x ? new Vec3(1, 0, 0) : new Vec3(-1, 0, 0);
-            } else if (overlapY <= overlapZ) {
-                result.penetrationDepth = Math.max(overlapY, minPenetration);
-                // Normal points from colliderA toward colliderB - for floor collisions, this pushes objects up
-                result.normal = this.position.y < other.position.y ? new Vec3(0, 1, 0) : new Vec3(0, -1, 0);
-            } else {
-                result.penetrationDepth = Math.max(overlapZ, minPenetration);
-                // Normal points from colliderA toward colliderB
-                result.normal = this.position.z < other.position.z ? new Vec3(0, 0, 1) : new Vec3(0, 0, -1);
-            }
-            
-            // Contact point is roughly the center of overlap
-            result.contactPoint = Vec3.multiplyScalar(Vec3.add(aabb1.getCenter(), aabb2.getCenter()), 0.5);
+        //Quick AABB check first for broad phase
+        const aabb1 = this.getAABB();
+        const aabb2 = other.getAABB();
+        if (!aabb1.intersects(aabb2)) {
+            return result;
         }
         
+        // Get rotation matrices from quaternions
+        const rotMatA = Mat4x4.fromQuaternion(this.rotation);
+        const rotMatB = Mat4x4.fromQuaternion(other.rotation);
+        
+        // Get the 3 axes for each box (local X, Y, Z axes in world space)
+        // Mat4x4 is column-major, so columns are: [0,1,2,3], [4,5,6,7], [8,9,10,11], [12,13,14,15]
+        const axesA = [
+            new Vec3(rotMatA[0], rotMatA[1], rotMatA[2]),    // First column (local X)
+            new Vec3(rotMatA[4], rotMatA[5], rotMatA[6]),    // Second column (local Y)
+            new Vec3(rotMatA[8], rotMatA[9], rotMatA[10])    // Third column (local Z)
+        ];
+        
+        const axesB = [
+            new Vec3(rotMatB[0], rotMatB[1], rotMatB[2]),    // First column (local X)
+            new Vec3(rotMatB[4], rotMatB[5], rotMatB[6]),    // Second column (local Y)
+            new Vec3(rotMatB[8], rotMatB[9], rotMatB[10])    // Third column (local Z)
+        ];
+        
+        // Vector from A to B
+        const centerOffset = Vec3.subtract(other.position, this.position);
+        
+        let minPenetration = Number.POSITIVE_INFINITY;
+        let bestAxis = new Vec3(1, 0, 0);
+        
+        // Test 15 potential separating axes:
+        // - 3 face normals from box A
+        // - 3 face normals from box B
+        // - 9 cross products of edges from A and B
+        
+        const testAxes: Vec3[] = [
+            ...axesA,
+            ...axesB
+        ];
+        
+        // Add edge cross products (9 axes)
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+                const cross = Vec3.cross(axesA[i], axesB[j]);
+                const len = Vec3.length(cross);
+                if (len > 0.0001) { // Avoid nearly parallel edges
+                    testAxes.push(Vec3.normalize(cross));
+                }
+            }
+        }
+        
+        // Test each axis
+        for (const axis of testAxes) {
+            const axisLen = Vec3.length(axis);
+            if (axisLen < 0.0001) continue; // Skip degenerate axes
+            
+            const normalizedAxis = Vec3.normalize(axis);
+            
+            // Project box A onto axis
+            const projA = this.projectBoxOntoAxis(normalizedAxis, this.size, axesA);
+            
+            // Project box B onto axis
+            const projB = this.projectBoxOntoAxis(normalizedAxis, other.size, axesB);
+            
+            // Project center offset onto axis
+            const centerDist = Vec3.dot(centerOffset, normalizedAxis);
+            const projBShifted = {
+                min: projB.min + centerDist,
+                max: projB.max + centerDist
+            };
+            
+            // Check for separation
+            const separation = Math.max(projA.min - projBShifted.max, projBShifted.min - projA.max);
+            
+            if (separation > 0.0001) {
+                // Found a separating axis - boxes don't collide
+                return result;
+            }
+            
+            // Calculate penetration depth on this axis
+            const penetration = Math.min(projA.max - projBShifted.min, projBShifted.max - projA.min);
+            
+            if (penetration < minPenetration) {
+                minPenetration = penetration;
+                bestAxis = normalizedAxis;
+                
+                // Make sure the normal points from A to B
+                if (Vec3.dot(centerOffset, bestAxis) < 0) {
+                    bestAxis = Vec3.multiplyScalar(bestAxis, -1);
+                }
+            }
+        }
+        
+        // If we made it here, there's a collision
+        result.isColliding = true;
+        result.penetrationDepth = Math.max(minPenetration, 0.001);
+        result.normal = bestAxis;
+        
+        // Calculate contact point (approximate as center point along collision normal)
+        const contactOffset = Vec3.multiplyScalar(result.normal, result.penetrationDepth * 0.5);
+        result.contactPoint = Vec3.add(this.position, contactOffset);
+        
         return result;
+    }
+    
+    /**
+     * Project an OBB onto an axis
+     * Returns the min and max projection values
+     */
+    private projectBoxOntoAxis(axis: Vec3, halfExtents: Vec3, boxAxes: Vec3[]): { min: number, max: number } {
+        // Project the half extents onto the axis
+        const r = 
+            Math.abs(Vec3.dot(Vec3.multiplyScalar(boxAxes[0], halfExtents.x), axis)) +
+            Math.abs(Vec3.dot(Vec3.multiplyScalar(boxAxes[1], halfExtents.y), axis)) +
+            Math.abs(Vec3.dot(Vec3.multiplyScalar(boxAxes[2], halfExtents.z), axis));
+        
+        return { min: -r, max: r };
     }
     
     public checkBoxSphere(sphere: SphereCollider): CollisionInfo {
